@@ -1,0 +1,20 @@
+name: Host compiler proof of concept
+on:
+  push:
+    paths:
+      - 'poc/**'
+      - '.github/workflows/host-poc.yml'
+  workflow_dispatch:
+jobs:
+  host-compiler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run C and C++ smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror poc/hello.c -o /tmp/codelab-c
+          c++ -std=c++17 -Wall -Wextra -Werror poc/hello.cpp -o /tmp/codelab-cpp
+          test "$(/tmp/codelab-c)" = "Hello from C!"
+          test "$(/tmp/codelab-cpp)" = "Hello from C++!"
