@@ -1,0 +1,25 @@
+FROM ALGORITHMS TO PROGRAMMING LANGUAGES
+
+A programming language is a formal language for expressing computations as programs, with rules for syntax (which constructions are valid) and semantics (what valid constructions mean).
+
+Algorithm: the logic of a solution.
+Pseudocode: a human-readable way to express that logic.
+Source code: instructions written according to a particular programming language's grammar and meaning.
+Compiler: a tool that translates source code into another representation, commonly machine/object code.
+Linker: combines compiled units and required libraries into a linked program.
+Execution: the computer runs the program, interacting with its environment as permitted.
+
+C and C++ are commonly compiled languages. A typical workflow is:
+write source → preprocess/compile → link → run → inspect output and errors.
+Actual implementations can use multiple compilation stages and intermediate representations.
+
+IMPORTANT: Syntax is not the same as algorithm correctness. A compiler can accept a program that computes the wrong result. Equally, a correct algorithm may be expressed in invalid source code.
+
+Consider the statement:
+    amount = amount * 1.10;
+The semicolon is part of C/C++ syntax. The multiplication and assignment express a step in our compound-interest algorithm.
+
+CHECKPOINT:
+Why can't the pseudocode keyword OUTPUT automatically be compiled as C? Because OUTPUT is not a built-in C statement; C requires appropriate language constructs and library calls.
+
+Continue to the formal history and definition of C and C++.
