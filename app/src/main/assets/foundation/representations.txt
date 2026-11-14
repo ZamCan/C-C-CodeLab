@@ -1,0 +1,34 @@
+WAYS TO PRESENT AN ALGORITHM
+
+There is no single universally mandated number of methods. For this course we teach five practical representations; natural-language prose and structured steps overlap in many textbooks.
+
+One hypothetical problem: determine whether three requirements are met:
+S = eligible subject combination
+G = sufficient grades
+A = complete application
+The sample output 'Eligible for review' is NOT an actual admission decision.
+
+METHOD 1 — NATURAL LANGUAGE
+Read the student's subject information, grades, and application status. If all three requirements are satisfied, report eligible for review. Otherwise report requirements not met.
+
+METHOD 2 — STRUCTURED NUMBERED STEPS
+1. Start.
+2. Read S, G, A.
+3. Validate that each value is true or false.
+4. If S and G and A are all true, choose 'Eligible for review'.
+5. Otherwise choose 'Requirements not met'.
+6. Display the result.
+7. Stop.
+
+METHOD 3 — FLOWCHART
+Use an oval for Start/End, parallelogram for Input/Output, rectangle for processing, and diamond for decisions. Connect them with directional arrows. A simple flow:
+(Start) → [Input S,G,A] → <S AND G AND A?> → Yes: [Output eligible] / No: [Output not met] → (End)
+The symbols are conventional, but conventions can vary. Always label Yes/No arrows clearly.
+
+METHOD 4 — DECISION TABLE
+See the next lesson for all eight combinations of three Boolean conditions and the corresponding action. Decision tables are especially useful when several conditions interact.
+
+METHOD 5 — PSEUDOCODE
+See the final foundation lesson. Pseudocode uses structured, readable instructions that resemble a program but are not directly compiled.
+
+COMPARE: A flowchart emphasizes control flow. A decision table emphasizes condition combinations. Pseudocode emphasizes stepwise executable logic. All describe the same underlying decision.
