@@ -1,0 +1,31 @@
+DECISION TABLES — THREE CONDITIONS, EIGHT RULES
+
+A decision table systematically maps combinations of conditions to actions. For three independent yes/no conditions, there are 2³ = 8 possible combinations.
+
+Hypothetical example, not an official admission rule:
+S = relevant subject requirement met
+G = required grade threshold met
+A = application complete
+Action E = eligible for review if and only if S AND G AND A.
+
+RULE | S | G | A | ACTION
+R1   | Y | Y | Y | E
+R2   | Y | Y | N | Not met
+R3   | Y | N | Y | Not met
+R4   | Y | N | N | Not met
+R5   | N | Y | Y | Not met
+R6   | N | Y | N | Not met
+R7   | N | N | Y | Not met
+R8   | N | N | N | Not met
+
+Read R3: the subject requirement is met and the application is complete, but grades are insufficient; therefore the hypothetical combined rule fails.
+
+Decision table components:
+- Condition stub: the questions or conditions being checked.
+- Condition entries: Y/N or other relevant values for each rule.
+- Action stub: the possible actions.
+- Action entries: which action is selected under each rule.
+
+Completeness: include every relevant combination, or justify a 'don't care' symbol when a condition genuinely cannot affect an action. Consistency: avoid contradictory actions for the same rule.
+
+Exercise: Modify the hypothetical policy so that an incomplete application is 'Pending documents', regardless of S or G. How many rules change? Explain which conditions become irrelevant when A = N.
