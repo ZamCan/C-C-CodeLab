@@ -1,0 +1,43 @@
+PSEUDOCODE — THE FINAL ALGORITHM REPRESENTATION
+
+Pseudocode is a human-readable, structured description of an algorithm using programming-like operations. It is not one standardized language and usually cannot be compiled directly.
+
+Hypothetical admission review example:
+
+BEGIN
+    INPUT subject_eligible
+    INPUT grades_sufficient
+    INPUT application_complete
+
+    IF subject_eligible AND grades_sufficient AND application_complete THEN
+        OUTPUT "Eligible for review"
+    ELSE
+        OUTPUT "Requirements not met"
+    ENDIF
+END
+
+EXPLAIN EVERY PART:
+BEGIN and END mark the overall algorithm.
+INPUT means obtain a value; it does not prescribe a keyboard API.
+IF evaluates a condition.
+AND requires all three Boolean values to be true.
+THEN introduces the true branch.
+ELSE introduces the alternative.
+OUTPUT displays or communicates the chosen result.
+ENDIF closes the decision.
+Four-space indentation makes the nested branches easier to read; it is a convention, not a universal pseudocode grammar.
+
+Compare the decision table: only rule R1 produces 'Eligible for review'. The IF condition expresses that same rule compactly.
+
+Second example — compound interest:
+SET amount = 1000
+SET years = 0
+WHILE amount <= 2000 DO
+    SET amount = amount * 1.10
+    SET years = years + 1
+ENDWHILE
+OUTPUT years
+
+Notice the difference between a precise mathematical algorithm and a real program. In C or C++, the source must also declare variable types, use the language's operators, obey its syntax, and handle input/output appropriately.
+
+NEXT: Learn what a programming language is and why C and C++ are distinct languages.
