@@ -1,0 +1,22 @@
+ALGORITHM — A PRECISE PLAN FOR SOLVING A PROBLEM
+
+Learning goal: Define an algorithm and distinguish a problem, an algorithm, and a computer program.
+
+Imagine a student wants to determine whether an application meets a university's stated entry conditions. Before writing code, we need to identify the inputs (subjects, grades, and whether the application is complete), the rules, and the possible outputs.
+
+An algorithm is a finite, well-specified sequence of effective steps for solving a problem or computing a result. A useful algorithm describes the inputs, operations, decisions, and outputs clearly enough that a person or machine could follow it.
+
+Five useful characteristics:
+1. Inputs are identified (sometimes there are none).
+2. Outputs or observable results are specified.
+3. Each step is sufficiently precise.
+4. The operations are executable in the intended setting.
+5. The procedure terminates for the intended inputs.
+
+An algorithm is NOT automatically a computer program. A recipe for computing a result can be explained in words, a diagram, or pseudocode before it is implemented in C or C++.
+
+THINK: If the rule simply says 'check whether the student is good enough,' what information is missing? The word 'good enough' has no precise meaning until requirements are defined.
+
+Practice: Write four steps for converting Celsius to Fahrenheit. Identify the input, computation F = (9/5) × C + 32, and output. Explain why using integer division 9/5 in C can produce an incorrect result.
+
+Note: Real admissions decisions must follow current official university and regulatory rules. Examples here use hypothetical criteria only.
