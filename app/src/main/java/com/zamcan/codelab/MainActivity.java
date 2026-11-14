@@ -17,7 +17,7 @@ import java.util.regex.*;
 
 /** Offline academy and source workspace. No fabricated compiler or certificate results. */
 public final class MainActivity extends Activity {
-    private static final int INK=0xfff1f5ff, MUTED=0xffbac6df, MINT=0xff8cf2d5, LILAC=0xffbcadff;
+    private static final int INK=0xfff6f7ff, MUTED=0xffb5c5e8, MINT=0xff67c8ff, LILAC=0xffc2a5ff;
     private LinearLayout content;
     private ProjectStore store;
     private WorkspaceRepository workspaces;
@@ -62,8 +62,8 @@ public final class MainActivity extends Activity {
     private void message(String title,String body) { new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("Got it",null).show(); }
     private boolean leaveEditor() { return editor==null || !dirty || saveSource(true); }
     private GradientDrawable glass(boolean accent) {
-        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,accent ? new int[]{0xdd254752,0xdd252440} : new int[]{0xc92b354f,0xc91a2239});
-        d.setCornerRadius(dp(24)); d.setStroke(dp(1),accent ? 0x668cf2d5 : 0x36d0dcff); return d;
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,accent ? new int[]{0xdd172c59,0xdd29204c} : new int[]{0xc9202c4f,0xc9111833});
+        d.setCornerRadius(dp(24)); d.setStroke(dp(1),accent ? 0x6682aaff : 0x36d0dcff); return d;
     }
     private TextView label(String text,int size,int color) {
         TextView v=new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color);
@@ -100,7 +100,7 @@ public final class MainActivity extends Activity {
         setContentView(root);
     }
     private void home() {
-        shell("home","ZAMCAN ACADEMY","Small steps.\nReal programs.","Your C & C++ learning space. Built for focused, offline practice.");
+        shell("home","BY ZAMCAN ACADEMY","C/C++ CodeLab","Learn • Code • Compile • Build\nYour offline-first C and C++ programming laboratory.");
         LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,getString(R.string.studio),23); body(studio,"A quiet workspace for your C and C++ source files. Save, edit, and export on your phone."); action(studio,"Open workspace",false,this::studio);
         LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,getString(R.string.academy),23); body(academy,"20 foundation lessons · offline quizzes\nTwo languages. One clear starting point."); action(academy,"Explore the academy",false,this::academy);
         body(content,"LOCAL FIRST  •  No account required\nLearning and source files stay on this device.");
