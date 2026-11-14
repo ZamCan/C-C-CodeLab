@@ -1,0 +1,14 @@
+Host verification observed on 2026-11-14
+python3 tools/verify_lessons.py
+PASS: all 20 worked examples compile with warnings treated as errors and exit successfully on the host.
+
+python3 tools/verify_projects.py
+PASS: ten C/C++ reference builds and exact transcripts; calculator error statuses and corrupt record rejection verified on host.
+
+node --test backend/test/policy.test.mjs
+8 tests passed, 0 failed.
+
+python3 tools/test_backend_schema.py
+Ran 6 tests. OK.
+
+These recorded outputs are host checks, not Android-native compiler, live Cloudflare, or physical-device evidence.

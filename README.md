@@ -23,3 +23,11 @@ Offline-first Android academy with two primary home destinations: **Code Studio*
 
 ## Current verified scope
 Engineering documentation, sample C/C++ source and host smoke-test workflow are committed. Android APK, offline compiler integration, and online certificate service are **not verified**.
+
+## Android preview implementation (2026-11-14)
+
+Native Java Android source is now in `app/`, with a dark glass-style UI, two home destinations, persistent project/source editing, SQLite learning progress, introductory C/C++ lessons, detailed syntax and math notes, and five project guides with starter/reference files. The initially available Java implementation is retained while engine boundaries are improved; Compose remains a future option, not a reason to discard the working build.
+
+Build: `./gradlew testDebugUnitTest lintDebug assembleDebug`. Host teaching checks: `python3 tools/verify_lessons.py` and `python3 tools/verify_projects.py`. Backend policy tests: `node --test backend/test/*.test.mjs`; schema tests: `python3 tools/test_backend_schema.py`.
+
+The Cloudflare foundation in `backend/` is undeployed and disabled by default. Native Android C/C++ execution, live certification, visual/device validation, and several advanced editor/course features remain open. See [delivery evidence](docs/DELIVERY_PLAN.md) and [compiler investigation](docs/COMPILER_RESEARCH.md). This is not a production-readiness claim.

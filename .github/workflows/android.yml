@@ -11,9 +11,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
       - run: bash gradlew testDebugUnitTest lintDebug assembleDebug --console=plain
+      - run: python3 tools/verify_lessons.py
+      - run: python3 tools/verify_projects.py
+      - run: node --test backend/test/policy.test.mjs
+      - run: python3 tools/test_backend_schema.py
       - uses: actions/upload-artifact@v4
         with:
           name: codelab-development-apk
