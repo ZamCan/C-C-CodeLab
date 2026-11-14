@@ -165,8 +165,34 @@ public final class MainActivity extends Activity {
     }
     private int completed() {int count=0;for(int i=0;i<10;i++)if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i)))count++;return count;}
 
+    /** Optional algorithmic-thinking foundation; does not award C/C++ course mastery. */
+    private void foundation(int index) {
+        String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode and the programming bridge"};
+        String[] files={"algorithm","computer","representations","decision-table","pseudocode"};
+        if(index<0||index>=titles.length){programmingIntroduction();return;}
+        shell("foundation","OPTIONAL FOUNDATION  /  "+(index+1)+" OF "+titles.length,titles[index],"Think clearly before writing code. You may skip this foundation.");
+        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/"+files[index]+".txt"));}catch(IOException e){error(e);}
+        action(content,index==titles.length-1?"Continue to programming languages":"Next foundation topic  →",true,()->foundation(index+1));
+        action(content,"Skip foundation — introduce C & C++",false,this::programmingIntroduction);
+        action(content,"Back to academy",false,this::academy);
+    }
+    /** Required shared introduction before entering either formal programming pathway. */
+    private void programmingIntroduction() {
+        shell("programming-intro","REQUIRED INTRODUCTION  /  C & C++","From algorithms to programs.","Discover the languages, their history, and how source becomes executable.");
+        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/programming-languages.txt"));}catch(IOException e){error(e);}
+        action(content,"Continue to C and C++ history  →",true,this::languageHistory);
+        action(content,"Back to academy",false,this::academy);
+    }
+    private void languageHistory() {
+        shell("language-history","REQUIRED INTRODUCTION  /  C & C++","Meet C and C++.","Two related languages with different strengths and rules.");
+        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/language-history.txt"));}catch(IOException e){error(e);}
+        action(content,"Continue to course pathways  →",true,()->{preferences.edit().putBoolean("intro_completed",true).apply();academy();});
+        action(content,"Previous: programming languages",false,this::programmingIntroduction);
+    }
     private void academy() {
         shell("academy","LEARNING ACADEMY  /  YOUR PATH","Understand.\nThen build.","Small lessons. Useful ideas. Progress at your pace.");
+        LinearLayout intro=panel(false);title(intro,"Start with problem solving",22);body(intro,"Optional: algorithms, computers, five ways to express solutions, decision tables and pseudocode.");action(intro,"Explore algorithms (skippable)",false,()->foundation(0));
+        if(!preferences.getBoolean("intro_completed",false)){LinearLayout required=panel(true);title(required,"C & C++ introduction",22);body(required,"Required: what programming languages are, the history of C and C++, and their relationship.");action(required,"Continue introduction",true,this::programmingIntroduction);return;}
         LinearLayout p=panel(true); title(p,cpp?"C++ foundations":"C foundations",25);body(p,completed()+" of 10 lessons completed");
         ProgressBar courseProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);courseProgress.setMax(10);courseProgress.setProgress(completed());courseProgress.setProgressTintList(ColorStateList.valueOf(MINT));p.addView(courseProgress,new LinearLayout.LayoutParams(-1,dp(8)));
         action(p,cpp?"Switch to C":"Switch to C++",false,()->{cpp=!cpp;preferences.edit().putBoolean("cpp",cpp).apply();academy();});
@@ -181,7 +207,11 @@ public final class MainActivity extends Activity {
         LinearLayout challenge=panel(true);title(challenge,"Your turn",22);body(challenge,lesson.challenge);
         LinearLayout quiz=panel(false);quiz.addView(label("PRACTICE CHECK  /  OFFLINE",12,LILAC));title(quiz,lesson.question,19);RadioGroup choices=new RadioGroup(this);int[] order=index%2==0?new int[]{0,1}:new int[]{1,0};for(int option:order){RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(option);button.setText(lesson.options[option]);button.setTextColor(INK);button.setTextSize(16);button.setMinHeight(dp(52));choices.addView(button);}quiz.addView(choices);TextView feedback=label("Choose an answer to check your understanding.",14,MUTED);quiz.addView(feedback);
         action(quiz,"Check answer",true,()->{if(choices.getCheckedRadioButtonId()==-1){feedback.setText(R.string.select_answer);return;}RadioButton selected=choices.findViewById(choices.getCheckedRadioButtonId());boolean right=((Integer)selected.getTag())==lesson.answer;feedback.setText(getString(right?R.string.correct_feedback:R.string.retry_feedback,lesson.feedback));feedback.setTextColor(right?MINT:0xffffd5a4);if(right)progress.complete(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));feedback.announceForAccessibility(feedback.getText());});
-        if(index<9)action(content,"Next lesson  →",false,()->lesson(index+1));action(content,"Back to course",false,this::academy);
+        if(index<9) {
+            if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index)))action(content,"Continue to next lesson  →",true,()->lesson(index+1));
+            else action(content,"Complete the practice check to continue",false,()->message("Practice checkpoint","Answer this lesson's question correctly to unlock the next lesson. You can return and review at any time."));
+        }
+        action(content,"Back to course",false,this::academy);
     }
     private void copyLesson(int index) {
         String base=(cpp?"cpp":"c")+"-lesson-"+(index+1),extension=cpp?".cpp":".c",name=base+extension;int n=2;
