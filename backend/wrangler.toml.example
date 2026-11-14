@@ -1,0 +1,13 @@
+name = "zamcan-academy-api-preview"
+main = "src/worker.mjs"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+EXAMS_ENABLED = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zamcan-academy-preview"
+database_id = "REPLACE_WITH_OWNER_CREATED_DATABASE_ID"
+migrations_dir = "migrations"

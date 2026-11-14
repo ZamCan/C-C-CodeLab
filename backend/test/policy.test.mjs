@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {selectQuestions,assertLive,grade,publicQuestion} from '../src/policy.mjs';
+import worker from '../src/worker.mjs';
+const slots=[{style:'multiple_choice',objective:'loops',difficulty:'easy',count:13},{style:'true_false',objective:'types',difficulty:'medium',count:12}];
+const bank=slots.flatMap((s,g)=>Array.from({length:30},(_,i)=>({id:`q${g}_${i}`,style:s.style,objective:s.objective,difficulty:s.difficulty,prompt:'Server-only reviewed question',choices_json:'["A","B"]',correct_index:0})));
+test('selects 25 unique fresh questions with the required coverage',()=>{const selected=selectQuestions(bank,slots,new Set(['q0_0']),()=>0);assert.equal(selected.length,25);assert.equal(new Set(selected.map(q=>q.id)).size,25);assert.ok(!selected.some(q=>q.id==='q0_0'));assert.equal(selected.filter(q=>q.style==='multiple_choice').length,13);});
+test('fails closed when freshness cannot be met',()=>assert.throws(()=>selectQuestions(bank.slice(0,10),slots),/insufficient_fresh_questions/));
+test('never sends answer keys to the learner',()=>{const question=publicQuestion(bank[0]);assert.deepEqual(Object.keys(question).sort(),['choices','id','prompt','style']);});
+test('deadline equality is expired and reopening cannot reset it',()=>{assert.doesNotThrow(()=>assertLive({status:'active',deadline_at:100},99));assert.throws(()=>assertLive({status:'active',deadline_at:100},100),/expired/);assert.throws(()=>assertLive({status:'submitted',deadline_at:100},50),/finalized/);});
+test('grading uses exact values and missing answers are wrong',()=>{const questions=Array.from({length:25},(_,i)=>({question_id:'q'+i,correct_index:0}));const answers=Object.fromEntries(questions.slice(0,20).map(q=>[q.question_id,0]));assert.deepEqual(grade(questions,answers,80),{score:80,passed:true});answers.q0='0';assert.deepEqual(grade(questions,answers,80),{score:76,passed:false});});
+test('practical coding requires a dedicated grader',()=>assert.throws(()=>selectQuestions(bank,[{...slots[0],style:'practical_coding'},slots[1]]),/unsupported_blueprint/));
+test('disabled exam and credential endpoints fail closed',async()=>{for(const path of ['/v1/exams/attempts','/v1/credentials/issue','/v1/auth/session']){const result=await worker.fetch(new Request('https://test.invalid'+path,{method:'POST'}),{});assert.equal(result.status,503);}});
+test('health never claims credential issuance is available',async()=>{const result=await worker.fetch(new Request('https://test.invalid/health'),{});assert.equal((await result.json()).credential_issuance,false);});

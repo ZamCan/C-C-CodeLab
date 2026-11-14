@@ -1,0 +1,44 @@
+export class ApiError extends Error {
+  constructor(status, code) { super(code); this.status = status; this.code = code; }
+}
+export const automaticStyles = new Set(['multiple_choice', 'true_false', 'output_prediction', 'error_identification', 'algorithm_selection']);
+export function randomIndex(length) {
+  if (!Number.isSafeInteger(length) || length < 1 || length > 0xffffffff) throw new Error('invalid_random_range');
+  const ceiling = 0x100000000 - (0x100000000 % length);
+  const bytes = new Uint32Array(1);
+  do { crypto.getRandomValues(bytes); } while (bytes[0] >= ceiling);
+  return bytes[0] % length;
+}
+export function selectQuestions(bank, slots, exposed = new Set(), choose = randomIndex) {
+  if (!Array.isArray(slots) || slots.length === 0 || slots.reduce((n, s) => n + s.count, 0) !== 25)
+    throw new ApiError(503, 'blueprint_requires_25_questions');
+  if (new Set(slots.map(s => s.style)).size !== 2) throw new ApiError(503, 'blueprint_requires_two_reviewed_styles');
+  const seen = new Set(exposed), selected = [];
+  for (const slot of slots) {
+    if (!automaticStyles.has(slot.style) || !Number.isInteger(slot.count) || slot.count < 1 || !slot.objective || !['easy','medium','hard'].includes(slot.difficulty))
+      throw new ApiError(503, 'unsupported_blueprint');
+    const available = bank.filter(q => !seen.has(q.id) && q.style === slot.style && q.objective === slot.objective && q.difficulty === slot.difficulty);
+    if (available.length < slot.count) throw new ApiError(409, 'insufficient_fresh_questions');
+    for (let n = 0; n < slot.count; n++) {
+      const [question] = available.splice(choose(available.length), 1);
+      if (seen.has(question.id)) throw new ApiError(503, 'duplicate_question_id');
+      if (!/^[A-Za-z0-9_-]{1,100}$/.test(question.id)) throw new ApiError(503, 'invalid_question_id');
+      const choices = JSON.parse(question.choices_json);
+      if (!Array.isArray(choices) || choices.length < 2 || choices.length > 8 || choices.some(c => typeof c !== 'string') || !Number.isInteger(question.correct_index) || question.correct_index < 0 || question.correct_index >= choices.length)
+        throw new ApiError(503, 'invalid_question');
+      seen.add(question.id); selected.push(question);
+    }
+  }
+  for (let i = selected.length - 1; i > 0; i--) { const j = choose(i + 1); [selected[i], selected[j]] = [selected[j], selected[i]]; }
+  return selected;
+}
+export function assertLive(attempt, now) {
+  if (attempt.status !== 'active') throw new ApiError(409, 'attempt_finalized');
+  if (now >= attempt.deadline_at) throw new ApiError(410, 'attempt_expired');
+}
+export function grade(questions, answers, passPercent) {
+  if (questions.length !== 25 || !Number.isInteger(passPercent) || passPercent < 1 || passPercent > 100) throw new ApiError(503, 'invalid_assessment');
+  const correct = questions.reduce((n, q) => n + (Object.hasOwn(answers, q.question_id) && answers[q.question_id] === q.correct_index ? 1 : 0), 0);
+  return { score: correct * 4, passed: correct * 4 >= passPercent };
+}
+export function publicQuestion(q) { return { id: q.question_id ?? q.id, prompt: q.prompt, choices: JSON.parse(q.choices_json), style: q.style }; }
