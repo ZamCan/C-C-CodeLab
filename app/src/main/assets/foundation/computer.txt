@@ -1,0 +1,18 @@
+WHY DO ALGORITHMS COME BEFORE COMPUTER PROGRAMS?
+
+One-sentence connection:
+An algorithm describes the logic of a solution; a computer performs that logic when it is represented as executable instructions.
+
+A computer processes data according to instructions. A programming language lets us express those instructions precisely enough for a compiler or other language implementation to process.
+
+Problem → algorithm → source code → translation/build → execution → result.
+
+Example: We want to find the first year in which an initial deposit of 1000 grows beyond 2000 at 10% annual compound interest.
+
+Input: initial amount 1000, annual rate 0.10, target 2000.
+Algorithm: start years at zero; while amount is not greater than 2000, multiply the amount by 1.10 and increment years; report years.
+Output: number of completed annual increases required.
+
+Why plan first? A program can compile correctly while implementing the wrong condition. For example, using amount < 2000 instead of amount <= 2000 may give a different result when the amount reaches exactly 2000. The algorithm specifies the intended stopping rule before syntax is introduced.
+
+Reflection: Does a compiler know whether the student's mathematical question was understood correctly? No. It checks language constraints, not the intent of the original problem.
