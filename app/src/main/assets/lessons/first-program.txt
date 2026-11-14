@@ -1,0 +1,34 @@
+FIRST PROGRAM — C11 AND C++17
+
+1. THE PROBLEM
+Ask the computer to display one greeting and report successful completion. The algorithm is: start → write a line → finish successfully. Source is human-readable instructions; a compiler translates it, a linker resolves required code, and a runtime executes the result. A printed example in a lesson is not execution.
+
+2. #include
+Name: preprocessing directive. Meaning: make a header's contents available to the translation unit. Put it at the start of a preprocessing line, conventionally before declarations that depend on it. Removing the declaration of printf is a constraint violation in modern C; removing iostream prevents portable use of std::cout. Moving a header inside a function is not a safe general substitute: headers may contain declarations only permitted at namespace/file scope. Test: remove the header and inspect the real compiler diagnostic.
+
+3. <stdio.h> AND <iostream>
+The angle brackets delimit a header name in this directive; they are not comparison operators here. C's stdio.h declares standard formatted I/O. C++'s iostream declares standard streams. The compiler implementation determines header search locations; quotes and angle brackets have different search conventions. A header supplies declarations, not necessarily the implementation's entire machine code. Test: misspell the header and distinguish a missing-header error from a linker error.
+
+4. int main(void) AND int main()
+int is the return type; main is the special hosted-program entry function; parentheses delimit parameters. In C11, (void) explicitly says no parameters. In a C11 declaration, empty parentheses do not provide a parameter prototype; use (void) for clarity. C23 changes these historical declaration rules. In C++, empty parentheses specify no parameters. The example targets hosted C11/C++17, not every embedded startup convention. Test: change main's return type to void and inspect diagnostics with strict warnings.
+
+5. { AND }
+Names: braces. They delimit a compound statement and introduce block scope. They are required around the function body. Removing a brace changes the grammar or which statements belong to a block. Four-space indentation makes this structure visible but does not determine scope. Test: change indentation without changing braces; behavior remains the same. Then move a statement outside a conditional's braces and predict the difference.
+
+6. printf("Hello\n");
+printf is a function declared by stdio.h. Parentheses enclose its arguments. Double quotes delimit a string literal; \n is an escape sequence representing a newline in the string. The semicolon ends the expression statement. Moving the semicolon before the call ends a different statement; removing it normally causes a syntax diagnostic, sometimes reported at the following token. A format specifier must match the corresponding argument type. Test: compare a newline escape with the two literal characters backslash and n, written \\n in the source string.
+
+7. std::cout << "Hello\n";
+std is the standard namespace; :: is scope resolution; cout is a stream object. << is an overloaded stream insertion operator here, though it means a bit shift for some integer operands. The semicolon ends the expression. using namespace std; is optional and can create name collisions, especially in headers. Prefer explicit qualification in beginner examples. Test: remove std:: without adding a using declaration and inspect the diagnostic.
+
+8. return 0;
+return ends the current function and supplies a result. Zero from main denotes successful termination. In hosted C99 and later, and in C++, reaching the closing brace of main has the effect of returning zero. That special rule is not a license to omit required returns in every non-void function. Test: return 3 and observe process exit status separately from stdout.
+
+9. DIAGNOSTIC EXPERIMENT
+Start from a saved working copy. Remove exactly one semicolon. Compile and read filename, line, column, and diagnostic text. Restore it. Then change only the greeting. Compile again and run. Keep expected output separate from observed stdout, stderr, and exit status. This preview cannot perform those Android execution steps until the toolchain is integrated.
+
+10. RECALL AND INDEPENDENCE
+Without looking back: identify the header name, function name, string literal, compound statement, expression terminator, and exit status. Write a two-line greeting from an empty file. Explain why indenting a line does not move it into or out of a C/C++ block.
+
+READING ANCHORS
+These explanations are original. Further reading: Kernighan and Ritchie, The C Programming Language, second edition (historical ANSI C; supplement with current language rules); Stroustrup, The C++ Programming Language, fourth edition (C++11 era); ISO C and ISO C++ language specifications for the chosen language version. No author or publisher endorsement is implied.

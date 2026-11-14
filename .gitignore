@@ -1,0 +1,10 @@
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+
+backend/wrangler.toml
+backend/.dev.vars
+backend/.wrangler/
+backend/node_modules/

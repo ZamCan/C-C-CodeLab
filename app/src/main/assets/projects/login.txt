@@ -1,0 +1,47 @@
+Educational login
+
+SPECIFICATION
+Register one memory-only account → validate input → compare demonstration credentials → establish or reject session → logout → clear session on process exit.
+
+ALGORITHM / TEXT FLOWCHART
+Start → read bounded input → validate → apply one domain operation → report → repeat or exit.
+Invalid input → diagnostic/rejection → no invalid state update.
+
+MILESTONES
+1. Model signed-out and signed-in states.
+2. Register one demonstration account.
+3. Require an eight-character demonstration password.
+4. Limit unsuccessful attempts to three.
+5. Implement logout and test restart.
+
+CODE ANATOMY
+This intentionally limited model teaches state transitions, not secure authentication. Passwords exist only in memory; there is no password file. Ordinary string comparison and memset are not cryptographic security. Production systems need reviewed password hashing, salts, identity/session protections, and secure transport. Never reuse a real password here.
+
+INPUT CONTRACT
+These bounded console exercises accept small, representable numbers and whitespace-separated commands. Use the commands in the test. Text tokens cannot contain spaces. Numeric scanf conversion is not a hardened parser for arbitrarily huge values: replace it with strtol/strtod plus end-pointer/range checking as a robustness extension. The reference is procedural code valid as both C11 and C++17; it is not an idiomatic object-oriented C++ solution.
+
+EXPECTED SAMPLE INPUT (NOT LIVE OUTPUT)
+register ada example123
+login ada wrongpass
+login ada example123
+status
+logout
+status
+quit
+
+EXPECTED SAMPLE OUTPUT (NOT LIVE OUTPUT)
+Registered for this session
+Invalid credentials
+Logged in
+Authenticated demo session
+Logged out
+Signed out
+
+DEBUGGING EXERCISE
+Temporarily remove one boundary check. Predict the incorrect state or output, add a failing test, then restore the check. Never use real credentials, financial balances, or private records.
+
+INDEPENDENT TASK
+Begin with the starter, write your algorithm, then implement each milestone. Compare actual compiler output with the expected transcript. The reference solution is available separately. Android execution is unavailable until the toolchain gate is passed; host verification does not change that.
+
+LIMITS
+Console programs only, not Android APKs or GUI generators. No static interface is represented as program output. Files belong in an isolated project working directory. These teaching references need further hardening and review before reuse outside the academy.

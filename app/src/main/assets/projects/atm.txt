@@ -1,0 +1,45 @@
+ATM simulator
+
+SPECIFICATION
+Read command → parse positive integer minor units → check balance/overflow invariant → change balance only on success → print result → repeat.
+
+ALGORITHM / TEXT FLOWCHART
+Start → read bounded input → validate → apply one domain operation → report → repeat or exit.
+Invalid input → diagnostic/rejection → no invalid state update.
+
+MILESTONES
+1. Display a fictional balance.
+2. Add positive deposits.
+3. Reject overdrafts and negative amounts.
+4. Check addition overflow.
+5. Trace state after rejected operations.
+
+CODE ANATOMY
+balance is always nonnegative. amount <= LONG_MAX - balance checks addition before doing it. strcmp returns zero for equal strings. Rejected operations must not mutate balance. The ledger is session-only; persist an auditable transaction history as an extension. Never connect this teaching exercise to real money.
+
+INPUT CONTRACT
+These bounded console exercises accept small, representable numbers and whitespace-separated commands. Use the commands in the test. Text tokens cannot contain spaces. Numeric scanf conversion is not a hardened parser for arbitrarily huge values: replace it with strtol/strtod plus end-pointer/range checking as a robustness extension. The reference is procedural code valid as both C11 and C++17; it is not an idiomatic object-oriented C++ solution.
+
+EXPECTED SAMPLE INPUT (NOT LIVE OUTPUT)
+deposit 1000
+withdraw 400
+balance
+withdraw 1001
+balance
+quit
+
+EXPECTED SAMPLE OUTPUT (NOT LIVE OUTPUT)
+Deposited 1000
+Withdrew 400
+Balance 600
+Rejected
+Balance 600
+
+DEBUGGING EXERCISE
+Temporarily remove one boundary check. Predict the incorrect state or output, add a failing test, then restore the check. Never use real credentials, financial balances, or private records.
+
+INDEPENDENT TASK
+Begin with the starter, write your algorithm, then implement each milestone. Compare actual compiler output with the expected transcript. The reference solution is available separately. Android execution is unavailable until the toolchain gate is passed; host verification does not change that.
+
+LIMITS
+Console programs only, not Android APKs or GUI generators. No static interface is represented as program output. Files belong in an isolated project working directory. These teaching references need further hardening and review before reuse outside the academy.

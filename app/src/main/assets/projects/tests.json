@@ -1,0 +1,32 @@
+[
+  {
+    "id": "calculator",
+    "title": "Calculator",
+    "stdin": "2 + 3\n",
+    "stdout": "5\n"
+  },
+  {
+    "id": "atm",
+    "title": "ATM simulator",
+    "stdin": "deposit 1000\nwithdraw 400\nbalance\nwithdraw 1001\nbalance\nquit\n",
+    "stdout": "Deposited 1000\nWithdrew 400\nBalance 600\nRejected\nBalance 600\n"
+  },
+  {
+    "id": "login",
+    "title": "Educational login",
+    "stdin": "register ada example123\nlogin ada wrongpass\nlogin ada example123\nstatus\nlogout\nstatus\nquit\n",
+    "stdout": "Registered for this session\nInvalid credentials\nLogged in\nAuthenticated demo session\nLogged out\nSigned out\n"
+  },
+  {
+    "id": "grades",
+    "title": "Student results",
+    "stdin": "average\nadd 1 80\nadd 2 60\nadd 1 90\naverage\nfind 1\nsave\nload\nquit\n",
+    "stdout": "No records\nAdded\nAdded\nRejected\nAverage 70.00\n1 80.00 Pass\nSaved\nLoaded\n"
+  },
+  {
+    "id": "library",
+    "title": "Library management",
+    "stdin": "add 1 C_Fundamentals\nborrow 1\nborrow 1\nfind 1\nreturn 1\nsave\nload\nfind 1\nquit\n",
+    "stdout": "Added\nBorrowed\nRejected\n1 C_Fundamentals Borrowed\nReturned\nSaved\nLoaded\n1 C_Fundamentals Available\n"
+  }
+]

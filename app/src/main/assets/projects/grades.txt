@@ -1,0 +1,51 @@
+Student results
+
+SPECIFICATION
+Parse command → validate unique positive ID and finite score 0–100 → update collection → calculate average or lookup → save validated records → validate complete input before load replacement.
+
+ALGORITHM / TEXT FLOWCHART
+Start → read bounded input → validate → apply one domain operation → report → repeat or exit.
+Invalid input → diagnostic/rejection → no invalid state update.
+
+MILESTONES
+1. Add a student record.
+2. Reject duplicates and invalid scores.
+3. Search by ID and calculate average.
+4. Save through a temporary file.
+5. Validate load into a separate collection before replacing current state.
+
+CODE ANATOMY
+The illustrative pass threshold is 50, not an institutional GPA policy. structs group IDs and scores. The array capacity is 100; count is the number of initialized records. A separate incoming array makes failed loads non-destructive. Division occurs only when count is positive.
+
+INPUT CONTRACT
+These bounded console exercises accept small, representable numbers and whitespace-separated commands. Use the commands in the test. Text tokens cannot contain spaces. Numeric scanf conversion is not a hardened parser for arbitrarily huge values: replace it with strtol/strtod plus end-pointer/range checking as a robustness extension. The reference is procedural code valid as both C11 and C++17; it is not an idiomatic object-oriented C++ solution.
+
+EXPECTED SAMPLE INPUT (NOT LIVE OUTPUT)
+average
+add 1 80
+add 2 60
+add 1 90
+average
+find 1
+save
+load
+quit
+
+EXPECTED SAMPLE OUTPUT (NOT LIVE OUTPUT)
+No records
+Added
+Added
+Rejected
+Average 70.00
+1 80.00 Pass
+Saved
+Loaded
+
+DEBUGGING EXERCISE
+Temporarily remove one boundary check. Predict the incorrect state or output, add a failing test, then restore the check. Never use real credentials, financial balances, or private records.
+
+INDEPENDENT TASK
+Begin with the starter, write your algorithm, then implement each milestone. Compare actual compiler output with the expected transcript. The reference solution is available separately. Android execution is unavailable until the toolchain gate is passed; host verification does not change that.
+
+LIMITS
+Console programs only, not Android APKs or GUI generators. No static interface is represented as program output. Files belong in an isolated project working directory. These teaching references need further hardening and review before reuse outside the academy.
