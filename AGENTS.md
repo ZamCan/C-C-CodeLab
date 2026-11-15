@@ -101,3 +101,7 @@ Before implementing or deploying the examination and certification engine, read 
 
 ## Deep curriculum and visual reference requirements — 2026-11-15
 Read [docs/DEEP_CURRICULUM_AND_LEARNING_FLOW.md](docs/DEEP_CURRICULUM_AND_LEARNING_FLOW.md) before modifying learning screens, lesson assets, topic structure or assessments. Each topic must contain 3–5 substantive modules with tested C/C++ examples, syntax anatomy, diagnostics, experiments, exercises and mastery checks. The seven user screenshots are behavioral/layout references only; use original assets and copy. Course completion must not falsely imply trusted certificate issuance.
+
+
+## Professor-led strings/types instruction — 2026-11-15
+Read [docs/PROFESSOR_LED_TYPES_STRINGS.md](docs/PROFESSOR_LED_TYPES_STRINGS.md) before writing any lesson scripts, character illustrations, data-type or string modules. Use a consistent original CodeLab Professor, substantive learner-facing dialogue, pedagogically meaningful original diagrams, exhaustive accurate C17/C++17 type/constant/string coverage and real verified code examples. Do not impersonate a real educator or copy third-party artwork.
