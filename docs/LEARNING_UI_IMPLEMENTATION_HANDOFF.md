@@ -89,3 +89,26 @@ The supplied screenshots show a **progressive reveal** sequence: (a) a question 
 - [ ] Progress, page and reveal state restore after rotation and process recreation.
 - [ ] All displayed Share/Expand/Next actions are functional, and the primary advance control is consistent.
 - [ ] Academic reviewers confirm that examples and source-to-execution explanations are precise and not copied uncritically.
+
+
+## Third screenshot batch — welcome, mentor framing, formative quiz, feedback (2026-11-15)
+
+Reference screenshots show a nine-segment introductory lesson with an illustrated welcome, a "small tip" that reveals a second and third paragraph on subsequent taps, an illustrated "Meet C++" history beat that reveals information incrementally, and a single-select four-option question ("C++ was developed as an extension for?"). The Check Result action is initially disabled and becomes enabled after selecting an answer; selection uses a prominent filled state. A separate correct-answer presentation appears after checking. These observations are **UI references**, not permission to copy artwork, dialogue, or branding.
+
+### Required CodeLab learning model
+1. **Welcome beat:** a short original welcome and clear expectations; no fabricated historical figure speaking in first person or promise of guaranteed mastery.
+2. **Study tip beat:** teach a concrete learning strategy: read the explanation, predict what code will do, run it, inspect errors, and modify it. Provide an actionable **Open in Code Studio** control where the lesson has runnable code.
+3. **Meet C / Meet C++ beats:** original visual treatment, accurate historical attribution in third person. Dennis Ritchie developed C at Bell Labs in the early 1970s. Bjarne Stroustrup began work on C with Classes at Bell Labs in 1979; the name C++ was adopted in 1983. Present these as historical background, not a fabricated personal speech.
+4. **Formative quiz beat:** radio-style options with single selection, disabled Check Answer until selection, visibly selected state, keyboard/screen-reader accessibility, no automatic submit on selection, and explanation-based feedback for both correct and incorrect choices.
+5. **Result beat:** show whether the answer was correct, what the correct answer is, and **why**; support Review Explanation and Continue. No misleading celebratory screen that omits the explanation.
+6. **Learning record:** save completed beats and quiz attempts locally; distinguish practice feedback from scored certificate exams. A wrong answer should not block course access.
+7. **Layout:** bottom primary action stays above system navigation and IME; adaptive insets and scrolling protect content on compact devices; no excessive blank vertical space when the lesson can use it meaningfully.
+8. **Brand:** original CodeLab blue/violet identity, accessible light/dark contrast and modest illustration sizes; no copying of the reference app's mascot or imagery.
+
+### Additional acceptance tests
+- [ ] The quiz's Check Answer is disabled until an option is selected and enabled immediately afterward.
+- [ ] Selecting another option replaces the previous selection, without prematurely grading.
+- [ ] Correct and incorrect feedback both give an accurate reason and a route to revisit the concept.
+- [ ] Practice attempts persist locally and remain separate from secure online certification attempts.
+- [ ] Code-along buttons load a real editable source example; run is not advertised as functional until an actual compiler is integrated and tested.
+- [ ] Historical introduction uses third-person attribution and no impersonation or invented endorsement.
