@@ -18,7 +18,8 @@ public final class WasiCompilerEngine implements CompilerEngine {
     private static final int MAX_OUTPUT=128*1024;
     private final File clang,clangCpp,sysroot,iwasm,workspace;
     private final boolean verified,isolatedRunner;
-    private final Map<String,File> artifacts=new HashMap<>();
+    private final Map<String,File> artifacts=new LinkedHashMap<>();
+    private static final int MAX_ARTIFACTS=20;
 
     public WasiCompilerEngine(Context context,File clang,File clangCpp,File sysroot,
                               File iwasm,boolean verified,boolean isolatedRunner) {
@@ -38,6 +39,7 @@ public final class WasiCompilerEngine implements CompilerEngine {
     @Override public synchronized CompileResult compile(Request request) throws Exception {
         workerThread();
         if (!available()) throw new IllegalStateException("Verified offline WASI toolchain and isolated runtime unavailable");
+        if (request==null) throw new IllegalArgumentException("Missing compile request");
         if (!workspace.isDirectory() && !workspace.mkdirs()) throw new IOException("Cannot create workspace");
         File session=new File(workspace,UUID.randomUUID().toString());
         if (!session.mkdir()) throw new IOException("Cannot create compile session");
@@ -48,7 +50,17 @@ public final class WasiCompilerEngine implements CompilerEngine {
                 session,"",20000);
         boolean ok=!result.timedOut && result.exitCode==0 && wasm.isFile() && wasm.length()>0;
         String id=null;
-        if(ok) { id=UUID.randomUUID().toString(); artifacts.put(id,wasm); }
+        if(ok) {
+            id=UUID.randomUUID().toString();
+            if(artifacts.size()>=MAX_ARTIFACTS) {
+                String oldest=artifacts.keySet().iterator().next();
+                File stale=artifacts.remove(oldest);
+                if(stale!=null) { stale.delete(); File dir=stale.getParentFile(); if(dir!=null)dir.delete(); }
+            }
+            artifacts.put(id,wasm);
+        } else {
+            source.delete();wasm.delete();session.delete();
+        }
         String stderr=result.stderr+(result.timedOut?"\nCompilation timed out.":"");
         return new CompileResult(ok,result.exitCode,result.stdout,stderr,ClangDiagnostics.parse(stderr),id);
     }
