@@ -198,3 +198,29 @@ This entry supersedes conflicting historical status above.
 | 8. Continuity | ReadingView offset preferences; MainActivity restore | Course/reading offsets, notes, bookmarks and selections persist. Full process-death quiz/feedback and all intro routes require further work. |
 
 New adaptive launcher foreground/background/monochrome assets were preserved from remote. Launcher mask verification remains pending. This table records partial implementation, not acceptance of all eight states.
+## Midnight launch gate — 2026-11-15 (Africa/Dar_es_Salaam)
+**Requested deadline:** 2026-11-16 00:00 EAT. This is a deadline, not a release certification. Do not publish a production claim merely to meet it.
+
+**Latest verified source commit:** `b3b07b85c9bdb8d51488d72cf62be912d19c0978` — home CTA cleanup, Compiler file menu, quiz Check disabled until selection, shorter lesson labels. GitHub source commit is verified; Android compilation, UI screenshots and on-device testing of this change are **not yet verified**.
+
+### Required immediate checks for active agent
+1. Read latest `AGENTS.md` on `preview/android-foundation`, including screenshot-derived learning states; pull latest branch before editing. Coordinate concurrent writes, preserve existing commits and report conflicts.
+2. Run `bash gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug`; upload signed-off debug APK and SHA-256 from actual build; fix build failures before release. CI workflow uploads `codelab-debug-apk` if generated.
+3. Install on Android phone and test launcher adaptive mask, minimal home, file drawer, saved sources, progress, lesson navigation, quiz selection and completion; capture screenshots.
+4. **Block production launch** until real Clang C/C++ compilation/run, Cloudflare exams/credentials/verifier, AdMob consent/test banners, security/privacy and distribution signing are implemented and tested. If incomplete, label deliverable **limited offline learning/editor preview** and state exclusions prominently.
+5. Publish no fabricated APK, screenshot, test logs, certificate, compiler results or deployment URLs. Do not substitute a source commit for a completed release.
+
+### Remaining blockers at time of this entry
+- Real on-device Clang/C++ toolchain and isolated execution: **not verified / absent in current app**.
+- Cloudflare Worker deployed, live certificate issuer, signer, PDF, public verifier: **not verified**.
+- AdMob SDK and consent flow: **not integrated in current app**.
+- Fresh Android build and physical-device UI validation after the latest source change: **not verified**.
+
+
+## Main consolidation and compiler integration — 2026-11-15
+
+User explicitly requested main as the only branch. Local checkpoint `d3ebb26` is being merged with remote `a90c1df`; all remote compiler contracts, WAMR adapter, CI workflows, snippet models, tests and ad SDK scaffolding are retained. MainActivity keeps the measured native reader and actual bundled WebAssembly compiler, superseding the unprovisioned WAMR editor path. WAMR remains disabled pending Android native binaries/isolation. The remote rewarded-lesson lock is not activated because AGENTS requires all learning free and offline; rewarded ads must be optional. Existing local progress is preserved.
+
+The Clang 22.1.8 / LLD release and WASI SDK 33 sysroot are now bundled (gzip compressed) with runtime SHA-256 validation and notices. Compilation and program execution run in a disposable Web Worker under a restricted local WebView origin; program WASI imports are checked, host files/network/Java bridges are unavailable. Programs use a fresh virtual filesystem. Limits: 32 files, 1 MiB project, 64 KiB stdin/output, 64 MiB program memory, 128 MiB virtual filesystem linear memory, 8 MiB virtual file, 16 MiB open write buffers, 120-second compile/link and 3-second execution watchdogs. Compiler renderer total memory still requires profiling/hardening.
+
+Build before latest merge: unit/lint/assemble passed in 5m15s; APK SHA-256 025fa4528aba5b282805bc9d2fa8df237ab16ce59f27df6d69570584bfd78ace. This hash is historical, not the final merged APK. Packaged-engine tests are running. Node initially aborted with a host futex error after three passes; the failure log is retained and cases are rerun in separate processes. No Android WebView runtime or installation claim is made.

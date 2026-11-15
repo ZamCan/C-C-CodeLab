@@ -172,16 +172,17 @@ public final class MainActivity extends Activity {
     private void status() {
         shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.4.0");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
-        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThis build requests no network or storage permissions and includes no analytics or advertising SDK.");
+        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThe bundled compiler runs offline. Network permissions and Google test-ad SDK scaffolding are present for upcoming online features; ad consent and display integration remain pending.");
         action(content,"Back home",true,this::home);
     }
     private void studio() { try { if(store.list().isEmpty())store.write("main.c",Curriculum.C[0].code);openEditor(store.exists(filename)?filename:store.list().get(0)); } catch(IOException e){error(e);} }
     private void compilerMenu() {
-        new AlertDialog.Builder(this).setTitle(project).setItems(new String[]{"Files","New file","Projects","Export","Text size"},(dialog,item)->{
+        new AlertDialog.Builder(this).setTitle(project).setItems(new String[]{"Files","New file","Projects","Export","Text size","Compiler self-test"},(dialog,item)->{
             if(item==0){String[] files=store.list().toArray(new String[0]);new AlertDialog.Builder(this).setTitle("Project files").setItems(files,(d,w)->openEditor(files[w])).show();}
             else if(item==1){if(leaveEditor())newFile();}
             else if(item==2){if(leaveEditor())chooseProject();}
             else if(item==3 && saveSource(true)){exportSource=editor.getText().toString();try{startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename),41);}catch(ActivityNotFoundException e){error(e);}}
+            else if(item==5){if(saveSource(true))startActivity(new Intent(this,CompilerDiagnosticsActivity.class));}
             else if(item==4)new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"16 sp","20 sp","24 sp"},(d,w)->{int size=new int[]{16,20,24}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show();
         }).show();
     }
@@ -235,12 +236,26 @@ public final class MainActivity extends Activity {
             if(!saveSource(true)||compiler==null)return;
             try{
                 org.json.JSONObject files=new org.json.JSONObject();
-                for(String name:store.list())if(name.equals(filename)||name.endsWith(".h")||name.endsWith(".hpp")||multi.isChecked())files.put(name,store.read(name));
+                int sourceBytes=0;
+                for(String name:store.list())if(name.equals(filename)||name.endsWith(".h")||name.endsWith(".hpp")||multi.isChecked()){
+                    if(files.length()>=32)throw new IOException("Maximum 32 project files per build");
+                    String text=store.read(name);sourceBytes+=text.getBytes(StandardCharsets.UTF_8).length;
+                    if(sourceBytes>1048576)throw new IOException("Build sources exceed 1 MiB");
+                    files.put(name,text);
+                }
                 diagnostics.setText("");stdout.setText("");stderr.setText("");run.setEnabled(false);
                 compiler.run(new org.json.JSONObject().put("files",files).put("stdin",stdin.getText().toString()));
             }catch(Exception e){run.setEnabled(true);error(e);}
         });
         action(terminal,"Stop",false,()->{if(compiler!=null)compiler.cancel();});
+        action(terminal,"Go to error",false,()->{
+            for(CompilerEngine.Diagnostic diagnostic:ClangDiagnostics.parse(diagnostics.getText().toString()))if(diagnostic.filename.equals(filename)){
+                String text=editor.getText().toString();int offset=0;
+                for(int line=1;line<diagnostic.line&&offset<text.length();line++){int next=text.indexOf('\n',offset);offset=next<0?text.length():next+1;}
+                editor.requestFocus();editor.setSelection(Math.min(text.length(),offset+Math.max(0,diagnostic.column-1)));return;
+            }
+            message("Diagnostics","No diagnostic location for the current source file. Open the reported project file using Files.");
+        });
         action(terminal,"Runtime details",false,()->message("Offline C/C++ runtime","Clang 22.1.8, LLD, C17/C++17 headers, libc, libc++ and compiler builtins. Programs run as WebAssembly, not Android native binaries. Input is supplied before running; EOF follows. Run limit: 3 seconds, 64 MiB program memory, 64 KiB output. Virtual files are temporary. Threads, sockets, native GUI, dynamic libraries and C++ exceptions are not supported. Device execution is still under verification."));
     }
     private void highlight(Editable s) {

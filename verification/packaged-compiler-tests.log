@@ -1,1 +1,43 @@
 CASE 0
+PASS: C11 standard headers, math and stdin
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 1
+PASS: C++17 containers, strings, templates and algorithms
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 2
+PASS: C++17 RAII and smart pointers
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 3
+PASS: C multi-file linking and project headers
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 4
+PASS: Virtual file round trip
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 5
+PASS: Host filesystem is not mounted
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 6
+PASS: Compiler diagnostic rejects syntax error
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 7
+PASS: Real nonzero program status
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 8
+PASS: Infinite loop is terminated by supervisor
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 9
+PASS: Separate stdout and stderr
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 10
+PASS: UTF-8 input and output
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 11
+PASS: Output flood stops at budget
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 12
+PASS: Memory exhaustion is bounded
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+CASE 13
+PASS: C++17 multiple translation units
+PASS: 1 packaged-engine integration checks. Android WebView verification remains pending.
+PASS: all 14 cases in separate Node processes. Not Android WebView verification.

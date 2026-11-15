@@ -51,7 +51,7 @@ public final class OfflineCompiler {
                         if(closed||message.getData()==null||message.getData().length()>100000)return;
                         try{
                             JSONObject event=new JSONObject(message.getData());String type=event.optString("type");
-                            if(type.equals("ready"))ready=true;
+                            if(type.equals("ready")){ready=true;handler.removeCallbacks(watchdog);}
                             if(type.equals("result")||type.equals("failure")||type.equals("cancelled")){busy=false;handler.removeCallbacks(watchdog);}
                             listener.onEvent(event);
                         }catch(Exception error){emit("failure","Invalid compiler response");}
@@ -62,6 +62,7 @@ public final class OfflineCompiler {
             @Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){emit("failure","Compiler renderer stopped. Reopen the editor to restart.");close();return true;}
             @Override public void onReceivedError(WebView v,WebResourceRequest r,WebResourceError error){if(r.isForMainFrame())emit("failure","Offline compiler could not load: "+error.getDescription());}
         });
+        handler.postDelayed(watchdog,30000);
         view.loadUrl(ORIGIN+"/index.html");
     }
     private static java.io.InputStream openAsset(Context context,String name) throws IOException {

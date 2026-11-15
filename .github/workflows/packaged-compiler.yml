@@ -1,0 +1,21 @@
+name: Packaged offline compiler
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  packaged-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify reviewed artifacts
+        run: python3 tools/verify_toolchain.py
+      - name: Compile and execute real C and C++
+        run: node --v8-pool-size=1 --wasm-num-compilation-tasks=1 tools/test_packaged_compiler.cjs

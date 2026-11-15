@@ -1,0 +1,40 @@
+name: WASI compiler and runtime integration tests
+on:
+  push:
+    branches: [main, 'preview/**']
+    paths:
+      - 'scripts/test-wasi-compiler.sh'
+      - 'scripts/test-wasi-types.sh'
+      - '.github/workflows/wasi-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wasi:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install WASI SDK and build WAMR interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y cmake make g++ wget
+          curl -fL --retry 3 -o /tmp/wasi-sdk.tar.gz \
+            https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+          mkdir -p "$RUNNER_TEMP/wasi-sdk"
+          tar -xzf /tmp/wasi-sdk.tar.gz -C "$RUNNER_TEMP/wasi-sdk" --strip-components=1
+          git clone --depth 1 --branch WAMR-2.3.1 \
+            https://github.com/bytecodealliance/wasm-micro-runtime.git "$RUNNER_TEMP/wamr"
+          cmake -S "$RUNNER_TEMP/wamr/product-mini/platforms/linux" \
+            -B "$RUNNER_TEMP/wamr-build" \
+            -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=0 -DWAMR_BUILD_JIT=0
+          cmake --build "$RUNNER_TEMP/wamr-build" -j 2
+          test -x "$RUNNER_TEMP/wamr-build/iwasm"
+          echo "WASI_SDK_PATH=$RUNNER_TEMP/wasi-sdk" >> "$GITHUB_ENV"
+          echo "IWASM=$RUNNER_TEMP/wamr-build/iwasm" >> "$GITHUB_ENV"
+      - name: Test C17 and C++17 compilation, stdin, stdout, diagnostics
+        run: bash scripts/test-wasi-compiler.sh
+      - name: Test data types, math and C++ standard library
+        run: bash scripts/test-wasi-types.sh
