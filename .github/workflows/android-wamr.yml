@@ -1,0 +1,63 @@
+name: Android WAMR runtime build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'preview/**']
+    paths:
+      - '.github/workflows/android-wamr.yml'
+permissions:
+  contents: read
+jobs:
+  wamr-android:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+        include:
+          - abi: arm64-v8a
+            wamr_platform: android
+            wamr_target: AARCH64
+          - abi: armeabi-v7a
+            wamr_platform: android
+            wamr_target: ARM
+          - abi: x86_64
+            wamr_platform: android
+            wamr_target: X86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+      - name: Fetch pinned WAMR source
+        run: |
+          git clone --depth 1 --branch WAMR-2.3.1 https://github.com/bytecodealliance/wasm-micro-runtime.git "$RUNNER_TEMP/wamr"
+      - name: Configure Android interpreter library
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOOLCHAIN="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
+          test -f "$TOOLCHAIN"
+          cmake -S "$RUNNER_TEMP/wamr" -B "$RUNNER_TEMP/build" \
+            -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-26 \
+            -DWAMR_BUILD_PLATFORM=android \
+            -DWAMR_BUILD_TARGET="${{ matrix.wamr_target }}" \
+            -DWAMR_BUILD_INTERP=1 \
+            -DWAMR_BUILD_AOT=0 \
+            -DWAMR_BUILD_JIT=0 \
+            -DWAMR_BUILD_LIBC_WASI=1 \
+            -DWAMR_BUILD_LIB_PTHREAD=0
+      - name: Build runtime and inspect output
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build "$RUNNER_TEMP/build" --parallel 2
+          find "$RUNNER_TEMP/build" -type f \( -name '*.a' -o -name '*.so' \) -print
+          test -n "$(find "$RUNNER_TEMP/build" -type f -name 'libvmlib.a' -print -quit)"
+      - name: Upload runtime build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wamr-android-${{ matrix.abi }}
+          path: ${{ runner.temp }}/build/**/*.a
+          if-no-files-found: error
