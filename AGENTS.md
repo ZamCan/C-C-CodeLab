@@ -93,3 +93,7 @@ No production-ready claim without device-verified offline C/C++ compilation, edi
 - [ ] Run Android build/tests and report evidence. Do **not** claim these unchecked tasks are complete. Keep a status ledger and check off only verified results.
 
 **Agent handoff rule:** Before changing any UI or claiming readiness, compare each of the eight screenshot-derived states above to the actual app. Record implemented class/method, screenshot or test evidence, remaining defects, and commit in docs/DELIVERY_PLAN.md. Do not treat AGENTS.md updates as UI implementation. Preserve all earlier technical/security requirements.
+
+
+## Codex Cloudflare handoff — 2026-11-15
+Before implementing or deploying the examination and certification engine, read [docs/CODEX_CLOUDFLARE_HANDOFF.md](docs/CODEX_CLOUDFLARE_HANDOFF.md). It specifies the authorized ZamCan Nexus account, existing D1 resources, ten exam variants per course, exactly 25 top-level questions per attempt, multipart question counting, time-weighted assessments, safety gates and independent Termux authentication. This handoff is binding for Codex and other coding agents; no token or signing-key sharing is authorized.
