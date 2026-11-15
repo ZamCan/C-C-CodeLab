@@ -24,6 +24,8 @@ public final class MainActivity extends Activity {
     private String project="Practice";
     private LearningStore progress;
     private RewardedLessonGate rewardedGate;
+    private CompilerEngine compilerEngine;
+    private final java.util.concurrent.ExecutorService compilerWorker=java.util.concurrent.Executors.newSingleThreadExecutor();
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
     private String screen="home", filename="main.c", exportSource="";
@@ -37,6 +39,7 @@ public final class MainActivity extends Activity {
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
         progress=new LearningStore(this);
         rewardedGate=new RewardedLessonGate(this);
+        compilerEngine=OfflineCompilerBootstrap.create(this);
         progress.importLegacy(preferences);
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
@@ -53,7 +56,7 @@ public final class MainActivity extends Activity {
         saveSource(false); out.putString("screen",screen); super.onSaveInstanceState(out);
     }
     @Override protected void onPause() { saveSource(false); super.onPause(); }
-    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); compilerWorker.shutdownNow(); super.onDestroy(); }
     @Override public void onBackPressed() {
         if("home".equals(screen)) super.onBackPressed();
         else if(leaveEditor()) home();
@@ -158,7 +161,41 @@ public final class MainActivity extends Activity {
         editor.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){}public void afterTextChanged(Editable s){if(highlighting)return;dirty=true;saveStatus.setText(R.string.saving);handler.removeCallbacks(autosave);handler.postDelayed(autosave,700);highlight(s);}});
         action(p,"Save",true,()->saveSource(true)); action(p,"Export",false,()->{if(saveSource(true)){exportSource=editor.getText().toString();Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename);try{startActivityForResult(intent,41);}catch(ActivityNotFoundException e){error(e);}}});
         action(p,"Text size",false,()->new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"Compact · 13 sp","Comfortable · 16 sp","Large · 20 sp"},(d,w)->{int size=new int[]{13,16,20}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show());
-        LinearLayout terminal=panel(false); terminal.addView(label("TERMINAL  /  NOT CONNECTED",12,LILAC)); body(terminal,"Native compiler not installed in this build. No code has been compiled or executed."); action(terminal,"View execution requirements",false,()->message("Native execution is pending","Release requires a packaged Android toolchain, linker and runtime, verified input/output, time/memory/output limits, and termination on a real device. Host compiler tests do not establish Android support."));
+        LinearLayout terminal=panel(false);
+        terminal.addView(label("TERMINAL  /  OFFLINE",12,LILAC));
+        TextView output=label(compilerEngine.available()?"Ready to compile C17/C++17":"Offline toolchain not installed",14,MUTED);
+        output.setTextIsSelectable(true);
+        terminal.addView(output);
+        EditText stdin=new EditText(this);
+        stdin.setHint("Program input (stdin)");
+        stdin.setMinLines(2);
+        stdin.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        terminal.addView(stdin,new LinearLayout.LayoutParams(-1,-2));
+        action(terminal,"Compile & Run",true,()->{
+            if(!compilerEngine.available()){
+                message("Offline compiler unavailable","This APK does not yet contain a verified Android Clang/WASI toolchain and isolated WAMR runtime.");
+                return;
+            }
+            if(!saveSource(true))return;
+            final String source=editor.getText().toString();
+            final String input=stdin.getText().toString();
+            final String file=filename;
+            output.setText("Compiling...");
+            compilerWorker.execute(()->{
+                String result;
+                try {
+                    CompilerEngine.Request request=new CompilerEngine.Request(file,source,CompilerEngine.languageFor(file));
+                    CompilerEngine.CompileResult compile=compilerEngine.compile(request);
+                    if(!compile.success)result="Compilation failed (exit "+compile.exitCode+")\\n"+compile.stderr+"\\n"+compile.stdout;
+                    else {
+                        CompilerEngine.RunResult run=compilerEngine.run(compile.artifactId,input,10000);
+                        result="Exit: "+run.exitCode+(run.timedOut?" (timed out)":"")+"\\n"+run.stdout+"\\n"+run.stderr;
+                    }
+                }catch(Exception ex){result="Compiler error: "+ex.getMessage();}
+                final String shown=result;
+                runOnUiThread(()->{if(!isFinishing() && output.getParent()!=null)output.setText(shown);});
+            });
+        });
     }
     private void highlight(Editable s) {
         if(s.length()>24000) return;
