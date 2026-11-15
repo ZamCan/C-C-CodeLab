@@ -1,0 +1,17 @@
+{
+  "name": "zamcan-codelab-certification",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-11-15",
+  "workers_dev": true,
+  "vars": {
+    "EXAMS_ENABLED": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zamcan-codelab-certification",
+      "database_id": "c3efb3e2-9e4d-42a4-89f8-9a54016c2978",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
