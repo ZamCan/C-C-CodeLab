@@ -61,3 +61,35 @@ No production-ready claim without device-verified offline C/C++ compilation, edi
 - **Cloudflare**: complete Workers + D1 deployment, authenticated exam sessions, server-side question selection/grading, time limits, rate limits, durable attempts, verifiable signed credentials, PDF output, public verification/revocation, and security/backup testing. Keep signing keys server-side; don't mark issuance complete until verified end-to-end.
 - **AdMob**: implement privacy-aware, consent-aware anchored adaptive banners only, never interrupting editor, terminal, quiz choices, navigation or accessibility. Use test ad units for development; configure production IDs securely before release; verify platform policies and regional consent requirements.
 - Keep the interface eye-friendly and engaging through typography, whitespace, contrast, subtle progress/feedback motion and responsive layout, not excessive panels or promotional copy.
+
+## Mandatory screenshot-based learning experience — binding implementation brief (2026-11-15)
+**Applies to every active/future coding agent. Read before modifying UI, curriculum, assessments or build scripts.** The user supplied consecutive screenshots of a C++ learning flow. They are **behavioral and visual references, not permission to copy copyrighted art, mascot characters, text, branding or illustrations**. Implement the same class of learner experience with original CodeLab assets and accurate university-level content.
+
+### Observed reference states and required equivalents
+1. **Lesson presentation:** white/off-white canvas, restrained charcoal text, a slim segmented blue-to-violet progress rail near the top, a close/back control, optional contextual share and illustration expansion, a centered short section title, an original compact visual when helpful, and clean left-aligned explanation blocks. Large quiet margins and ample whitespace; never crowd with web-style cards.
+2. **Progressive explanations:** the supplied screenshots show successive additions to a lesson paragraph while the progress rail remains stable. Implement concept-by-concept disclosure with one- or two-word **Next** action; do not require one tap per sentence, and allow learners to review prior concepts. Provide resume and screen-reader announcements without forced typewriter effects.
+3. **Section transition:** a short, encouraging original message and **Next**; no patronizing “buddy” tone, generic “see you” filler or compulsory illustration. A transition should motivate and accurately summarize what was learned.
+4. **Multiple-choice knowledge check:** short question, optional “Select one answer” hint, four accessible selectable options with a clear selected state, and a fixed-bottom **Check** action disabled until a selection exists. A correct answer displays meaningful feedback and a concise explanation; an incorrect answer explains the misconception and permits appropriate retry/review.
+5. **Fill-in-the-blank check:** a sentence with a genuine blank and tappable word choices; selected choice fills the blank and is reversible before **Check**. Ensure correct grammar and accurate programming terminology.
+6. **Feedback state:** clear success/error indicator and original illustration or simple vector, readable explanation and **Next**. Do not copy the supplied orange character/mascot or use confetti as a substitute for feedback.
+7. **Topic completion:** original restrained celebratory treatment; show **accuracy calculated from actual correct/attempted answers** and **elapsed time measured from the actual session**. No fabricated “100%” or “6m 34s”. Show the real next topic and **Next** / **Start** action, with persistent progress.
+8. **Continuity:** the supplied images show a topic completion followed by an introduction to the next C++ topic and multi-step explanations. Preserve this navigation chain and real progress persistence across process death.
+
+### Screenshot-specific academic corrections
+- The screenshot quiz “Who created C++?” is correctly answered **Bjarne Stroustrup**; **Dennis Ritchie** is associated with C, **James Gosling** with Java, **Guido van Rossum** with Python. Teach this distinction.
+- Explain that C++ was initially developed as **C with Classes**, not that its modern definition is simply “C with Classes.” Avoid the unqualified claim that C++ is only object-oriented: it supports procedural, generic, object-oriented and other paradigms.
+- “Middle-level language” is an informal pedagogical label, not an official ISO language classification. Prefer precise discussion of high-level abstractions and low-level systems capabilities.
+- Correct grammar and typos from the references; do not replicate “C++ is also called as”, “large areas” misspellings, or overly casual filler. Include a concrete code example and a short diagnostic experiment where appropriate.
+
+### Engineering checklist — required real work, not documentation-only
+- [ ] Implement responsive native Android lesson renderer for concept steps, progress rail, navigation, original illustrations, and persistent resume.
+- [ ] Implement selectable MCQ, reversible fill-in-the-blank, disabled-until-ready **Check**, correctness evaluation, substantive explanations and retry/review.
+- [ ] Implement accurate timing and score aggregation, durable topic-completion screen, next-topic routing, and accessibility/dark-mode equivalents.
+- [ ] Reduce home to **Compiler** and **Learn C/C++**; remove conspicuous publisher branding, verbose CTA text, clutter and marketing prose.
+- [ ] Build a genuine Android-compatible Clang/LLVM C/C++ toolchain with standard headers/libraries, ABI support, executable runtime and transparent diagnostics; prove real device compilation and execution.
+- [ ] Complete Cloudflare Workers/D1 authenticated exams, secure server-side assessment, verifiable certificate issuance/revocation and tested verifier; keep keys out of client/repo.
+- [ ] Add policy-compliant AdMob anchored adaptive banner with consent and test IDs; never obstruct compiler or learning interactions.
+- [ ] Verify adaptive icon on circular and other launcher masks and confirm original mark is not cropped.
+- [ ] Run Android build/tests and report evidence. Do **not** claim these unchecked tasks are complete. Keep a status ledger and check off only verified results.
+
+**Agent handoff rule:** Before changing any UI or claiming readiness, compare each of the eight screenshot-derived states above to the actual app. Record implemented class/method, screenshot or test evidence, remaining defects, and commit in docs/DELIVERY_PLAN.md. Do not treat AGENTS.md updates as UI implementation. Preserve all earlier technical/security requirements.
