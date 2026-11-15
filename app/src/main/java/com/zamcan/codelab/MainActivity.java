@@ -101,10 +101,10 @@ public final class MainActivity extends Activity {
     }
     private void home() {
         shell("home","","C/C++ CodeLab","");
-        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,"Compiler",23); body(studio,"A quiet workspace for your C and C++ source files. Save, edit, and export on your phone."); action(studio,"Open",false,this::studio);
-        LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,"Learn C/C++",23); body(academy,"20 foundation lessons · offline quizzes\nTwo languages. One clear starting point."); action(academy,"Learn",false,this::academy);
+        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,"Compiler",23);  action(studio,"Open",false,this::studio);
+        LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,"Learn C/C++",23);  action(academy,"Learn",false,this::academy);
         body(content,"LOCAL FIRST  •  No account required\nLearning and source files stay on this device.");
-        action(content,"Build status & privacy",false,this::status);
+        
     }
     private void status() {
         shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.1.0");
@@ -114,9 +114,14 @@ public final class MainActivity extends Activity {
     }
     private void studio() {
         shell("studio","COMPILER","Compiler","Write C and C++.");
-        LinearLayout p=panel(true); title(p,project,23); body(p,"C, C++, and header files • UTF-8\nEdits save automatically on this device."); action(p,"+  Create a source file",true,this::newFile); action(p,"Switch or create project",false,this::chooseProject);
-        for(String file:store.list()) { LinearLayout f=panel(false); title(f,file,20); body(f,file.endsWith(".cpp")?"C++ source":"Source file"); action(f,"Open",false,()->openEditor(file)); }
+        LinearLayout p=panel(true); title(p,project,23); body(p,"C / C++ · Autosaved"); action(p,"Files  ⋮",false,this::fileMenu);
+        for(String file:store.list()) { LinearLayout f=panel(false); title(f,file,20); action(f,"Open",false,()->openEditor(file)); }
         body(content,"Compiler setup is pending. You can edit and export sources; this build cannot execute them.");
+    }
+    private void fileMenu() {
+        new AlertDialog.Builder(this).setTitle("Files").setItems(
+            new String[]{"New file","Projects"},(dialog,which)->{if(which==0)newFile();else chooseProject();}
+        ).show();
     }
     private void chooseProject(){
         java.util.List<String> projects=workspaces.list();projects.add("+ Create project");
@@ -144,8 +149,8 @@ public final class MainActivity extends Activity {
         editor=new CodeEditor(this); editor.setTextColor(INK); editor.setTextSize(preferences.getInt("font",15)); editor.setTypeface(Typeface.MONOSPACE); editor.setGravity(Gravity.TOP|Gravity.START); editor.setPadding(dp(44),dp(12),dp(8),dp(12)); editor.setBackgroundColor(0x66101729); editor.setMinLines(12); editor.setHorizontallyScrolling(true); editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)}); editor.setContentDescription("Source code editor for "+file); editor.setText(source); p.addView(editor,new LinearLayout.LayoutParams(-1,-2));
         highlight(editor.getText());
         editor.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){}public void afterTextChanged(Editable s){if(highlighting)return;dirty=true;saveStatus.setText(R.string.saving);handler.removeCallbacks(autosave);handler.postDelayed(autosave,700);highlight(s);}});
-        action(p,"Save source",true,()->saveSource(true)); action(p,"Export source…",false,()->{if(saveSource(true)){exportSource=editor.getText().toString();Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename);try{startActivityForResult(intent,41);}catch(ActivityNotFoundException e){error(e);}}});
-        action(p,"Editor text size",false,()->new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"Compact · 13 sp","Comfortable · 16 sp","Large · 20 sp"},(d,w)->{int size=new int[]{13,16,20}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show());
+        action(p,"Save",true,()->saveSource(true)); action(p,"Export",false,()->{if(saveSource(true)){exportSource=editor.getText().toString();Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename);try{startActivityForResult(intent,41);}catch(ActivityNotFoundException e){error(e);}}});
+        action(p,"Text size",false,()->new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"Compact · 13 sp","Comfortable · 16 sp","Large · 20 sp"},(d,w)->{int size=new int[]{13,16,20}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show());
         LinearLayout terminal=panel(false); terminal.addView(label("TERMINAL  /  NOT CONNECTED",12,LILAC)); body(terminal,"Native compiler not installed in this build. No code has been compiled or executed."); action(terminal,"View execution requirements",false,()->message("Native execution is pending","Release requires a packaged Android toolchain, linker and runtime, verified input/output, time/memory/output limits, and termination on a real device. Host compiler tests do not establish Android support."));
     }
     private void highlight(Editable s) {
@@ -199,7 +204,7 @@ public final class MainActivity extends Activity {
         TextView headingView=label(heading,25,INK);headingView.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));center.addView(headingView);
         TextView paragraphView=label(paragraph,16,INK);paragraphView.setLineSpacing(dp(4),1.12f);paragraphView.setTextIsSelectable(true);center.addView(paragraphView);
         TextView count=label((current+1)+" / "+total,13,MUTED);count.setGravity(Gravity.CENTER);root.addView(count);
-        if(previous!=null)action(root,"← Previous",false,previous);
+        if(previous!=null)action(root,"Back",false,previous);
         action(root,nextLabel,true,next);
         setContentView(root);
     }
@@ -209,7 +214,7 @@ public final class MainActivity extends Activity {
         storyShell(eyebrow,heading,safe,pages.length,pages[safe],
             safe==0?null:()->readStory(eyebrow,heading,text,safe-1,finish),
             safe+1<pages.length?()->readStory(eyebrow,heading,text,safe+1,finish):finish,
-            safe+1<pages.length?"Next":"Continue  →");
+            safe+1<pages.length?"Next":"Continue");
     }
     private void foundation(int index) {
         String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode and the programming bridge"};
@@ -245,7 +250,7 @@ public final class MainActivity extends Activity {
             storyShell((cpp?"C++":"C")+" · LESSON "+(index+1),lesson.title,page,total,explanation[page],
                 page==0?null:()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next");
         }else if(page==examplePage) {
-            storyShell("WORKED SOURCE · COPY TO STUDIO",lesson.title,page,total,lesson.code,
+            storyShell("WORKED SOURCE",lesson.title,page,total,lesson.code,
                 ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next");
         }else if(page==challengePage) {
             storyShell("YOUR TURN · INDEPENDENT PRACTICE",lesson.title,page,total,lesson.challenge,
@@ -267,14 +272,14 @@ public final class MainActivity extends Activity {
         for(int option:order){RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(option);button.setText(lesson.options[option]);button.setTextColor(INK);button.setTextSize(17);button.setPadding(dp(8),dp(12),dp(8),dp(12));button.setMinHeight(dp(64));choices.addView(button);}
         TextView feedback=label("Choose one answer, then check.",15,MUTED);middle.addView(feedback);
         action(root,"Back",false,()->lessonPage(index,storyPages(lesson.explanation).length+1));
-        action(root,"Check",true,()->{
+        Button check=new Button(this);check.setText("Check");check.setAllCaps(false);check.setTextColor(Color.WHITE);check.setTextSize(16);check.setMinHeight(dp(54));check.setEnabled(false);check.setBackgroundTintList(ColorStateList.valueOf(MINT));root.addView(check,new LinearLayout.LayoutParams(-1,dp(56)));choices.setOnCheckedChangeListener((group,id)->check.setEnabled(id!=-1));check.setOnClickListener(v->{
             if(choices.getCheckedRadioButtonId()==-1){feedback.setText("Select an answer first.");return;}
             RadioButton selected=choices.findViewById(choices.getCheckedRadioButtonId());
             boolean correct=((Integer)selected.getTag())==lesson.answer;
             if(correct)progress.complete(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));
             new AlertDialog.Builder(this).setTitle(correct?"Correct answer":"Not quite — review and retry")
                 .setMessage(lesson.feedback)
-                .setPositiveButton(correct?"Continue  →":"Try again",(dialog,which)->{if(correct){if(index+1<Curriculum.lessons(cpp).length)lesson(index+1);else academy();}})
+                .setPositiveButton(correct?"Next":"Try again",(dialog,which)->{if(correct){if(index+1<Curriculum.lessons(cpp).length)lesson(index+1);else academy();}})
                 .show();
         });
         setContentView(root);
@@ -304,7 +309,7 @@ public final class MainActivity extends Activity {
     private void projectGuide(String id,String name){
         shell("guide","PROJECT LAB  /  "+(cpp?"C++":"C"),name,"Work through the milestones, then compare your solution.");
         try{LinearLayout p=panel(false);body(p,asset("projects/"+id+".txt"));}catch(IOException e){error(e);}
-        action(content,"Open starter in Studio",true,()->copyAsset(id,true));
+        action(content,"Open starter",true,()->copyAsset(id,true));
         action(content,"Open reference solution",false,()->copyAsset(id,false));
         action(content,"Back to projects",false,this::projects);
     }
