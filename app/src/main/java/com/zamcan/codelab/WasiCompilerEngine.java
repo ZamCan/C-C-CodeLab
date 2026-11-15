@@ -48,9 +48,10 @@ public final class WasiCompilerEngine implements CompilerEngine {
         Files.write(source.toPath(),request.source.getBytes(StandardCharsets.UTF_8));
         Execution result=execute(WasiToolchainCommands.compile(request,clang,clangCpp,sysroot,source,wasm),
                 session,"",20000);
-        boolean ok=!result.timedOut && result.exitCode==0 && wasm.isFile() && wasm.length()>0;
+        boolean ok=!result.timedOut && result.exitCode==0 && validWasm(wasm);
         String id=null;
         if(ok) {
+            source.delete();
             id=UUID.randomUUID().toString();
             if(artifacts.size()>=MAX_ARTIFACTS) {
                 String oldest=artifacts.keySet().iterator().next();
@@ -76,6 +77,17 @@ public final class WasiCompilerEngine implements CompilerEngine {
         Execution e=execute(Arrays.asList(iwasm.getAbsolutePath(),wasm.getAbsolutePath()),
                 wasm.getParentFile(),stdin,timeoutMillis);
         return new RunResult(e.stdout,e.stderr,e.exitCode,e.timedOut);
+    }
+    /** Reject empty or unrelated output even when a compiler process exits zero. */
+    private static boolean validWasm(File artifact) {
+        if (!artifact.isFile() || artifact.length()<8) return false;
+        try(FileInputStream in=new FileInputStream(artifact)) {
+            byte[] header=new byte[8];
+            if(in.read(header)!=8)return false;
+            return header[0]==0 && header[1]=='a' && header[2]=='s'
+                && header[3]=='m' && header[4]==1 && header[5]==0
+                && header[6]==0 && header[7]==0;
+        }catch(IOException ex){return false;}
     }
     private static final class Execution {
         String stdout="",stderr="";
