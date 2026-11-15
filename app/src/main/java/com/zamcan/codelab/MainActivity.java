@@ -17,7 +17,8 @@ import java.util.regex.*;
 
 /** Offline academy and source workspace. No fabricated compiler or certificate results. */
 public final class MainActivity extends Activity {
-    private static final int INK=0xfff6f7ff, MUTED=0xffb5c5e8, MINT=0xff67c8ff, LILAC=0xffc2a5ff;
+    private int INK=0xfff6f7ff, MUTED=0xffb5c5e8, MINT=0xff67c8ff, LILAC=0xffc2a5ff;
+    private boolean light;
     private LinearLayout content;
     private ProjectStore store;
     private WorkspaceRepository workspaces;
@@ -25,6 +26,7 @@ public final class MainActivity extends Activity {
     private LearningStore progress;
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
+    private int activeLesson, activeStage;
     private String screen="home", filename="main.c", exportSource="";
     private EditText editor;
     private TextView saveStatus;
@@ -32,7 +34,10 @@ public final class MainActivity extends Activity {
     private final Runnable autosave=() -> saveSource(false);
 
     @Override public void onCreate(Bundle state) {
+        light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",false);
+        if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff43516b;MINT=0xff125ba6;LILAC=0xff6240a6;}
         super.onCreate(state);
+        getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
         progress=new LearningStore(this);
         progress.importLegacy(preferences);
@@ -45,15 +50,20 @@ public final class MainActivity extends Activity {
             if (!store.exists("main.c")) store.write("main.c", Curriculum.C[0].code);
             if (!store.exists("main.cpp")) store.write("main.cpp", Curriculum.CPP[0].code);
         } catch(IOException e) { fatal(e); return; }
-        if(state!=null && "editor".equals(state.getString("screen"))) openEditor(filename); else home();
+        if(state!=null && "editor".equals(state.getString("screen"))) openEditor(filename);
+        else if(state!=null && "lesson".equals(state.getString("screen"))) lesson(state.getInt("lesson"),state.getInt("stage"));
+        else home();
     }
     @Override protected void onSaveInstanceState(Bundle out) {
-        saveSource(false); out.putString("screen",screen); super.onSaveInstanceState(out);
+        saveSource(false); out.putString("screen",screen); out.putInt("lesson",activeLesson); out.putInt("stage",activeStage); super.onSaveInstanceState(out);
     }
     @Override protected void onPause() { saveSource(false); super.onPause(); }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     @Override public void onBackPressed() {
         if("home".equals(screen)) super.onBackPressed();
+        else if("lesson".equals(screen)) { if(activeStage>0) lesson(activeLesson,activeStage-1); else courseMap(); }
+        else if("course".equals(screen))pathways();
+        else if("pathways".equals(screen))academy();
         else if(leaveEditor()) home();
     }
     private int dp(float n) { return Math.round(n*getResources().getDisplayMetrics().density); }
@@ -62,22 +72,22 @@ public final class MainActivity extends Activity {
     private void message(String title,String body) { new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("Got it",null).show(); }
     private boolean leaveEditor() { return editor==null || !dirty || saveSource(true); }
     private GradientDrawable glass(boolean accent) {
-        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,accent ? new int[]{0xdd172c59,0xdd29204c} : new int[]{0xc9202c4f,0xc9111833});
-        d.setCornerRadius(dp(24)); d.setStroke(dp(1),accent ? 0x6682aaff : 0x36d0dcff); return d;
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,light ? (accent ? new int[]{0xf0eef2ff,0xe8f1eaff} : new int[]{0xfaffffff,0xe8f0f4ff}) : (accent ? new int[]{0xdd172c59,0xdd29204c} : new int[]{0xc9202c4f,0xc9111833}));
+        d.setCornerRadius(dp(20)); d.setStroke(dp(1),light ? 0x66818eb2 : (accent ? 0x6682aaff : 0x36d0dcff)); return d;
     }
     private TextView label(String text,int size,int color) {
         TextView v=new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color);
         v.setLineSpacing(dp(3),1); v.setPadding(0,dp(5),0,dp(5)); return v;
     }
     private void title(LinearLayout parent,String text,int size) { TextView t=label(text,size,INK); t.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); parent.addView(t); }
-    private void body(LinearLayout parent,String text) { parent.addView(label(text,15,MUTED)); }
+    private void body(LinearLayout parent,String text) { parent.addView(label(text,16,MUTED)); }
     private LinearLayout panel(boolean accent) {
         LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(20),dp(18),dp(20),dp(18)); p.setBackground(glass(accent));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(16); p.setLayoutParams(lp); content.addView(p); return p;
     }
     private void action(LinearLayout parent,String text,boolean primary,Runnable run) {
-        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?0xff102e2a:INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
-        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?new int[]{MINT,0xffb1ebf2}:new int[]{0x40b1a4ef,0x252b4767});
+        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?(light?Color.WHITE:0xff102e2a):INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
+        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?(light?new int[]{0xff125ba6,0xff553b9f}:new int[]{MINT,0xffb1ebf2}):(light?new int[]{0xffe9e5fa,0xffe4ecf9}:new int[]{0x40b1a4ef,0x252b4767}));
         background.setCornerRadius(dp(15)); background.setStroke(dp(1),primary?0x55ffffff:0x44ced9ff);
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x40ffffff),background,null));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.topMargin=dp(10); b.setLayoutParams(lp);
@@ -85,37 +95,76 @@ public final class MainActivity extends Activity {
     }
     private void shell(String name,String eyebrow,String heading,String subtitle) {
         handler.removeCallbacks(autosave); editor=null; dirty=false; screen=name;
-        FrameLayout root=new FrameLayout(this); root.addView(new Aurora(this),new FrameLayout.LayoutParams(-1,-1));
+        FrameLayout root=new FrameLayout(this); root.addView(new Aurora(this,light),new FrameLayout.LayoutParams(-1,-1));
         LinearLayout stack=new LinearLayout(this); stack.setOrientation(LinearLayout.VERTICAL); root.addView(stack,new FrameLayout.LayoutParams(-1,-1));
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); stack.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(22),dp(24),dp(22),dp(14)); scroll.addView(content);
-        content.addView(label(eyebrow,12,MINT)); title(content,heading,32); body(content,subtitle);
+        content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(20),dp(20),dp(20),dp(20)); scroll.addView(content);
+        content.addView(label(eyebrow,12,MINT)); title(content,heading,28); body(content,subtitle);
         View gap=new View(this); content.addView(gap,new LinearLayout.LayoutParams(1,dp(20)));
         LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackground(glass(false)); stack.addView(nav);
-        for(String tab:new String[]{"⌘  Studio","◈  Academy"}) {
-            Button b=new Button(this); b.setText(tab); b.setAllCaps(false); b.setTextColor(INK); b.setBackgroundColor(Color.TRANSPARENT); b.setMinHeight(dp(56));
-            nav.addView(b,new LinearLayout.LayoutParams(0,-2,1)); b.setOnClickListener(v->{if(leaveEditor()){if(tab.contains("Studio")) studio(); else academy();}});
+        String[] tabs={"Home","Studio","Academy"};
+        int selected="home".equals(name)?0:("studio".equals(name)||"editor".equals(name)?1:2);
+        for(int i=0;i<tabs.length;i++) {
+            final int destination=i;Button b=new Button(this);b.setText(tabs[i]);b.setAllCaps(false);b.setTextSize(14);
+            b.setTextColor(i==selected?MINT:MUTED);b.setMinHeight(dp(56));b.setSelected(i==selected);
+            GradientDrawable surface=new GradientDrawable();surface.setCornerRadius(dp(16));surface.setColor(i==selected?(light?0xffe4ecfa:0xff202d50):Color.TRANSPARENT);
+            b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22758cdb),surface,null));
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,-2,1);params.setMargins(dp(3),dp(6),dp(3),0);nav.addView(b,params);
+            b.setOnClickListener(v->{if(leaveEditor()){if(destination==0)home();else if(destination==1)studio();else academy();}});
         }
         setContentView(root);
     }
+    private void artwork(LinearLayout parent) {
+        ImageView art=new ImageView(this);BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=2;
+        art.setImageBitmap(BitmapFactory.decodeResource(getResources(),light?R.drawable.academy_art_light:R.drawable.academy_art_dark,options));
+        art.setScaleType(ImageView.ScaleType.FIT_CENTER);art.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,dp(144));layout.bottomMargin=dp(12);parent.addView(art,layout);
+    }
+    private void section(String text) {
+        TextView heading=label(text,14,MUTED);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        heading.setPadding(0,dp(18),0,dp(10));content.addView(heading);
+    }
+    private void row(LinearLayout parent,String number,String name,String detail,boolean enabled,Runnable open) {
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12),dp(12),dp(12),dp(12));row.setMinimumHeight(dp(76));
+        TextView marker=label(number,16,enabled?MINT:MUTED);marker.setGravity(Gravity.CENTER);marker.setTypeface(Typeface.MONOSPACE);
+        row.addView(marker,new LinearLayout.LayoutParams(dp(42),-2));
+        LinearLayout text=new LinearLayout(this);text.setOrientation(LinearLayout.VERTICAL);text.setPadding(dp(8),0,dp(8),0);
+        TextView title=label(name,17,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);text.addView(title);text.addView(label(detail,14,MUTED));
+        row.addView(text,new LinearLayout.LayoutParams(0,-2,1));
+        TextView arrow=label("›",24,enabled?MINT:MUTED);row.addView(arrow,new LinearLayout.LayoutParams(dp(20),-2));
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33758cdb),null,new android.graphics.drawable.ColorDrawable(Color.WHITE)));
+        row.setFocusable(true);row.setContentDescription(name+". "+detail);row.setOnClickListener(v->open.run());parent.addView(row);
+        View line=new View(this);line.setBackgroundColor(light?0x197080a0:0x19d0dcff);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
+    }
     private void home() {
-        shell("home","BY ZAMCAN ACADEMY","C/C++ CodeLab","Learn • Code • Compile • Build\nYour offline-first C and C++ programming laboratory.");
-        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,getString(R.string.studio),23); body(studio,"A quiet workspace for your C and C++ source files. Save, edit, and export on your phone."); action(studio,"Open workspace",false,this::studio);
-        LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,getString(R.string.academy),23); body(academy,"20 foundation lessons · offline quizzes\nTwo languages. One clear starting point."); action(academy,"Explore the academy",false,this::academy);
-        body(content,"LOCAL FIRST  •  No account required\nLearning and source files stay on this device.");
-        action(content,"Build status & privacy",false,this::status);
+        shell("home","BY ZAMCAN ACADEMY","C/C++ CodeLab","Your space to learn programming and build with code.");
+        LinearLayout create=panel(true);artwork(create);create.addView(label("CODE STUDIO",14,MINT));title(create,"From idea to source.",26);
+        body(create,"C and C++ projects, a focused editor, and files that stay on your phone.");action(create,"Open Code Studio  →",true,this::studio);
+        LinearLayout learn=panel(false);learn.addView(label("LEARNING ACADEMY",14,LILAC));title(learn,"A path through programming.",26);
+        body(learn,"Start with the concepts. Explore a worked example. Practice, then check your understanding.");action(learn,"Continue learning  →",true,this::academy);
+        section("YOUR SPACE");
+        row(content,"◐","Appearance",light?"Light glass theme":"Midnight glass theme",true,this::appearance);
+        row(content,"i","About this preview","Capabilities, privacy and build status",true,this::status);
+    }
+    private void appearance() {
+        shell("appearance","SETTINGS / APPEARANCE","Your learning space.","Choose a theme. Text follows your device font scaling.");
+        LinearLayout p=panel(false);title(p,light?"Light glass":"Midnight glass",24);
+        body(p,"A full-screen gradient, translucent surfaces and clear controls. Theme choice is saved on this device.");
+        action(p,light?"Use midnight theme":"Use light theme",true,()->{preferences.edit().putBoolean("light_theme",!light).apply();recreate();});
+        action(content,"Back home",false,this::home);
     }
     private void status() {
-        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.1.0");
+        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.3.0");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
         LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An Android-compatible C/C++ compiler and isolated execution runtime are not bundled. Compile and Run are unavailable. No program output is simulated.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThis build requests no network or storage permissions and includes no analytics or advertising SDK.");
         action(content,"Back home",true,this::home);
     }
     private void studio() {
-        shell("studio","CODE STUDIO  /  LOCAL WORKSPACE","Make something.","Your source files, always close at hand.");
+        shell("studio","CODE STUDIO  /  LOCAL WORKSPACE","Your workspace","Projects and source files, stored on this device.");
         LinearLayout p=panel(true); title(p,project,23); body(p,"C, C++, and header files • UTF-8\nEdits save automatically on this device."); action(p,"+  Create a source file",true,this::newFile); action(p,"Switch or create project",false,this::chooseProject);
-        for(String file:store.list()) { LinearLayout f=panel(false); title(f,file,20); body(f,file.endsWith(".cpp")?"C++ source":"Source file"); action(f,"Open editor  →",false,()->openEditor(file)); }
+        section("PROJECT FILES");LinearLayout files=panel(false);for(String file:store.list())row(files,file.endsWith(".cpp")?"C++":"C",file,"Saved locally · tap to edit",true,()->openEditor(file));
         body(content,"Compiler setup is pending. You can edit and export sources; this build cannot execute them.");
     }
     private void chooseProject(){
@@ -141,7 +190,7 @@ public final class MainActivity extends Activity {
         filename=file; preferences.edit().putString("file",file).apply();
         shell("editor","CODE STUDIO  /  EDITOR",file,"A little focus goes a long way.");
         LinearLayout p=panel(false); saveStatus=label("Saved on this device",12,MINT); p.addView(saveStatus);
-        editor=new CodeEditor(this); editor.setTextColor(INK); editor.setTextSize(preferences.getInt("font",15)); editor.setTypeface(Typeface.MONOSPACE); editor.setGravity(Gravity.TOP|Gravity.START); editor.setPadding(dp(44),dp(12),dp(8),dp(12)); editor.setBackgroundColor(0x66101729); editor.setMinLines(12); editor.setHorizontallyScrolling(true); editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)}); editor.setContentDescription("Source code editor for "+file); editor.setText(source); p.addView(editor,new LinearLayout.LayoutParams(-1,-2));
+        editor=new CodeEditor(this); editor.setTextColor(INK); editor.setTextSize(preferences.getInt("font",15)); editor.setTypeface(Typeface.MONOSPACE); editor.setGravity(Gravity.TOP|Gravity.START); editor.setPadding(dp(44),dp(12),dp(8),dp(12)); editor.setBackgroundColor(light?0xfff6f8ff:0x66101729); editor.setMinLines(12); editor.setHorizontallyScrolling(true); editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)}); editor.setContentDescription("Source code editor for "+file); editor.setText(source); p.addView(editor,new LinearLayout.LayoutParams(-1,-2));
         highlight(editor.getText());
         editor.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){}public void afterTextChanged(Editable s){if(highlighting)return;dirty=true;saveStatus.setText(R.string.saving);handler.removeCallbacks(autosave);handler.postDelayed(autosave,700);highlight(s);}});
         action(p,"Save source",true,()->saveSource(true)); action(p,"Export source…",false,()->{if(saveSource(true)){exportSource=editor.getText().toString();Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename);try{startActivityForResult(intent,41);}catch(ActivityNotFoundException e){error(e);}}});
@@ -153,7 +202,7 @@ public final class MainActivity extends Activity {
         highlighting=true;
         for(ForegroundColorSpan span:s.getSpans(0,s.length(),ForegroundColorSpan.class))s.removeSpan(span);
         Pattern pattern=Pattern.compile("//[^\\n]*|/\\*[\\s\\S]*?\\*/|\"(?:\\\\.|[^\"\\\\])*\"|\\b(?:int|double|char|void|return|if|else|for|while|const|class|struct|public|private|auto|bool|namespace|include)\\b");
-        Matcher matcher=pattern.matcher(s);while(matcher.find()){String token=matcher.group();int color=token.startsWith("/")?0xffa0b1c7:token.startsWith("\"")?MINT:LILAC;s.setSpan(new ForegroundColorSpan(color),matcher.start(),matcher.end(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);}highlighting=false;
+        Matcher matcher=pattern.matcher(s);while(matcher.find()){String token=matcher.group();int color=token.startsWith("/")?(light?0xff52617a:0xffa0b1c7):token.startsWith("\"")?MINT:LILAC;s.setSpan(new ForegroundColorSpan(color),matcher.start(),matcher.end(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);}highlighting=false;
     }
     private boolean saveSource(boolean notify) {
         handler.removeCallbacks(autosave); if(editor==null)return true;
@@ -186,32 +235,154 @@ public final class MainActivity extends Activity {
     private void languageHistory() {
         shell("language-history","REQUIRED INTRODUCTION  /  C & C++","Meet C and C++.","Two related languages with different strengths and rules.");
         try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/language-history.txt"));}catch(IOException e){error(e);}
-        action(content,"Continue to course pathways  →",true,()->{preferences.edit().putBoolean("intro_completed",true).apply();academy();});
+        action(content,"Check your understanding  →",true,this::introductionCheckpoint);
         action(content,"Previous: programming languages",false,this::programmingIntroduction);
     }
+    private RadioGroup practiceChoices(LinearLayout parent,String question,String... options) {
+        title(parent,question,19);
+        RadioGroup group=new RadioGroup(this);
+        for(int i=0;i<options.length;i++) {
+            RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(i);
+            button.setText(options[i]);button.setTextSize(16);button.setTextColor(INK);button.setMinHeight(dp(52));group.addView(button);
+        }
+        parent.addView(group);return group;
+    }
+    private int selected(RadioGroup group) {
+        RadioButton choice=group.findViewById(group.getCheckedRadioButtonId());
+        return choice==null?-1:(Integer)choice.getTag();
+    }
+    private EditText practiceInput(LinearLayout parent,String hint) {
+        EditText input=new EditText(this);input.setTextColor(INK);input.setHintTextColor(MUTED);input.setHint(hint);
+        input.setContentDescription(hint);input.setSingleLine(true);input.setMinHeight(dp(52));parent.addView(input);return input;
+    }
+    private void introductionCheckpoint() {
+        shell("intro-checkpoint","REQUIRED INTRODUCTION / PRACTICE","Ready for the pathway?","Four short checks. You can retry freely; this is not a certificate exam.");
+        LinearLayout p=panel(false);
+        RadioGroup language=practiceChoices(p,"1. Which statement describes C and C++?","C++ accepts every C program unchanged.","C and C++ are related languages with different rules.","C and C++ are names for the same language.");
+        RadioGroup compatibility=practiceChoices(p,"2. True or false: indentation alone defines a C block.","False — braces define a compound statement.","True — adding spaces changes block boundaries.");
+        body(p,"3. Fill the blank: a ______ translates C/C++ source into object code in a typical separate-compilation workflow.");
+        EditText compiler=practiceInput(p,"Name the translation tool");
+        body(p,"4. Arrange these steps by entering their numbers: 3 = link object files and libraries; 1 = write source; 2 = compile source to object code.");
+        EditText pipeline=practiceInput(p,"Order, for example 3, 2, 1");
+        TextView feedback=label("Answer all four checks, then review the feedback.",16,MUTED);p.addView(feedback);
+        action(p,"Check introduction",true,()->{
+            if(LearningPath.introductionPassed(selected(language),selected(compatibility),compiler.getText().toString(),pipeline.getText().toString())) {
+                preferences.edit().putBoolean("intro_checkpoint_v1",true).apply();
+                feedback.setText("Checkpoint passed. The C and C++ pathways are now available.");
+                action(content,"Choose your pathway",true,this::academy);
+            } else {
+                feedback.setText("Review and retry: C and C++ have different rules. Braces, not indentation, group C statements. A compiler translates source; a linker combines object files and libraries. Write source, compile, then link. Your existing course progress is preserved.");
+            }
+            feedback.announceForAccessibility(feedback.getText());
+        });
+        action(content,"Review introduction",false,this::programmingIntroduction);
+        action(content,"Back to academy",false,this::academy);
+    }
+    private String courseKey(){return cpp?"cpp-foundation":"c-foundation";}
+    private String lessonKey(int index){return courseKey()+":"+index;}
     private void academy() {
-        shell("academy","LEARNING ACADEMY  /  YOUR PATH","Understand.\nThen build.","Small lessons. Useful ideas. Progress at your pace.");
-        LinearLayout intro=panel(false);title(intro,"Start with problem solving",22);body(intro,"Optional: algorithms, computers, five ways to express solutions, decision tables and pseudocode.");action(intro,"Explore algorithms (skippable)",false,()->foundation(0));
-        if(!preferences.getBoolean("intro_completed",false)){LinearLayout required=panel(true);title(required,"C & C++ introduction",22);body(required,"Required: what programming languages are, the history of C and C++, and their relationship.");action(required,"Continue introduction",true,this::programmingIntroduction);return;}
-        LinearLayout p=panel(true); title(p,cpp?"C++ foundations":"C foundations",25);body(p,completed()+" of 10 lessons completed");
-        ProgressBar courseProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);courseProgress.setMax(10);courseProgress.setProgress(completed());courseProgress.setProgressTintList(ColorStateList.valueOf(MINT));p.addView(courseProgress,new LinearLayout.LayoutParams(-1,dp(8)));
-        action(p,cpp?"Switch to C":"Switch to C++",false,()->{cpp=!cpp;preferences.edit().putBoolean("cpp",cpp).apply();academy();});
-        Lesson[] lessons=Curriculum.lessons(cpp);for(int i=0;i<lessons.length;i++){final int index=i;LinearLayout row=panel(false);row.addView(label(String.format(Locale.ROOT,"%02d  /  %s",i+1,progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i))?"COMPLETED":"FOUNDATION"),12,MINT));title(row,lessons[i].title,21);action(row,index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1))?"Open lesson  →":"Locked — complete previous lesson",false,()->{if(index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1)))lesson(index);else message("Lesson locked","Complete the previous lesson checkpoint before continuing.");});}
-        action(content,"Worked math problems",false,this::mathProblems);action(content,"Guided projects",true,this::projects);action(content,"Your achievements",false,this::achievements);
+        shell("academy","LEARNING ACADEMY","Your learning journey","Offline lessons. Clear steps. Progress you can return to.");
+        boolean introduced=preferences.getBoolean("intro_checkpoint_v1",false);
+        LinearLayout next=panel(true);artwork(next);next.addView(label(introduced?"CONTINUE YOUR PATH":"START HERE",14,MINT));
+        title(next,introduced?(cpp?"C++ foundations":"C foundations"):"Understand the languages",24);
+        body(next,introduced?completed()+" of "+Curriculum.lessons(cpp).length+" preview checkpoints complete":"Explore how programs work, meet C and C++, then check your understanding.");
+        action(next,introduced?"Resume lesson  →":"Begin introduction  →",true,()->{if(introduced)lesson(preferences.getInt(courseKey()+":resume",0));else programmingIntroduction();});
+        section("THE JOURNEY");LinearLayout journey=panel(false);
+        row(journey,"01","Think like a programmer","Optional · algorithms and problem solving",true,()->foundation(0));
+        row(journey,"02","Meet C and C++",introduced?"Checkpoint passed · review anytime":"Required · languages, history and toolchain",true,this::programmingIntroduction);
+        row(journey,"03","Choose your pathway","C or C++ · preview lessons and checkpoints",introduced,()->{if(introduced)pathways();else message("Start with the introduction","Complete the introduction checkpoint to begin either pathway.");});
+        row(journey,"04","Build guided projects","Five projects · unlock through course practice",introduced,()->{if(introduced)projects();else message("Your project journey","The projects follow the course. Start with the introduction.");});
+        section("YOUR LEARNING TOOLS");
+        row(content,"✓","Progress & achievements","Your completed practice checks",true,this::achievements);
+        row(content,"ƒ","Math into code","Worked problems and reasoning",true,this::mathProblems);
+    }
+    private void pathways() {
+        shell("pathways","ACADEMY / PATHWAYS","Choose your language","Both pathways remain available. Your progress is saved separately.");
+        for(boolean language:new boolean[]{false,true}) {
+            LinearLayout p=panel(language);p.addView(label(language?"C++ / ABSTRACTION & STRUCTURE":"C / PROGRAMMING FOUNDATIONS",14,language?LILAC:MINT));
+            title(p,language?"Build with modern C++":"Understand the foundations of C",24);
+            body(p,language?"Values, functions, containers and objects. Learn how C++ expresses reusable programs.":"Types, decisions, functions and memory. Learn how source code describes precise operations.");
+            action(p,"View "+(language?"C++":"C")+" course",true,()->{cpp=language;preferences.edit().putBoolean("cpp",cpp).apply();courseMap();});
+        }
+        body(content,"Preview scope: ten introductory lessons per language. The complete sixteen-module pathways are still being developed.");
+        action(content,"Back to journey",false,this::academy);
+    }
+    private void courseMap() {
+        shell("course","ACADEMY / "+(cpp?"C++":"C"),cpp?"C++ foundations":"C foundations","Work through the checkpoints in order. Revisit completed lessons anytime.");
+        Lesson[] lessons=Curriculum.lessons(cpp);LinearLayout summary=panel(true);
+        title(summary,completed()+" / "+lessons.length+" checkpoints",24);
+        ProgressBar meter=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);meter.setMax(lessons.length);meter.setProgress(completed());meter.setProgressTintList(ColorStateList.valueOf(MINT));summary.addView(meter,new LinearLayout.LayoutParams(-1,dp(6)));
+        action(summary,"Resume learning",true,()->lesson(preferences.getInt(courseKey()+":resume",0)));
+        LinearLayout group=null;
+        for(int i=0;i<lessons.length;i++) {
+            if(i%4==0){section("LESSONS "+(i+1)+"–"+Math.min(i+4,lessons.length));group=panel(false);}
+            final int index=i;boolean complete=progress.completed(courseKey(),Integer.toString(i));
+            boolean available=LearningPath.canOpen(preferences.getBoolean("intro_checkpoint_v1",false),i,lessons.length,i>0&&progress.completed(courseKey(),Integer.toString(i-1)));
+            String detail=complete?"Checkpoint passed":available?"Ready to learn":"Complete the previous checkpoint";
+            if(preferences.getBoolean(lessonKey(i)+":bookmark",false))detail+=" · Bookmarked";
+            row(group,String.format(Locale.ROOT,"%02d",i+1),lessons[i].title,detail,available,()->lesson(index));
+        }
+        action(content,"Change pathway",false,this::pathways);
+        action(content,"Back to journey",false,this::academy);
     }
     private void lesson(int index) {
-        Lesson lesson=Curriculum.lessons(cpp)[index];shell("lesson",(cpp?"C++":"C")+" FOUNDATIONS  /  "+(index+1)+" OF 10",lesson.title,"Read, experiment, and check your understanding.");
-        LinearLayout explanation=panel(false);body(explanation,lesson.explanation);
-        if(index==0)action(explanation,"Explore the syntax, token by token",true,()->readGuide("First program: syntax anatomy","lessons/first-program.txt"));
-        LinearLayout example=panel(false);example.addView(label("WORKED EXAMPLE  /  SOURCE",12,MINT));TextView code=label(lesson.code,14,INK);code.setTypeface(Typeface.MONOSPACE);code.setTextIsSelectable(true);example.addView(code);action(example,"Open a copy in Studio",true,()->copyLesson(index));
-        LinearLayout challenge=panel(true);title(challenge,"Your turn",22);body(challenge,lesson.challenge);
-        LinearLayout quiz=panel(false);quiz.addView(label("PRACTICE CHECK  /  OFFLINE",12,LILAC));title(quiz,lesson.question,19);RadioGroup choices=new RadioGroup(this);int[] order=index%2==0?new int[]{0,1}:new int[]{1,0};for(int option:order){RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(option);button.setText(lesson.options[option]);button.setTextColor(INK);button.setTextSize(16);button.setMinHeight(dp(52));choices.addView(button);}quiz.addView(choices);TextView feedback=label("Choose an answer to check your understanding.",14,MUTED);quiz.addView(feedback);
-        action(quiz,"Check answer",true,()->{if(choices.getCheckedRadioButtonId()==-1){feedback.setText(R.string.select_answer);return;}RadioButton selected=choices.findViewById(choices.getCheckedRadioButtonId());boolean right=((Integer)selected.getTag())==lesson.answer;feedback.setText(getString(right?R.string.correct_feedback:R.string.retry_feedback,lesson.feedback));feedback.setTextColor(right?MINT:0xffffd5a4);if(right){progress.complete(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));if(index<9)feedback.append("\nCheckpoint passed. Return to the course to open the next lesson.");}feedback.announceForAccessibility(feedback.getText());});
-        if(index<9) {
-            if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index)))action(content,"Continue to next lesson  →",true,()->lesson(index+1));
-            else action(content,"Complete the practice check to continue",false,()->message("Practice checkpoint","Answer this lesson's question correctly to unlock the next lesson. You can return and review at any time."));
+        lesson(index,preferences.getInt(lessonKey(index)+":stage",0));
+    }
+    private void lesson(int index,int requestedStage) {
+        Lesson[] lessons=Curriculum.lessons(cpp);
+        boolean previous=index>0 && progress.completed(courseKey(),Integer.toString(index-1));
+        if(!LearningPath.canOpen(preferences.getBoolean("intro_checkpoint_v1",false),index,lessons.length,previous)) {
+            academy();message("Continue your learning path","Pass the introduction and preceding lesson checkpoint first. Completed lessons remain available for review.");return;
         }
-        action(content,"Back to course",false,this::academy);
+        int stage=LearningPath.stage(requestedStage);activeLesson=index;activeStage=stage;
+        preferences.edit().putInt(courseKey()+":resume",index).putInt(lessonKey(index)+":stage",stage).apply();
+        Lesson lesson=lessons[index];
+        shell("lesson",(cpp?"C++":"C")+" FOUNDATIONS / "+(index+1)+" OF "+lessons.length,lesson.title,"Stage "+(stage+1)+" of 4 · "+LearningPath.STAGES[stage]);
+        LinearLayout stages=new LinearLayout(this);stages.setPadding(0,0,0,dp(16));content.addView(stages);
+        for(int i=0;i<LearningPath.STAGES.length;i++) {
+            final int target=i;Button step=new Button(this);step.setText(Integer.toString(i+1));step.setAllCaps(false);
+            step.setTextColor(i==stage?MINT:MUTED);step.setContentDescription("Stage "+(i+1)+": "+LearningPath.STAGES[i]);step.setMinHeight(dp(48));step.setBackground(glass(i==stage));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),0,dp(3),0);stages.addView(step,lp);step.setOnClickListener(v->lesson(index,target));
+        }
+        LinearLayout page=panel(false);
+        if(stage==0) {
+            title(page,"Understand the idea",22);body(page,lesson.explanation);
+            if(index==0)action(page,"Explore syntax, token by token",false,()->readGuide("First program: syntax anatomy","lessons/first-program.txt"));
+        } else if(stage==1) {
+            page.addView(label("WORKED EXAMPLE / SOURCE, NOT LIVE OUTPUT",12,MINT));
+            TextView code=label(lesson.code,16,INK);code.setTypeface(Typeface.MONOSPACE);code.setTextIsSelectable(true);page.addView(code);
+            body(page,"Read each statement in order. Predict what changes in memory and what is printed before comparing with the source.");
+            action(page,"Open a copy in Studio",true,()->copyLesson(index));
+        } else if(stage==2) {
+            title(page,"Your turn",22);body(page,lesson.challenge);
+            body(page,"Write your prediction or solution notes below. These stay on this device; saving a note does not award mastery.");
+            EditText notes=new EditText(this);notes.setTextColor(INK);notes.setTextSize(16);notes.setGravity(Gravity.TOP);
+            notes.setMinLines(4);notes.setHint("My prediction and reasoning");notes.setHintTextColor(MUTED);
+            notes.setContentDescription("Private practice notes");notes.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8000)});
+            String key=lessonKey(index)+":notes";notes.setText(preferences.getString(key,""));page.addView(notes);
+            notes.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence t,int a,int c,int f){}public void onTextChanged(CharSequence t,int a,int b,int c){preferences.edit().putString(key,t.toString()).apply();}public void afterTextChanged(Editable t){}});
+        } else {
+            RadioGroup choices=practiceChoices(page,lesson.question,lesson.options);
+            TextView feedback=label("Choose an answer. You may retry and review the earlier stages.",16,MUTED);page.addView(feedback);
+            action(page,"Check answer",true,()->{
+                int answer=selected(choices);if(answer<0){feedback.setText(R.string.select_answer);return;}
+                boolean right=answer==lesson.answer;
+                feedback.setText(getString(right?R.string.correct_feedback:R.string.retry_feedback,lesson.feedback));
+                if(right) progress.complete(courseKey(),Integer.toString(index));
+                feedback.announceForAccessibility(feedback.getText());
+            });
+        }
+        if(stage<3)action(content,"Continue to "+LearningPath.STAGES[stage+1],true,()->lesson(index,stage+1));
+        else action(content,index+1<lessons.length?"Continue to next lesson":"Return to course",true,()->{
+            if(!progress.completed(courseKey(),Integer.toString(index))) {message("Checkpoint needed","Answer this lesson's practice check correctly before continuing.");return;}
+            if(index+1<lessons.length)lesson(index+1,0);else courseMap();
+        });
+        if(stage>0)action(content,"Previous stage",false,()->lesson(index,stage-1));
+        String bookmark=lessonKey(index)+":bookmark";
+        action(content,preferences.getBoolean(bookmark,false)?"Remove bookmark":"Bookmark lesson",false,()->{
+            preferences.edit().putBoolean(bookmark,!preferences.getBoolean(bookmark,false)).apply();lesson(index,stage);
+        });
+        action(content,"Back to course",false,this::courseMap);
     }
     private void copyLesson(int index) {
         String base=(cpp?"cpp":"c")+"-lesson-"+(index+1),extension=cpp?".cpp":".c",name=base+extension;int n=2;
@@ -256,13 +427,14 @@ public final class MainActivity extends Activity {
     private static final class Aurora extends View {
         private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
         private Shader top, bottom;
-        Aurora(Context context){super(context);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
+        private final boolean light;
+        Aurora(Context context,boolean light){super(context);this.light=light;setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
         @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
             if(w<=0||h<=0)return;
-            top=new RadialGradient(w*.95f,h*.08f,w*.95f,new int[]{0xff303465,0x00303465},null,Shader.TileMode.CLAMP);
-            bottom=new RadialGradient(w*.02f,h*.58f,w*.8f,new int[]{0xff103e48,0x00103e48},null,Shader.TileMode.CLAMP);
+            top=new RadialGradient(w*.95f,h*.08f,w*.95f,light?new int[]{0xffd7d2f5,0x00d7d2f5}:new int[]{0xff303465,0x00303465},null,Shader.TileMode.CLAMP);
+            bottom=new RadialGradient(w*.02f,h*.58f,w*.8f,light?new int[]{0xffc8e6f3,0x00c8e6f3}:new int[]{0xff103e48,0x00103e48},null,Shader.TileMode.CLAMP);
         }
-        @Override protected void onDraw(Canvas canvas){float w=getWidth(),h=getHeight();canvas.drawColor(0xff0b1020);paint.setShader(top);canvas.drawRect(0,0,w,h,paint);paint.setShader(bottom);canvas.drawRect(0,0,w,h,paint);paint.setShader(null);paint.setColor(0x12b6caff);paint.setStrokeWidth(1);for(int x=0;x<w;x+=64)canvas.drawLine(x,0,x,h,paint);for(int y=0;y<h;y+=64)canvas.drawLine(0,y,w,y,paint);}
+        @Override protected void onDraw(Canvas canvas){float w=getWidth(),h=getHeight();canvas.drawColor(light?0xfff5f7ff:0xff0b1025);paint.setShader(top);canvas.drawRect(0,0,w,h,paint);paint.setShader(bottom);canvas.drawRect(0,0,w,h,paint);paint.setShader(null);paint.setColor(light?0x0c344b80:0x12b6caff);paint.setStrokeWidth(1);for(int x=0;x<w;x+=64)canvas.drawLine(x,0,x,h,paint);for(int y=0;y<h;y+=64)canvas.drawLine(0,y,w,y,paint);}
 
     }
 }
