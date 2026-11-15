@@ -90,7 +90,7 @@ public final class MainActivity extends Activity {
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); stack.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(22),dp(24),dp(22),dp(14)); scroll.addView(content);
-        content.addView(label(eyebrow,12,MINT)); title(content,heading,32); body(content,subtitle);
+        if (!eyebrow.isEmpty()) content.addView(label(eyebrow,12,MINT)); title(content,heading,32); if (!subtitle.isEmpty()) body(content,subtitle);
         View gap=new View(this); content.addView(gap,new LinearLayout.LayoutParams(1,dp(20)));
         LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackgroundColor(0xfff7f8fc); stack.addView(nav);
         for(String tab:new String[]{"Compiler","Learn C/C++"}) {
