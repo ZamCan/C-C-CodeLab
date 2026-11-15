@@ -186,10 +186,10 @@ public final class MainActivity extends Activity {
                 try {
                     CompilerEngine.Request request=new CompilerEngine.Request(file,source,CompilerEngine.languageFor(file));
                     CompilerEngine.CompileResult compile=compilerEngine.compile(request);
-                    if(!compile.success)result="Compilation failed (exit "+compile.exitCode+")\\n"+compile.stderr+"\\n"+compile.stdout;
+                    if(!compile.success)result="Compilation failed (exit "+compile.exitCode+")\n"+compile.stderr+"\n"+compile.stdout;
                     else {
                         CompilerEngine.RunResult run=compilerEngine.run(compile.artifactId,input,10000);
-                        result="Exit: "+run.exitCode+(run.timedOut?" (timed out)":"")+"\\n"+run.stdout+"\\n"+run.stderr;
+                        result="Exit: "+run.exitCode+(run.timedOut?" (timed out)":"")+"\n"+run.stdout+"\n"+run.stderr;
                     }
                 }catch(Exception ex){result="Compiler error: "+ex.getMessage();}
                 final String shown=result;
