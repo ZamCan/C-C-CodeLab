@@ -93,16 +93,16 @@ public final class MainActivity extends Activity {
         content.addView(label(eyebrow,12,MINT)); title(content,heading,32); body(content,subtitle);
         View gap=new View(this); content.addView(gap,new LinearLayout.LayoutParams(1,dp(20)));
         LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackgroundColor(0xfff7f8fc); stack.addView(nav);
-        for(String tab:new String[]{"⌘  Studio","◈  Academy"}) {
+        for(String tab:new String[]{"Compiler","Learn C/C++"}) {
             Button b=new Button(this); b.setText(tab); b.setAllCaps(false); b.setTextColor(INK); b.setBackgroundColor(Color.TRANSPARENT); b.setMinHeight(dp(56));
-            nav.addView(b,new LinearLayout.LayoutParams(0,-2,1)); b.setOnClickListener(v->{if(leaveEditor()){if(tab.contains("Studio")) studio(); else academy();}});
+            nav.addView(b,new LinearLayout.LayoutParams(0,-2,1)); b.setOnClickListener(v->{if(leaveEditor()){if(tab.equals("Compiler")) studio(); else academy();}});
         }
         setContentView(root);
     }
     private void home() {
         shell("home","BY ZAMCAN ACADEMY","C/C++ CodeLab","Learn • Code • Compile • Build\nYour offline-first C and C++ programming laboratory.");
-        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,getString(R.string.studio),23); body(studio,"A quiet workspace for your C and C++ source files. Save, edit, and export on your phone."); action(studio,"Open workspace",false,this::studio);
-        LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,getString(R.string.academy),23); body(academy,"20 foundation lessons · offline quizzes\nTwo languages. One clear starting point."); action(academy,"Explore the academy",false,this::academy);
+        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,"Compiler",23); body(studio,"A quiet workspace for your C and C++ source files. Save, edit, and export on your phone."); action(studio,"Open",false,this::studio);
+        LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,"Learn C/C++",23); body(academy,"20 foundation lessons · offline quizzes\nTwo languages. One clear starting point."); action(academy,"Learn",false,this::academy);
         body(content,"LOCAL FIRST  •  No account required\nLearning and source files stay on this device.");
         action(content,"Build status & privacy",false,this::status);
     }
@@ -113,9 +113,9 @@ public final class MainActivity extends Activity {
         action(content,"Back home",true,this::home);
     }
     private void studio() {
-        shell("studio","CODE STUDIO  /  LOCAL WORKSPACE","Make something.","Your source files, always close at hand.");
+        shell("studio","COMPILER","Compiler","Write C and C++.");
         LinearLayout p=panel(true); title(p,project,23); body(p,"C, C++, and header files • UTF-8\nEdits save automatically on this device."); action(p,"+  Create a source file",true,this::newFile); action(p,"Switch or create project",false,this::chooseProject);
-        for(String file:store.list()) { LinearLayout f=panel(false); title(f,file,20); body(f,file.endsWith(".cpp")?"C++ source":"Source file"); action(f,"Open editor  →",false,()->openEditor(file)); }
+        for(String file:store.list()) { LinearLayout f=panel(false); title(f,file,20); body(f,file.endsWith(".cpp")?"C++ source":"Source file"); action(f,"Open",false,()->openEditor(file)); }
         body(content,"Compiler setup is pending. You can edit and export sources; this build cannot execute them.");
     }
     private void chooseProject(){
@@ -139,7 +139,7 @@ public final class MainActivity extends Activity {
         if(!leaveEditor()) return;
         String source; try {source=store.read(file);}catch(IOException e){error(e);return;}
         filename=file; preferences.edit().putString("file",file).apply();
-        shell("editor","CODE STUDIO  /  EDITOR",file,"A little focus goes a long way.");
+        shell("editor","COMPILER",file,"Source editor");
         LinearLayout p=panel(false); saveStatus=label("Saved on this device",12,MINT); p.addView(saveStatus);
         editor=new CodeEditor(this); editor.setTextColor(INK); editor.setTextSize(preferences.getInt("font",15)); editor.setTypeface(Typeface.MONOSPACE); editor.setGravity(Gravity.TOP|Gravity.START); editor.setPadding(dp(44),dp(12),dp(8),dp(12)); editor.setBackgroundColor(0x66101729); editor.setMinLines(12); editor.setHorizontallyScrolling(true); editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)}); editor.setContentDescription("Source code editor for "+file); editor.setText(source); p.addView(editor,new LinearLayout.LayoutParams(-1,-2));
         highlight(editor.getText());
@@ -209,7 +209,7 @@ public final class MainActivity extends Activity {
         storyShell(eyebrow,heading,safe,pages.length,pages[safe],
             safe==0?null:()->readStory(eyebrow,heading,text,safe-1,finish),
             safe+1<pages.length?()->readStory(eyebrow,heading,text,safe+1,finish):finish,
-            safe+1<pages.length?"Next  →":"Continue  →");
+            safe+1<pages.length?"Next":"Continue  →");
     }
     private void foundation(int index) {
         String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode and the programming bridge"};
@@ -227,13 +227,13 @@ public final class MainActivity extends Activity {
         catch(IOException e){error(e);}
     }
     private void academy() {
-        shell("academy","LEARNING ACADEMY  /  YOUR PATH","Understand.\nThen build.","Small lessons. Useful ideas. Progress at your pace.");
-        LinearLayout intro=panel(false);title(intro,"Start with problem solving",22);body(intro,"Optional: algorithms, computers, five ways to express solutions, decision tables and pseudocode.");action(intro,"Explore algorithms (skippable)",false,()->foundation(0));
-        if(!preferences.getBoolean("intro_completed",false)){LinearLayout required=panel(true);title(required,"C & C++ introduction",22);body(required,"Required: what programming languages are, the history of C and C++, and their relationship.");action(required,"Continue introduction",true,this::programmingIntroduction);return;}
+        shell("academy","LEARN C/C++","Learn C/C++","Courses");
+        LinearLayout intro=panel(false);title(intro,"Start with problem solving",22);body(intro,"Optional: algorithms, computers, five ways to express solutions, decision tables and pseudocode.");action(intro,"Explore",false,()->foundation(0));
+        if(!preferences.getBoolean("intro_completed",false)){LinearLayout required=panel(true);title(required,"C & C++ introduction",22);body(required,"Required: what programming languages are, the history of C and C++, and their relationship.");action(required,"Continue",true,this::programmingIntroduction);return;}
         LinearLayout p=panel(true); title(p,cpp?"C++ foundations":"C foundations",25);body(p,completed()+" of 10 lessons completed");
         ProgressBar courseProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);courseProgress.setMax(10);courseProgress.setProgress(completed());courseProgress.setProgressTintList(ColorStateList.valueOf(MINT));p.addView(courseProgress,new LinearLayout.LayoutParams(-1,dp(8)));
         action(p,cpp?"Switch to C":"Switch to C++",false,()->{cpp=!cpp;preferences.edit().putBoolean("cpp",cpp).apply();academy();});
-        Lesson[] lessons=Curriculum.lessons(cpp);for(int i=0;i<lessons.length;i++){final int index=i;LinearLayout row=panel(false);row.addView(label(String.format(Locale.ROOT,"%02d  /  %s",i+1,progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i))?"COMPLETED":"FOUNDATION"),12,MINT));title(row,lessons[i].title,21);action(row,index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1))?"Open lesson  →":"Locked — complete previous lesson",false,()->{if(index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1)))lesson(index);else message("Lesson locked","Complete the previous lesson checkpoint before continuing.");});}
+        Lesson[] lessons=Curriculum.lessons(cpp);for(int i=0;i<lessons.length;i++){final int index=i;LinearLayout row=panel(false);row.addView(label(String.format(Locale.ROOT,"%02d  /  %s",i+1,progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i))?"COMPLETED":"FOUNDATION"),12,MINT));title(row,lessons[i].title,21);action(row,index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1))?"Open":"Locked — complete previous lesson",false,()->{if(index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1)))lesson(index);else message("Lesson locked","Complete the previous lesson checkpoint before continuing.");});}
         action(content,"Worked math problems",false,this::mathProblems);action(content,"Guided projects",true,this::projects);action(content,"Your achievements",false,this::achievements);
     }
     private void lesson(int index) { lessonPage(index,0); }
@@ -243,13 +243,13 @@ public final class MainActivity extends Activity {
         int examplePage=explanation.length,challengePage=examplePage+1,quizPage=examplePage+2,total=quizPage+1;
         if(page<examplePage) {
             storyShell((cpp?"C++":"C")+" · LESSON "+(index+1),lesson.title,page,total,explanation[page],
-                page==0?null:()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next  →");
+                page==0?null:()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next");
         }else if(page==examplePage) {
             storyShell("WORKED SOURCE · COPY TO STUDIO",lesson.title,page,total,lesson.code,
-                ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next: practise  →");
+                ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next");
         }else if(page==challengePage) {
             storyShell("YOUR TURN · INDEPENDENT PRACTICE",lesson.title,page,total,lesson.challenge,
-                ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next: knowledge check  →");
+                ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next");
         }else {
             questionPage(index);
         }
@@ -266,8 +266,8 @@ public final class MainActivity extends Activity {
         int[] order=index%2==0?new int[]{0,1}:new int[]{1,0};
         for(int option:order){RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(option);button.setText(lesson.options[option]);button.setTextColor(INK);button.setTextSize(17);button.setPadding(dp(8),dp(12),dp(8),dp(12));button.setMinHeight(dp(64));choices.addView(button);}
         TextView feedback=label("Choose one answer, then check.",15,MUTED);middle.addView(feedback);
-        action(root,"← Review previous page",false,()->lessonPage(index,storyPages(lesson.explanation).length+1));
-        action(root,"Check answer",true,()->{
+        action(root,"Back",false,()->lessonPage(index,storyPages(lesson.explanation).length+1));
+        action(root,"Check",true,()->{
             if(choices.getCheckedRadioButtonId()==-1){feedback.setText("Select an answer first.");return;}
             RadioButton selected=choices.findViewById(choices.getCheckedRadioButtonId());
             boolean correct=((Integer)selected.getTag())==lesson.answer;
