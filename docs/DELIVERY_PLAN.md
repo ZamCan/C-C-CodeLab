@@ -109,3 +109,92 @@ Specification baseline: `ba198369a745100020e60422229c91a00100f7c6`. Implementati
 - `termux-open --view --content-type application/vnd.android.package-archive /sdcard/Download/ZamCan-Academy-0.1.0-preview.apk` exited 0. This establishes installer intent dispatch only. Installation and launch confirmation are still pending from the owner.
 - Direct Android model/version/ABI queries returned Operation not permitted. No device identity or visual verification is fabricated.
 - A later source-only edit removed one blank line's trailing whitespace after the successful build; it makes no semantic change to the verified APK.
+
+
+## Continuation — 2026-11-15 / preview 0.3.0
+
+Baseline: `37bb54e` merged with local checkpoint `5a3239b`, branch `preview/android-foundation`, including updated brand,
+pedagogy, course sequence, foundation assets and independent CI jobs.
+This entry supersedes conflicting historical status above.
+
+### Done in this continuation
+
+- Reworked home and course layout after the owner rejected 0.2.0 design and course organization. Separate journey, pathway selection and compact course maps replace the large single list. After merging newer instructions, home has Compiler / Learn C/C++ only, no publisher banner. Compiler opens the editor with files/projects/export in an overflow menu.
+- Original light/dark PNG artwork is bundled and rendered on home/Academy; see ASSET_ORIGINS.md for saved resource paths and prompts. No HTML mockup was substituted for the native application.
+
+- Required introduction now has a four-part offline practice checkpoint:
+  multiple choice, true/false, fill-in and numbered ordering. The former
+  button-tap `intro_completed` flag no longer awards mastery. Existing lesson
+  completion records are preserved; the new introduction must be passed.
+- Lesson phases: explanation, worked source, practice, checkpoint. Reading and feedback use the new native ReadingView; questions use quizScreen, one at a time with disabled-until-selected Check.
+  Saved per-language resume, lesson stage, bookmarks and bounded private notes.
+  Reading uses measured text pages with saved offsets; Back reviews prior pages. Correct
+  checkpoint answers unlock Continue immediately. Notes do not grant mastery.
+- Entry-point prerequisite and bounds checks also apply to resume/navigation.
+- Saved light/midnight themes for background, surfaces, controls, editor and
+  dialogs; reading text increased to 16sp. C/C++ CodeLab branding retained.
+- LearningFeedback configures platform click sounds, a 130ms system-volume success tone and a 260ms fade/scale on first successful answers. Sound/motion toggles persist; success tone checks ringer/stream volume and animation checks ValueAnimator.areAnimatorsEnabled. Audible behavior, DND interaction and reduced-motion behavior are not device-verified.
+- VersionCode 3 / versionName 0.3.0. Signed with the existing development key.
+- Read-only same-phone package diagnostic and reproducible, checksum-pinned
+  WebAssembly compiler research harness added.
+
+### Evidence
+
+- `tools/verify_android.sh --offline`: `testDebugUnitTest lintDebug assembleDebug`
+  passed. Actual log: `verification/android-build.log`.
+- JVM results: 15 tests, 0 failures,
+  0 errors. New tests cover intro answers, prerequisites,
+  invalid lesson indices and corrupt saved-stage values.
+- Host checks passed: twenty lesson examples, ten project reference builds
+  and exact transcripts, eight backend policy tests, six SQLite schema tests.
+- Delivered APK: `/sdcard/Download/C-C-CodeLab-0.3.0-signed.apk`, 3481389 bytes.
+  SHA-256: `10465acc5d2d1a16db940b3f7b53a0a04d22fbd55d5c56735afc35feab858b0c`.
+- Signature schemes v2/v3 verified; ZIP alignment passed. Same-phone Android
+  framework parsing and certificate verification passed. Evidence is recorded
+  in `verification/package-verification.txt`. This does not establish installation.
+- Device: Samsung SM-A055F, Android 15 / API35, arm64-v8a with 32-bit ARM ABIs.
+  The previous 0.1.0 APK also passed framework signature/parsing checks despite
+  the installer error; a missing signature was not established as its cause.
+- Candidate compiler investigation: see `docs/TOOLCHAIN_CANDIDATE.md` and
+  `verification/wasm-candidate-probe.log`. Actual Clang/LLD compilation and
+  WebAssembly execution passed C11 standard libraries/input/math, C++17
+  containers/templates/algorithms, RAII/smart pointers, multi-file C linking,
+  virtual files, inaccessible host files, invalid-source diagnostics, nonzero
+  exit status, and supervised infinite-loop termination. Missing compiler
+  builtins initially caused a C++ link failure and were explicitly added.
+
+### Partial, blocked and next work
+
+- **Installation/UI: 0.3.0 pending owner test.** The owner reviewed 0.2.0 and rejected its design/course arrangement. Earlier 0.1.0 installation failed.
+  Open the new APK through Files → Downloads; report the actual result. No
+  successful launch, screenshots, accessibility or visual acceptance is claimed.
+- **Compiler integration: blocked / research only.** The tested candidate is
+  an old WebAssembly distribution, not an integrated Android runtime. No toolchain
+  assets are bundled in 0.3.0. Complete licensing/maintenance review, bounded
+  runner implementation and device matrix before exposing Compile/Run.
+- **Learning: partial.** Twenty introductory lessons do not satisfy the required
+  sixteen-module pathway per language. Deep traces/diagrams, search, spaced
+  practice and full content remain. Selections are stored, but restoring exact quiz/feedback state after recreation remains incomplete; full timing/accuracy summary is not implemented.
+- **Projects/editor: partial.** Ten-check preview project unlock remains, not
+  full-course production eligibility. Import/rename/delete, undo/redo, bracket
+  matching, background I/O and extensive editor lifecycle checks remain.
+- **Cloudflare/certification/AdMob: incomplete.** Disabled backend scaffolding
+  only; no deployed identity/exams/issuance/verifier, real credentials or ads.
+- **Production readiness: not achieved.** Next: successful install/launch and
+  device checklist; then Android compiler/library execution and full curriculum.
+
+
+### Screenshot-state reconciliation (37bb54e requirements)
+
+| Reference state | Implemented location | Evidence and remaining defect |
+|---|---|---|
+| 1. Reading presentation | ReadingView; MainActivity.readStory | Native light/dark page, measured text, segmented rail, fixed controls. Build evidence only; no phone screenshots or font-scale acceptance. |
+| 2. Progressive explanation | ReadingView.paginate/showPage | Paragraph/sentence-preferred measured pagination and saved offsets. Authored within-beat bullet reveals remain incomplete. |
+| 3. Section transition | foundation/programmingIntroduction/languageHistory | Sequential navigation exists; richer authored recap transitions remain. |
+| 4. MCQ | quizScreen/introductionQuestion | Four-option intro MCQ, stored selection, Check disabled until ready, feedback. Existing course checks have two choices. Compact landscape/large-text testing pending. |
+| 5. Fill blank | introductionQuestion index 2 | Reversible word choices and grading; inline replacement of the blank is not yet implemented. |
+| 6. Feedback | quizScreen → readStory | Separate correct/incorrect explanation with review/retry. No fabricated results. Device review pending. |
+| 7. Completion | LearningStore.complete; courseMap | Real checkpoints and a final foundation completion message persist/show actual completed counts. Aggregate accuracy/time summary remains not implemented. |
+| 8. Continuity | ReadingView offset preferences; MainActivity restore | Course/reading offsets, notes, bookmarks and selections persist. Full process-death quiz/feedback and all intro routes require further work. |
+
+New adaptive launcher foreground/background/monochrome assets were preserved from remote. Launcher mask verification remains pending. This table records partial implementation, not acceptance of all eight states.

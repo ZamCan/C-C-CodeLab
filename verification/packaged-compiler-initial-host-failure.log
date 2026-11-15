@@ -1,0 +1,4 @@
+PASS: C11 standard headers, math and stdin
+PASS: C++17 containers, strings, templates and algorithms
+PASS: C++17 RAII and smart pointers
+The futex facility returned an unexpected error code.

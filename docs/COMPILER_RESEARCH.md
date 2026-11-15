@@ -19,3 +19,8 @@ The current app targets API 35 with API 26 minimum. The working shell is Termux/
 5. Only after those checks, connect Compile/Run to the editor and report original diagnostics and actual stdout/stderr. Record device model, Android version, ABI, commands, elapsed times, and package checksums in DELIVERY_PLAN.md.
 
 This document is an investigation and acceptance plan, not a completed compiler integration. The proposed alternatives need license, device-policy, performance, and isolation validation before selection.
+
+
+## 2026-11-15 continuation
+
+The same-phone framework probe now identifies the device and verifies APK parsing/signatures; ADB installation/UI verification remains unavailable. A real Clang/LLD WebAssembly research experiment has been added. See [exact candidate, libraries and remaining gates](TOOLCHAIN_CANDIDATE.md). Its passing host tests do not establish APK integration. No compiler has been bundled in preview 0.3.0.

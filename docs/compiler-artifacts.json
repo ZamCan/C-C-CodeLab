@@ -1,0 +1,23 @@
+{
+  "source": "https://github.com/cppstudio-io/wasm-clang-runtime",
+  "sourceCommit": "df1180d80184733c6a01599f76b92b4001d20f87",
+  "release": "v0.1.0",
+  "artifacts": {
+    "clang22-noeh": {
+      "bytes": 36100574,
+      "sha256": "e01346e33b31a3b3359a317450502bd4feb78cd6ca7fed08aca8601f9ff8834d"
+    },
+    "lld22-noeh": {
+      "bytes": 19183252,
+      "sha256": "63c397c582e193aacd96fbdeb04b1bd32f47ae505f6dc4a569ed08a80ddfeff7"
+    },
+    "sysroot22.tar": {
+      "bytes": 39876608,
+      "sha256": "d991c621cdf9b4640c2cd4aa21abb08491c2ae6ef9917cac5c6065553604bcec"
+    },
+    "memfs": {
+      "bytes": 97733,
+      "sha256": "fb77c156e0c6c2032f4a4edd0224420debdb5cd071cbfc3daa6881a41d432d93"
+    }
+  }
+}

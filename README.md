@@ -1,6 +1,6 @@
-# ZamCan Academy — C & C++ first
+# C/C++ CodeLab
 
-Offline-first Android academy with two primary home destinations: **Code Studio** and **Learning Academy**. C and C++ are the initial subjects; shared learning, assessment and credential engines are designed for additional academic subjects.
+Offline-first Android academy with two primary home destinations: **Compiler** and **Learn C/C++**. C and C++ are the initial subjects; shared learning, assessment and credential engines are designed for additional academic subjects.
 
 ## Source availability — important for agents
 **There is no verified, accessible full Android source prototype to import from this repository.** An earlier README incorrectly suggested that a complete prototype was being prepared for import. No path, archive, commit or download for such a prototype has been established. **Do not wait for it.** Continue implementing the Android app in this repository, preserving any existing working files found through repository inspection.
@@ -22,7 +22,7 @@ Offline-first Android academy with two primary home destinations: **Code Studio*
 - A tested Android APK must precede any 'ready' claim.
 
 ## Current verified scope
-Engineering documentation, sample C/C++ source and host smoke-test workflow are committed. Android APK, offline compiler integration, and online certificate service are **not verified**.
+Native Android previews have built and passed unit/lint checks. Package signing/parsing is verified; full device functionality, integrated offline compilation and deployed certification remain unverified. See the delivery ledger for exact artifacts and limits.
 
 ## Android preview implementation (2026-11-14)
 

@@ -27,14 +27,16 @@ public final class MainActivity extends Activity {
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
     private int activeLesson, activeStage;
+    private Runnable readingBack;
     private String screen="home", filename="main.c", exportSource="";
     private EditText editor;
     private TextView saveStatus;
+    private OfflineCompiler compiler;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable autosave=() -> saveSource(false);
 
     @Override public void onCreate(Bundle state) {
-        light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",false);
+        light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",true);
         if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff43516b;MINT=0xff125ba6;LILAC=0xff6240a6;}
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
@@ -51,16 +53,22 @@ public final class MainActivity extends Activity {
             if (!store.exists("main.cpp")) store.write("main.cpp", Curriculum.CPP[0].code);
         } catch(IOException e) { fatal(e); return; }
         if(state!=null && "editor".equals(state.getString("screen"))) openEditor(filename);
-        else if(state!=null && "lesson".equals(state.getString("screen"))) lesson(state.getInt("lesson"),state.getInt("stage"));
+        else if(state!=null && ("lesson".equals(state.getString("screen"))||"story".equals(state.getString("screen"))) && preferences.getString("reading_key","").startsWith(courseKey()+":")) lesson(state.getInt("lesson"),state.getInt("stage"));
         else home();
+    }
+    @Override public void setContentView(View view) {
+        if(compiler!=null){compiler.close();compiler=null;}
+        super.setContentView(view);
+        LearningFeedback.configureClicks(view,preferences==null||preferences.getBoolean("click_sounds",true));
     }
     @Override protected void onSaveInstanceState(Bundle out) {
         saveSource(false); out.putString("screen",screen); out.putInt("lesson",activeLesson); out.putInt("stage",activeStage); super.onSaveInstanceState(out);
     }
     @Override protected void onPause() { saveSource(false); super.onPause(); }
-    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     @Override public void onBackPressed() {
         if("home".equals(screen)) super.onBackPressed();
+        else if("story".equals(screen) && readingBack!=null)readingBack.run();
         else if("lesson".equals(screen)) { if(activeStage>0) lesson(activeLesson,activeStage-1); else courseMap(); }
         else if("course".equals(screen))pathways();
         else if("pathways".equals(screen))academy();
@@ -86,8 +94,8 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(16); p.setLayoutParams(lp); content.addView(p); return p;
     }
     private void action(LinearLayout parent,String text,boolean primary,Runnable run) {
-        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?(light?Color.WHITE:0xff102e2a):INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
-        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?(light?new int[]{0xff125ba6,0xff553b9f}:new int[]{MINT,0xffb1ebf2}):(light?new int[]{0xffe9e5fa,0xffe4ecf9}:new int[]{0x40b1a4ef,0x252b4767}));
+        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?Color.WHITE:INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
+        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?(new int[]{0xff425ff5,0xff7851db}):(light?new int[]{0xffe9e5fa,0xffe4ecf9}:new int[]{0x40b1a4ef,0x252b4767}));
         background.setCornerRadius(dp(15)); background.setStroke(dp(1),primary?0x55ffffff:0x44ced9ff);
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x40ffffff),background,null));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.topMargin=dp(10); b.setLayoutParams(lp);
@@ -100,10 +108,10 @@ public final class MainActivity extends Activity {
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); stack.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(20),dp(20),dp(20),dp(20)); scroll.addView(content);
-        content.addView(label(eyebrow,12,MINT)); title(content,heading,28); body(content,subtitle);
+        if(!eyebrow.isEmpty())content.addView(label(eyebrow,14,MINT)); title(content,heading,28); if(!subtitle.isEmpty())body(content,subtitle);
         View gap=new View(this); content.addView(gap,new LinearLayout.LayoutParams(1,dp(20)));
         LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackground(glass(false)); stack.addView(nav);
-        String[] tabs={"Home","Studio","Academy"};
+        String[] tabs={"Home","Compiler","Learn C/C++"};
         int selected="home".equals(name)?0:("studio".equals(name)||"editor".equals(name)?1:2);
         for(int i=0;i<tabs.length;i++) {
             final int destination=i;Button b=new Button(this);b.setText(tabs[i]);b.setAllCaps(false);b.setTextSize(14);
@@ -139,14 +147,20 @@ public final class MainActivity extends Activity {
         View line=new View(this);line.setBackgroundColor(light?0x197080a0:0x19d0dcff);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
     private void home() {
-        shell("home","BY ZAMCAN ACADEMY","C/C++ CodeLab","Your space to learn programming and build with code.");
-        LinearLayout create=panel(true);artwork(create);create.addView(label("CODE STUDIO",14,MINT));title(create,"From idea to source.",26);
-        body(create,"C and C++ projects, a focused editor, and files that stay on your phone.");action(create,"Open Code Studio  →",true,this::studio);
-        LinearLayout learn=panel(false);learn.addView(label("LEARNING ACADEMY",14,LILAC));title(learn,"A path through programming.",26);
-        body(learn,"Start with the concepts. Explore a worked example. Practice, then check your understanding.");action(learn,"Continue learning  →",true,this::academy);
-        section("YOUR SPACE");
-        row(content,"◐","Appearance",light?"Light glass theme":"Midnight glass theme",true,this::appearance);
-        row(content,"i","About this preview","Capabilities, privacy and build status",true,this::status);
+        shell("home","","C/C++ CodeLab","");
+        artwork(content);
+        action(content,"Compiler",true,this::studio);
+        action(content,"Learn C/C++",true,this::academy);
+        row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else status();}).show());
+    }
+    private void feedbackSettings() {
+        String[] keys={"click_sounds","success_sound","success_motion"};
+        boolean[] enabled={preferences.getBoolean(keys[0],true),preferences.getBoolean(keys[1],true),preferences.getBoolean(keys[2],true)};
+        new AlertDialog.Builder(this).setTitle("Sound & motion")
+            .setMultiChoiceItems(new String[]{"Button click sounds","Checkpoint success tone","Checkpoint animation"},enabled,(dialog,index,checked)->{
+                preferences.edit().putBoolean(keys[index],checked).apply();
+                LearningFeedback.configureClicks(findViewById(android.R.id.content),preferences.getBoolean("click_sounds",true));
+            }).setPositiveButton("Done",null).show();
     }
     private void appearance() {
         shell("appearance","SETTINGS / APPEARANCE","Your learning space.","Choose a theme. Text follows your device font scaling.");
@@ -156,16 +170,20 @@ public final class MainActivity extends Activity {
         action(content,"Back home",false,this::home);
     }
     private void status() {
-        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.3.0");
+        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.4.0");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
-        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An Android-compatible C/C++ compiler and isolated execution runtime are not bundled. Compile and Run are unavailable. No program output is simulated.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThis build requests no network or storage permissions and includes no analytics or advertising SDK.");
+        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThis build requests no network or storage permissions and includes no analytics or advertising SDK.");
         action(content,"Back home",true,this::home);
     }
-    private void studio() {
-        shell("studio","CODE STUDIO  /  LOCAL WORKSPACE","Your workspace","Projects and source files, stored on this device.");
-        LinearLayout p=panel(true); title(p,project,23); body(p,"C, C++, and header files • UTF-8\nEdits save automatically on this device."); action(p,"+  Create a source file",true,this::newFile); action(p,"Switch or create project",false,this::chooseProject);
-        section("PROJECT FILES");LinearLayout files=panel(false);for(String file:store.list())row(files,file.endsWith(".cpp")?"C++":"C",file,"Saved locally · tap to edit",true,()->openEditor(file));
-        body(content,"Compiler setup is pending. You can edit and export sources; this build cannot execute them.");
+    private void studio() { try { if(store.list().isEmpty())store.write("main.c",Curriculum.C[0].code);openEditor(store.exists(filename)?filename:store.list().get(0)); } catch(IOException e){error(e);} }
+    private void compilerMenu() {
+        new AlertDialog.Builder(this).setTitle(project).setItems(new String[]{"Files","New file","Projects","Export","Text size"},(dialog,item)->{
+            if(item==0){String[] files=store.list().toArray(new String[0]);new AlertDialog.Builder(this).setTitle("Project files").setItems(files,(d,w)->openEditor(files[w])).show();}
+            else if(item==1){if(leaveEditor())newFile();}
+            else if(item==2){if(leaveEditor())chooseProject();}
+            else if(item==3 && saveSource(true)){exportSource=editor.getText().toString();try{startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename),41);}catch(ActivityNotFoundException e){error(e);}}
+            else if(item==4)new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"16 sp","20 sp","24 sp"},(d,w)->{int size=new int[]{16,20,24}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show();
+        }).show();
     }
     private void chooseProject(){
         java.util.List<String> projects=workspaces.list();projects.add("+ Create project");
@@ -188,14 +206,42 @@ public final class MainActivity extends Activity {
         if(!leaveEditor()) return;
         String source; try {source=store.read(file);}catch(IOException e){error(e);return;}
         filename=file; preferences.edit().putString("file",file).apply();
-        shell("editor","CODE STUDIO  /  EDITOR",file,"A little focus goes a long way.");
+        shell("editor","COMPILER",file,project);action(content,"⋮  Files & tools",false,this::compilerMenu);
         LinearLayout p=panel(false); saveStatus=label("Saved on this device",12,MINT); p.addView(saveStatus);
         editor=new CodeEditor(this); editor.setTextColor(INK); editor.setTextSize(preferences.getInt("font",15)); editor.setTypeface(Typeface.MONOSPACE); editor.setGravity(Gravity.TOP|Gravity.START); editor.setPadding(dp(44),dp(12),dp(8),dp(12)); editor.setBackgroundColor(light?0xfff6f8ff:0x66101729); editor.setMinLines(12); editor.setHorizontallyScrolling(true); editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)}); editor.setContentDescription("Source code editor for "+file); editor.setText(source); p.addView(editor,new LinearLayout.LayoutParams(-1,-2));
         highlight(editor.getText());
         editor.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){}public void afterTextChanged(Editable s){if(highlighting)return;dirty=true;saveStatus.setText(R.string.saving);handler.removeCallbacks(autosave);handler.postDelayed(autosave,700);highlight(s);}});
-        action(p,"Save source",true,()->saveSource(true)); action(p,"Export source…",false,()->{if(saveSource(true)){exportSource=editor.getText().toString();Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename);try{startActivityForResult(intent,41);}catch(ActivityNotFoundException e){error(e);}}});
-        action(p,"Editor text size",false,()->new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"Compact · 13 sp","Comfortable · 16 sp","Large · 20 sp"},(d,w)->{int size=new int[]{13,16,20}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show());
-        LinearLayout terminal=panel(false); terminal.addView(label("TERMINAL  /  NOT CONNECTED",12,LILAC)); body(terminal,"Native compiler not installed in this build. No code has been compiled or executed."); action(terminal,"View execution requirements",false,()->message("Native execution is pending","Release requires a packaged Android toolchain, linker and runtime, verified input/output, time/memory/output limits, and termination on a real device. Host compiler tests do not establish Android support."));
+        action(p,"Save",true,()->saveSource(true));
+        LinearLayout terminal=panel(false);
+        terminal.addView(label(file.endsWith(".cpp")?"C++17 · Clang 22 / WASI":"C17 · Clang 22 / WASI",12,LILAC));
+        EditText stdin=new EditText(this);stdin.setTextColor(INK);stdin.setHintTextColor(MUTED);stdin.setHint("Program input (stdin)");stdin.setContentDescription("Program standard input");stdin.setMinLines(2);stdin.setFilters(new InputFilter[]{new InputFilter.LengthFilter(65536)});terminal.addView(stdin);
+        CheckBox multi=new CheckBox(this);multi.setText("Build all source files in this project");multi.setTextColor(INK);terminal.addView(multi);
+        TextView state=label("Loading offline compiler…",14,MINT);state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);terminal.addView(state);
+        TextView diagnostics=label("",13,MUTED),stdout=label("",14,INK),stderr=label("",14,LILAC);
+        for(TextView output:new TextView[]{diagnostics,stdout,stderr}){output.setTypeface(Typeface.MONOSPACE);output.setTextIsSelectable(true);}
+        terminal.addView(label("Diagnostics",12,MUTED));terminal.addView(diagnostics);
+        terminal.addView(label("stdout",12,MUTED));terminal.addView(stdout);
+        terminal.addView(label("stderr",12,MUTED));terminal.addView(stderr);
+        Button run=new Button(this);run.setText("Compile & run");run.setAllCaps(false);run.setEnabled(false);terminal.addView(run);
+        compiler=new OfflineCompiler(this,event->{
+            String type=event.optString("type");
+            if(type.equals("ready")){state.setText("Ready · offline toolchain");run.setEnabled(true);}
+            else if(type.equals("phase"))state.setText(event.optString("phase")+"…");
+            else if(type.equals("output")){String stream=event.optString("stream");TextView target=stream.equals("stdout")?stdout:stream.equals("stderr")?stderr:diagnostics;if(target.length()<70000)target.append(event.optString("text"));}
+            else if(type.equals("result")){state.setText(event.isNull("trap")?"Exit status: "+event.optString("exitCode"):"Runtime error: "+event.optString("trap"));run.setEnabled(true);}
+            else if(type.equals("failure")||type.equals("cancelled")){state.setText(type.equals("cancelled")?"Cancelled":event.optString("message"));run.setEnabled(compiler!=null&&compiler.isReady());}
+        });
+        run.setOnClickListener(v->{
+            if(!saveSource(true)||compiler==null)return;
+            try{
+                org.json.JSONObject files=new org.json.JSONObject();
+                for(String name:store.list())if(name.equals(filename)||name.endsWith(".h")||name.endsWith(".hpp")||multi.isChecked())files.put(name,store.read(name));
+                diagnostics.setText("");stdout.setText("");stderr.setText("");run.setEnabled(false);
+                compiler.run(new org.json.JSONObject().put("files",files).put("stdin",stdin.getText().toString()));
+            }catch(Exception e){run.setEnabled(true);error(e);}
+        });
+        action(terminal,"Stop",false,()->{if(compiler!=null)compiler.cancel();});
+        action(terminal,"Runtime details",false,()->message("Offline C/C++ runtime","Clang 22.1.8, LLD, C17/C++17 headers, libc, libc++ and compiler builtins. Programs run as WebAssembly, not Android native binaries. Input is supplied before running; EOF follows. Run limit: 3 seconds, 64 MiB program memory, 64 KiB output. Virtual files are temporary. Threads, sockets, native GUI, dynamic libraries and C++ exceptions are not supported. Device execution is still under verification."));
     }
     private void highlight(Editable s) {
         if(s.length()>24000) return;
@@ -214,29 +260,24 @@ public final class MainActivity extends Activity {
     }
     private int completed() {int count=0;for(int i=0;i<10;i++)if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i)))count++;return count;}
 
-    /** Optional algorithmic-thinking foundation; does not award C/C++ course mastery. */
+    private void readStory(String key,String heading,String text,boolean code,Runnable finish,Runnable extra,String extraLabel) {
+        handler.removeCallbacks(autosave);editor=null;dirty=false;screen="story";readingBack=this::academy;
+        preferences.edit().putString("reading_key",key).apply();
+        setContentView(new ReadingView(this,light,heading,text,code,preferences.getInt(key+":offset",0),
+            offset->preferences.edit().putInt(key+":offset",offset).apply(),readingBack,finish,extra,extraLabel));
+    }
     private void foundation(int index) {
-        String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode and the programming bridge"};
+        String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode"};
         String[] files={"algorithm","computer","representations","decision-table","pseudocode"};
         if(index<0||index>=titles.length){programmingIntroduction();return;}
-        shell("foundation","OPTIONAL FOUNDATION  /  "+(index+1)+" OF "+titles.length,titles[index],"Think clearly before writing code. You may skip this foundation.");
-        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/"+files[index]+".txt"));}catch(IOException e){error(e);}
-        action(content,index==titles.length-1?"Continue to programming languages":"Next foundation topic  →",true,()->foundation(index+1));
-        action(content,"Skip foundation — introduce C & C++",false,this::programmingIntroduction);
-        action(content,"Back to academy",false,this::academy);
+        preferences.edit().putInt("foundation_index",index).apply();
+        try{readStory("foundation:"+index,titles[index],asset("foundation/"+files[index]+".txt"),false,()->foundation(index+1),this::programmingIntroduction,"Skip");}catch(IOException e){error(e);}
     }
-    /** Required shared introduction before entering either formal programming pathway. */
     private void programmingIntroduction() {
-        shell("programming-intro","REQUIRED INTRODUCTION  /  C & C++","From algorithms to programs.","Discover the languages, their history, and how source becomes executable.");
-        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/programming-languages.txt"));}catch(IOException e){error(e);}
-        action(content,"Continue to C and C++ history  →",true,this::languageHistory);
-        action(content,"Back to academy",false,this::academy);
+        try{readStory("intro:languages","Programming languages",asset("foundation/programming-languages.txt"),false,this::languageHistory,null,"");}catch(IOException e){error(e);}
     }
     private void languageHistory() {
-        shell("language-history","REQUIRED INTRODUCTION  /  C & C++","Meet C and C++.","Two related languages with different strengths and rules.");
-        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/language-history.txt"));}catch(IOException e){error(e);}
-        action(content,"Check your understanding  →",true,this::introductionCheckpoint);
-        action(content,"Previous: programming languages",false,this::programmingIntroduction);
+        try{readStory("intro:history","Meet C and C++",asset("foundation/language-history.txt"),false,this::introductionCheckpoint,null,"");}catch(IOException e){error(e);}
     }
     private RadioGroup practiceChoices(LinearLayout parent,String question,String... options) {
         title(parent,question,19);
@@ -255,38 +296,51 @@ public final class MainActivity extends Activity {
         EditText input=new EditText(this);input.setTextColor(INK);input.setHintTextColor(MUTED);input.setHint(hint);
         input.setContentDescription(hint);input.setSingleLine(true);input.setMinHeight(dp(52));parent.addView(input);return input;
     }
-    private void introductionCheckpoint() {
-        shell("intro-checkpoint","REQUIRED INTRODUCTION / PRACTICE","Ready for the pathway?","Four short checks. You can retry freely; this is not a certificate exam.");
-        LinearLayout p=panel(false);
-        RadioGroup language=practiceChoices(p,"1. Which statement describes C and C++?","C++ accepts every C program unchanged.","C and C++ are related languages with different rules.","C and C++ are names for the same language.");
-        RadioGroup compatibility=practiceChoices(p,"2. True or false: indentation alone defines a C block.","False — braces define a compound statement.","True — adding spaces changes block boundaries.");
-        body(p,"3. Fill the blank: a ______ translates C/C++ source into object code in a typical separate-compilation workflow.");
-        EditText compiler=practiceInput(p,"Name the translation tool");
-        body(p,"4. Arrange these steps by entering their numbers: 3 = link object files and libraries; 1 = write source; 2 = compile source to object code.");
-        EditText pipeline=practiceInput(p,"Order, for example 3, 2, 1");
-        TextView feedback=label("Answer all four checks, then review the feedback.",16,MUTED);p.addView(feedback);
-        action(p,"Check introduction",true,()->{
-            if(LearningPath.introductionPassed(selected(language),selected(compatibility),compiler.getText().toString(),pipeline.getText().toString())) {
-                preferences.edit().putBoolean("intro_checkpoint_v1",true).apply();
-                feedback.setText("Checkpoint passed. The C and C++ pathways are now available.");
-                action(content,"Choose your pathway",true,this::academy);
-            } else {
-                feedback.setText("Review and retry: C and C++ have different rules. Braces, not indentation, group C statements. A compiler translates source; a linker combines object files and libraries. Write source, compile, then link. Your existing course progress is preserved.");
-            }
-            feedback.announceForAccessibility(feedback.getText());
+    private void introductionCheckpoint() { introductionQuestion(Math.min(3,preferences.getInt("intro_question",0))); }
+    private void introductionQuestion(int index) {
+        String[] questions={"Which statement describes C and C++?","Indentation alone defines a C block. True or false?","A ____ translates source into object code.","Arrange: 1 write source, 2 compile, 3 link."};
+        String[][] options={{"They are identical languages.","They are related languages with different rules.","C++ accepts every C program unchanged.","C is another name for machine code."},{"False — braces group statements.","True — indentation groups statements."},{"compiler","linker","editor","loader"},{"1 → 2 → 3","1 → 3 → 2","2 → 1 → 3","3 → 2 → 1"}};
+        int[] correct={1,0,0,0};
+        String[] reasons={"C and C++ are related, but have distinct rules; valid C is not always valid C++.","Braces delimit a compound statement. Indentation communicates structure to readers.","The compiler produces object code in this workflow; the linker combines objects and libraries.","First write the source, compile it to objects, then link the objects and libraries."};
+        preferences.edit().putInt("intro_question",index).apply();
+        quizScreen("Introduction · "+(index+1)+" / 4",questions[index],options[index],correct[index],reasons[index],"intro:"+index,()->{
+            if(index<3)introductionQuestion(index+1);else{preferences.edit().putBoolean("intro_checkpoint_v1",true).apply();academy();}
+        },this::programmingIntroduction);
+    }
+    private void quizScreen(String title,String question,String[] options,int answer,String reason,String key,Runnable passed,Runnable review) {
+        handler.removeCallbacks(autosave);editor=null;dirty=false;screen="quiz";
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(light?0xfffcfcff:0xff0b1025);
+        root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(20)+insets.getSystemWindowInsetLeft(),dp(12)+insets.getSystemWindowInsetTop(),dp(20)+insets.getSystemWindowInsetRight(),dp(12)+insets.getSystemWindowInsetBottom());return insets;});
+        TextView close=label("Close",16,MINT);close.setMinHeight(dp(48));close.setGravity(Gravity.CENTER_VERTICAL);close.setOnClickListener(v->academy());root.addView(close);
+        root.addView(label(title,14,MUTED));
+        RadioGroup choices=practiceChoices(root,question,options);
+        String selection=key+":selection";int saved=preferences.getInt(selection,-1);
+        if(saved>=0&&saved<choices.getChildCount())choices.check(choices.getChildAt(saved).getId());
+        root.addView(new View(this),new LinearLayout.LayoutParams(1,0,1));
+        action(root,"Check",true,()->{
+            int choice=selected(choices);if(choice<0)return;
+            boolean correct=choice==answer;
+            boolean firstSuccess=correct&&!preferences.getBoolean(key+":celebrated",false);
+            if(firstSuccess)preferences.edit().putBoolean(key+":celebrated",true).apply();
+            if(correct && key.equals(lessonKey(activeLesson)))progress.complete(courseKey(),Integer.toString(activeLesson));
+            preferences.edit().putInt(key+":attempts",preferences.getInt(key+":attempts",0)+1).apply();
+            String feedback=(correct?"Correct. ":"Review and retry. ")+reason;
+            readStory(key+":feedback",correct?"Well understood":"Keep exploring",feedback,false,correct?passed:()->quizScreen(title,question,options,answer,reason,key,passed,review),review,"Review");
+            if(firstSuccess)LearningFeedback.success(this,findViewById(android.R.id.content),preferences.getBoolean("success_sound",true),preferences.getBoolean("success_motion",true));
         });
-        action(content,"Review introduction",false,this::programmingIntroduction);
-        action(content,"Back to academy",false,this::academy);
+        Button check=(Button)root.getChildAt(root.getChildCount()-1);check.setEnabled(saved>=0);check.setAlpha(saved>=0?1f:.4f);
+        choices.setOnCheckedChangeListener((group,id)->{int chosen=selected(group);preferences.edit().putInt(selection,chosen).apply();check.setEnabled(chosen>=0);check.setAlpha(chosen>=0?1f:.4f);});
+        setContentView(root);
     }
     private String courseKey(){return cpp?"cpp-foundation":"c-foundation";}
     private String lessonKey(int index){return courseKey()+":"+index;}
     private void academy() {
-        shell("academy","LEARNING ACADEMY","Your learning journey","Offline lessons. Clear steps. Progress you can return to.");
+        shell("academy","","Learn C/C++","Courses and practice");
         boolean introduced=preferences.getBoolean("intro_checkpoint_v1",false);
         LinearLayout next=panel(true);artwork(next);next.addView(label(introduced?"CONTINUE YOUR PATH":"START HERE",14,MINT));
-        title(next,introduced?(cpp?"C++ foundations":"C foundations"):"Understand the languages",24);
+        title(next,introduced?(cpp?"C++ foundations":"C foundations"):"C/C++ introduction",24);
         body(next,introduced?completed()+" of "+Curriculum.lessons(cpp).length+" preview checkpoints complete":"Explore how programs work, meet C and C++, then check your understanding.");
-        action(next,introduced?"Resume lesson  →":"Begin introduction  →",true,()->{if(introduced)lesson(preferences.getInt(courseKey()+":resume",0));else programmingIntroduction();});
+        action(next,introduced?"Continue":"Start",true,()->{if(introduced)lesson(preferences.getInt(courseKey()+":resume",0));else programmingIntroduction();});
         section("THE JOURNEY");LinearLayout journey=panel(false);
         row(journey,"01","Think like a programmer","Optional · algorithms and problem solving",true,()->foundation(0));
         row(journey,"02","Meet C and C++",introduced?"Checkpoint passed · review anytime":"Required · languages, history and toolchain",true,this::programmingIntroduction);
@@ -297,22 +351,22 @@ public final class MainActivity extends Activity {
         row(content,"ƒ","Math into code","Worked problems and reasoning",true,this::mathProblems);
     }
     private void pathways() {
-        shell("pathways","ACADEMY / PATHWAYS","Choose your language","Both pathways remain available. Your progress is saved separately.");
+        shell("pathways","COURSES","Choose your language","Both pathways remain available. Your progress is saved separately.");
         for(boolean language:new boolean[]{false,true}) {
             LinearLayout p=panel(language);p.addView(label(language?"C++ / ABSTRACTION & STRUCTURE":"C / PROGRAMMING FOUNDATIONS",14,language?LILAC:MINT));
             title(p,language?"Build with modern C++":"Understand the foundations of C",24);
             body(p,language?"Values, functions, containers and objects. Learn how C++ expresses reusable programs.":"Types, decisions, functions and memory. Learn how source code describes precise operations.");
-            action(p,"View "+(language?"C++":"C")+" course",true,()->{cpp=language;preferences.edit().putBoolean("cpp",cpp).apply();courseMap();});
+            action(p,"Open",true,()->{cpp=language;preferences.edit().putBoolean("cpp",cpp).apply();courseMap();});
         }
         body(content,"Preview scope: ten introductory lessons per language. The complete sixteen-module pathways are still being developed.");
         action(content,"Back to journey",false,this::academy);
     }
     private void courseMap() {
-        shell("course","ACADEMY / "+(cpp?"C++":"C"),cpp?"C++ foundations":"C foundations","Work through the checkpoints in order. Revisit completed lessons anytime.");
+        shell("course","COURSE / "+(cpp?"C++":"C"),cpp?"C++ foundations":"C foundations","Work through the checkpoints in order. Revisit completed lessons anytime.");
         Lesson[] lessons=Curriculum.lessons(cpp);LinearLayout summary=panel(true);
         title(summary,completed()+" / "+lessons.length+" checkpoints",24);
         ProgressBar meter=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);meter.setMax(lessons.length);meter.setProgress(completed());meter.setProgressTintList(ColorStateList.valueOf(MINT));summary.addView(meter,new LinearLayout.LayoutParams(-1,dp(6)));
-        action(summary,"Resume learning",true,()->lesson(preferences.getInt(courseKey()+":resume",0)));
+        action(summary,"Continue",true,()->lesson(preferences.getInt(courseKey()+":resume",0)));
         LinearLayout group=null;
         for(int i=0;i<lessons.length;i++) {
             if(i%4==0){section("LESSONS "+(i+1)+"–"+Math.min(i+4,lessons.length));group=panel(false);}
@@ -337,52 +391,22 @@ public final class MainActivity extends Activity {
         int stage=LearningPath.stage(requestedStage);activeLesson=index;activeStage=stage;
         preferences.edit().putInt(courseKey()+":resume",index).putInt(lessonKey(index)+":stage",stage).apply();
         Lesson lesson=lessons[index];
-        shell("lesson",(cpp?"C++":"C")+" FOUNDATIONS / "+(index+1)+" OF "+lessons.length,lesson.title,"Stage "+(stage+1)+" of 4 · "+LearningPath.STAGES[stage]);
-        LinearLayout stages=new LinearLayout(this);stages.setPadding(0,0,0,dp(16));content.addView(stages);
-        for(int i=0;i<LearningPath.STAGES.length;i++) {
-            final int target=i;Button step=new Button(this);step.setText(Integer.toString(i+1));step.setAllCaps(false);
-            step.setTextColor(i==stage?MINT:MUTED);step.setContentDescription("Stage "+(i+1)+": "+LearningPath.STAGES[i]);step.setMinHeight(dp(48));step.setBackground(glass(i==stage));
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),0,dp(3),0);stages.addView(step,lp);step.setOnClickListener(v->lesson(index,target));
-        }
-        LinearLayout page=panel(false);
-        if(stage==0) {
-            title(page,"Understand the idea",22);body(page,lesson.explanation);
-            if(index==0)action(page,"Explore syntax, token by token",false,()->readGuide("First program: syntax anatomy","lessons/first-program.txt"));
-        } else if(stage==1) {
-            page.addView(label("WORKED EXAMPLE / SOURCE, NOT LIVE OUTPUT",12,MINT));
-            TextView code=label(lesson.code,16,INK);code.setTypeface(Typeface.MONOSPACE);code.setTextIsSelectable(true);page.addView(code);
-            body(page,"Read each statement in order. Predict what changes in memory and what is printed before comparing with the source.");
-            action(page,"Open a copy in Studio",true,()->copyLesson(index));
-        } else if(stage==2) {
-            title(page,"Your turn",22);body(page,lesson.challenge);
-            body(page,"Write your prediction or solution notes below. These stay on this device; saving a note does not award mastery.");
-            EditText notes=new EditText(this);notes.setTextColor(INK);notes.setTextSize(16);notes.setGravity(Gravity.TOP);
-            notes.setMinLines(4);notes.setHint("My prediction and reasoning");notes.setHintTextColor(MUTED);
-            notes.setContentDescription("Private practice notes");notes.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8000)});
-            String key=lessonKey(index)+":notes";notes.setText(preferences.getString(key,""));page.addView(notes);
-            notes.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence t,int a,int c,int f){}public void onTextChanged(CharSequence t,int a,int b,int c){preferences.edit().putString(key,t.toString()).apply();}public void afterTextChanged(Editable t){}});
+        if(stage<3) {
+            String text=stage==0?lesson.explanation:stage==1?lesson.code:lesson.challenge;
+            Runnable extra=stage==1?()->copyLesson(index):stage==2?()->lessonTools(index):index==0?()->readGuide("First program: syntax anatomy","lessons/first-program.txt"):()->lessonTools(index);
+            readStory(lessonKey(index)+":stage:"+stage,lesson.title,text,stage==1,()->lesson(index,stage+1),extra,stage==1?"Try":stage==2?"Notes":"Explore");
+            readingBack=this::courseMap;
         } else {
-            RadioGroup choices=practiceChoices(page,lesson.question,lesson.options);
-            TextView feedback=label("Choose an answer. You may retry and review the earlier stages.",16,MUTED);page.addView(feedback);
-            action(page,"Check answer",true,()->{
-                int answer=selected(choices);if(answer<0){feedback.setText(R.string.select_answer);return;}
-                boolean right=answer==lesson.answer;
-                feedback.setText(getString(right?R.string.correct_feedback:R.string.retry_feedback,lesson.feedback));
-                if(right) progress.complete(courseKey(),Integer.toString(index));
-                feedback.announceForAccessibility(feedback.getText());
-            });
+            quizScreen(lesson.title,lesson.question,lesson.options,lesson.answer,lesson.feedback,lessonKey(index),()->{
+                progress.complete(courseKey(),Integer.toString(index));
+                if(index+1<lessons.length)lesson(index+1,0);else readStory(courseKey()+":completed","Foundations completed",completed()+" of "+lessons.length+" preview checkpoints passed. Review the concepts or explore the guided projects. These are local learning achievements, not certificates.",false,this::courseMap,this::projects,"Projects");
+            },()->lesson(index,0));
         }
-        if(stage<3)action(content,"Continue to "+LearningPath.STAGES[stage+1],true,()->lesson(index,stage+1));
-        else action(content,index+1<lessons.length?"Continue to next lesson":"Return to course",true,()->{
-            if(!progress.completed(courseKey(),Integer.toString(index))) {message("Checkpoint needed","Answer this lesson's practice check correctly before continuing.");return;}
-            if(index+1<lessons.length)lesson(index+1,0);else courseMap();
-        });
-        if(stage>0)action(content,"Previous stage",false,()->lesson(index,stage-1));
-        String bookmark=lessonKey(index)+":bookmark";
-        action(content,preferences.getBoolean(bookmark,false)?"Remove bookmark":"Bookmark lesson",false,()->{
-            preferences.edit().putBoolean(bookmark,!preferences.getBoolean(bookmark,false)).apply();lesson(index,stage);
-        });
-        action(content,"Back to course",false,this::courseMap);
+    }
+    private void lessonTools(int index) {
+        EditText notes=new EditText(this);notes.setTextSize(16);notes.setMinLines(4);notes.setMaxLines(8);notes.setHint("My prediction and reasoning");notes.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8000)});
+        String key=lessonKey(index);notes.setText(preferences.getString(key+":notes",""));
+        new AlertDialog.Builder(this).setTitle("Practice notes").setView(notes).setPositiveButton("Save",(d,w)->preferences.edit().putString(key+":notes",notes.getText().toString()).apply()).setNeutralButton(preferences.getBoolean(key+":bookmark",false)?"Unbookmark":"Bookmark",(d,w)->preferences.edit().putBoolean(key+":bookmark",!preferences.getBoolean(key+":bookmark",false)).putString(key+":notes",notes.getText().toString()).apply()).setNegativeButton("Cancel",null).show();
     }
     private void copyLesson(int index) {
         String base=(cpp?"cpp":"c")+"-lesson-"+(index+1),extension=cpp?".cpp":".c",name=base+extension;int n=2;
@@ -409,8 +433,8 @@ public final class MainActivity extends Activity {
     private void projectGuide(String id,String name){
         shell("guide","PROJECT LAB  /  "+(cpp?"C++":"C"),name,"Work through the milestones, then compare your solution.");
         try{LinearLayout p=panel(false);body(p,asset("projects/"+id+".txt"));}catch(IOException e){error(e);}
-        action(content,"Open starter in Studio",true,()->copyAsset(id,true));
-        action(content,"Open reference solution",false,()->copyAsset(id,false));
+        action(content,"Try starter",true,()->copyAsset(id,true));
+        action(content,"Reference",false,()->copyAsset(id,false));
         action(content,"Back to projects",false,this::projects);
     }
     private void copyAsset(String id,boolean starter){
