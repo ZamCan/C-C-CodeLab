@@ -177,14 +177,14 @@ public final class MainActivity extends Activity {
                 return;
             }
             if(!saveSource(true))return;
-            final String source=editor.getText().toString();
+            final String compileSource=editor.getText().toString();
             final String input=stdin.getText().toString();
-            final String file=filename;
+            final String compileFilename=filename;
             output.setText("Compiling...");
             compilerWorker.execute(()->{
                 String result;
                 try {
-                    CompilerEngine.Request request=new CompilerEngine.Request(file,source,CompilerEngine.languageFor(file));
+                    CompilerEngine.Request request=new CompilerEngine.Request(compileFilename,compileSource,CompilerEngine.languageFor(compileFilename));
                     CompilerEngine.CompileResult compile=compilerEngine.compile(request);
                     if(!compile.success)result="Compilation failed (exit "+compile.exitCode+")\n"+compile.stderr+"\n"+compile.stdout;
                     else {
