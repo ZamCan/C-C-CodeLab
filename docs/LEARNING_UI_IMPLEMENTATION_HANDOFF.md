@@ -56,3 +56,36 @@ A reviewer can open a lesson and proceed through multiple pages without scrollin
 ## Temporary handoff policy
 
 This brief may be deleted **only after** all acceptance criteria pass and its requirements have been transferred into permanent product documentation, tests, and verified native UI. Do not delete it merely because a screen looks similar. Do not commit or redistribute the third-party reference screenshots; use original graphics and implementation.
+
+
+## Additional screenshot study — second reference batch (2026-11-15)
+
+The supplied screenshots show a **progressive reveal** sequence: (a) a question introducing how computers understand instructions; (b) a centered topic heading with a modest programmer illustration; (c) an explanation revealed after the initial question; (d) an applications topic with individual bullets appearing across subsequent steps; and (e) a friendly transition to the next course section. They also show a header with a close icon, segmented progress, a share affordance, and a bottom action that alternates between a prominent gradient Next button and subtle "Tap to Continue" text. The screenshots are reference observations, not licensed assets.
+
+### Additional exact interaction requirements
+
+- Model each lesson as ordered **beats** with optional incremental **reveals**. A beat can contain a question hook, definition, image, explanatory paragraph, bullet, or conclusion. A tap should advance a reveal *within the same beat* where appropriate; after the final reveal, it advances to the next beat. Do not confuse revealed bullets with completed lessons.
+- **Progress segments** represent actual authored steps, with progress advancing consistently. A reveal may leave the segment unchanged until the beat completes. Restore reveal position on app resume.
+- For content with 3–7 bullets, display the heading and first item, then reveal additional items one at a time. Preserve earlier items only while the layout has enough space; otherwise split to a new page. No overflowing or hidden bullets.
+- **Conversational hooks** can ask a learner to think before the answer appears. Use concise, grammatically polished academic English rather than copying informal or erroneous wording. Example: "How does a computer execute the instructions we write in C++?" followed by "Let's trace the journey from source code to a running program."
+- **Illustration placement:** optional small, original programmer/terminal/CPU/compiler visual centered below the heading; never force a decorative image when a diagram or code is more instructive. Illustrations must be original or appropriately licensed.
+- **Interaction clarity:** choose one primary progression method for the product. Prefer a bottom Next button; if a full-page tap-to-continue mode is offered, it must be opt-in/clearly signposted, work with accessibility services, and avoid accidental advancement while selecting text or code. Do not randomly alternate controls between screens.
+- **Share and expand:** only show Share when it actually shares a lesson deep link or permitted original content. Only show Expand when it opens a functional, accessible larger diagram. Do not display inert icons merely to match screenshots.
+- **End-of-section transition:** show a short recap and clear next module; avoid excessive praise or a false sense of certification. A "Continue to C++ Fundamentals" action is better than a vague Next when switching sections.
+
+### Content corrections to apply when translating the reference pattern
+
+- Define a programming language as a formally specified notation for expressing computations and instructions. Explain that C/C++ source code is processed by toolchains and executed via compiled programs; the CPU does not directly interpret ordinary C++ text.
+- Explain preprocessing, compilation, linking, loading, and execution as a staged conceptual model; note that toolchain details vary.
+- Applications of C++ may include game engines, real-time systems, browsers, database engines, financial software, and language runtimes. Do not assert that an entire company, website, ATM, JVM, or browser is implemented in C++ merely because some components may be. Verify named company/product claims before publishing them.
+- Avoid ambiguous or unsupported examples such as "C++ is used in ATM machines" without a specific documented system.
+- Make the C and C++ pathways distinct: the introductory source-to-execution story can be shared, but examples must use the correct language and standard libraries.
+
+### Second-batch acceptance scenarios
+
+- [ ] The introductory question is followed by its explanation in a deliberate authored sequence.
+- [ ] A small original illustration can appear on a lesson beat without forcing scroll or shrinking body text.
+- [ ] Multi-item application lists reveal in stages, preserve legibility, and do not clip on compact screens.
+- [ ] Progress, page and reveal state restore after rotation and process recreation.
+- [ ] All displayed Share/Expand/Next actions are functional, and the primary advance control is consistent.
+- [ ] Academic reviewers confirm that examples and source-to-execution explanations are precise and not copied uncritically.
