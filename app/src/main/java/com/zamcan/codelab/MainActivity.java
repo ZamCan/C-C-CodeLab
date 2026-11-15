@@ -17,7 +17,7 @@ import java.util.regex.*;
 
 /** Offline academy and source workspace. No fabricated compiler or certificate results. */
 public final class MainActivity extends Activity {
-    private static final int INK=0xfff6f7ff, MUTED=0xffb5c5e8, MINT=0xff67c8ff, LILAC=0xffc2a5ff;
+    private static final int INK=0xff202536, MUTED=0xff596277, MINT=0xff425ff5, LILAC=0xff8256d9;
     private LinearLayout content;
     private ProjectStore store;
     private WorkspaceRepository workspaces;
@@ -62,8 +62,8 @@ public final class MainActivity extends Activity {
     private void message(String title,String body) { new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("Got it",null).show(); }
     private boolean leaveEditor() { return editor==null || !dirty || saveSource(true); }
     private GradientDrawable glass(boolean accent) {
-        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,accent ? new int[]{0xdd172c59,0xdd29204c} : new int[]{0xc9202c4f,0xc9111833});
-        d.setCornerRadius(dp(24)); d.setStroke(dp(1),accent ? 0x6682aaff : 0x36d0dcff); return d;
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,accent ? new int[]{0xfff0f3ff,0xfffafaff} : new int[]{0xffffffff,0xfffcfcff});
+        d.setCornerRadius(dp(24)); d.setStroke(dp(1),accent ? 0x665d79e8 : 0x1d596277); return d;
     }
     private TextView label(String text,int size,int color) {
         TextView v=new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color);
@@ -76,23 +76,23 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(16); p.setLayoutParams(lp); content.addView(p); return p;
     }
     private void action(LinearLayout parent,String text,boolean primary,Runnable run) {
-        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?0xff102e2a:INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
-        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?new int[]{MINT,0xffb1ebf2}:new int[]{0x40b1a4ef,0x252b4767});
-        background.setCornerRadius(dp(15)); background.setStroke(dp(1),primary?0x55ffffff:0x44ced9ff);
+        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?Color.WHITE:INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
+        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?new int[]{MINT,0xff7851db}:new int[]{0xfff2f4fa,0xfff2f4fa});
+        background.setCornerRadius(dp(15)); background.setStroke(dp(1),primary?0x00ffffff:0x33596277);
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x40ffffff),background,null));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.topMargin=dp(10); b.setLayoutParams(lp);
         b.setOnClickListener(v->run.run()); parent.addView(b);
     }
     private void shell(String name,String eyebrow,String heading,String subtitle) {
         handler.removeCallbacks(autosave); editor=null; dirty=false; screen=name;
-        FrameLayout root=new FrameLayout(this); root.addView(new Aurora(this),new FrameLayout.LayoutParams(-1,-1));
+        FrameLayout root=new FrameLayout(this); root.setBackgroundColor(Color.WHITE);
         LinearLayout stack=new LinearLayout(this); stack.setOrientation(LinearLayout.VERTICAL); root.addView(stack,new FrameLayout.LayoutParams(-1,-1));
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); stack.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(22),dp(24),dp(22),dp(14)); scroll.addView(content);
         content.addView(label(eyebrow,12,MINT)); title(content,heading,32); body(content,subtitle);
         View gap=new View(this); content.addView(gap,new LinearLayout.LayoutParams(1,dp(20)));
-        LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackground(glass(false)); stack.addView(nav);
+        LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackgroundColor(0xfff7f8fc); stack.addView(nav);
         for(String tab:new String[]{"⌘  Studio","◈  Academy"}) {
             Button b=new Button(this); b.setText(tab); b.setAllCaps(false); b.setTextColor(INK); b.setBackgroundColor(Color.TRANSPARENT); b.setMinHeight(dp(56));
             nav.addView(b,new LinearLayout.LayoutParams(0,-2,1)); b.setOnClickListener(v->{if(leaveEditor()){if(tab.contains("Studio")) studio(); else academy();}});
@@ -165,29 +165,66 @@ public final class MainActivity extends Activity {
     }
     private int completed() {int count=0;for(int i=0;i<10;i++)if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i)))count++;return count;}
 
-    /** Optional algorithmic-thinking foundation; does not award C/C++ course mastery. */
+    /** A lesson is a sequence of short, full-screen reading pages. No scrolling. */
+    private String[] storyPages(String text) {
+        java.util.ArrayList<String> pages=new java.util.ArrayList<>();
+        StringBuilder page=new StringBuilder();
+        for(String paragraph:text.split("\\n\\s*\\n|\\n(?=[A-Z][A-Z0-9 ,—/+()?-]{7,}\\n)")) {
+            String part=paragraph.trim();
+            if(part.isEmpty())continue;
+            while(part.length()>380) {
+                int cut=part.lastIndexOf(' ',350);
+                if(cut<180)cut=350;
+                if(page.length()>0){pages.add(page.toString());page.setLength(0);}
+                pages.add(part.substring(0,cut).trim());
+                part=part.substring(cut).trim();
+            }
+            if(page.length()>0 && page.length()+part.length()>380){pages.add(page.toString());page.setLength(0);}
+            if(page.length()>0)page.append("\\n\\n");
+            page.append(part);
+        }
+        if(page.length()>0)pages.add(page.toString());
+        return pages.isEmpty()?new String[]{"No lesson content available."}:pages.toArray(new String[0]);
+    }
+    private void storyShell(String eyebrow,String heading,int current,int total,String paragraph,Runnable previous,Runnable next,String nextLabel) {
+        handler.removeCallbacks(autosave);editor=null;dirty=false;screen="story";
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.WHITE);
+        root.setPadding(dp(22),dp(18),dp(22),dp(20));
+        root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(22)+insets.getSystemWindowInsetLeft(),dp(18)+insets.getSystemWindowInsetTop(),dp(22)+insets.getSystemWindowInsetRight(),dp(20)+insets.getSystemWindowInsetBottom());return insets;});
+        LinearLayout progressRow=new LinearLayout(this);progressRow.setOrientation(LinearLayout.HORIZONTAL);root.addView(progressRow);
+        for(int i=0;i<total;i++){View segment=new View(this);GradientDrawable bg=new GradientDrawable();bg.setColor(i<=current?MINT:0xffe9edf6);bg.setCornerRadius(dp(5));segment.setBackground(bg);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(5),1);lp.setMargins(dp(2),0,dp(2),0);progressRow.addView(segment,lp);}
+        TextView close=label("×   "+eyebrow,13,MUTED);close.setPadding(0,dp(16),0,dp(8));close.setOnClickListener(v->academy());root.addView(close);
+        LinearLayout center=new LinearLayout(this);center.setOrientation(LinearLayout.VERTICAL);center.setGravity(Gravity.CENTER_VERTICAL);
+        root.addView(center,new LinearLayout.LayoutParams(-1,0,1));
+        TextView headingView=label(heading,25,INK);headingView.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));center.addView(headingView);
+        TextView paragraphView=label(paragraph,16,INK);paragraphView.setLineSpacing(dp(4),1.12f);paragraphView.setTextIsSelectable(true);center.addView(paragraphView);
+        TextView count=label((current+1)+" / "+total,13,MUTED);count.setGravity(Gravity.CENTER);root.addView(count);
+        if(previous!=null)action(root,"← Previous",false,previous);
+        action(root,nextLabel,true,next);
+        setContentView(root);
+    }
+    private void readStory(String eyebrow,String heading,String text,int page,Runnable finish) {
+        String[] pages=storyPages(text);
+        int safe=Math.max(0,Math.min(page,pages.length-1));
+        storyShell(eyebrow,heading,safe,pages.length,pages[safe],
+            safe==0?null:()->readStory(eyebrow,heading,text,safe-1,finish),
+            safe+1<pages.length?()->readStory(eyebrow,heading,text,safe+1,finish):finish,
+            safe+1<pages.length?"Next  →":"Continue  →");
+    }
     private void foundation(int index) {
         String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode and the programming bridge"};
         String[] files={"algorithm","computer","representations","decision-table","pseudocode"};
-        if(index<0||index>=titles.length){programmingIntroduction();return;}
-        shell("foundation","OPTIONAL FOUNDATION  /  "+(index+1)+" OF "+titles.length,titles[index],"Think clearly before writing code. You may skip this foundation.");
-        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/"+files[index]+".txt"));}catch(IOException e){error(e);}
-        action(content,index==titles.length-1?"Continue to programming languages":"Next foundation topic  →",true,()->foundation(index+1));
-        action(content,"Skip foundation — introduce C & C++",false,this::programmingIntroduction);
-        action(content,"Back to academy",false,this::academy);
+        if(index>=titles.length){programmingIntroduction();return;}
+        try{readStory("OPTIONAL FOUNDATION · Skip via Academy",titles[index],asset("foundation/"+files[index]+".txt"),0,()->foundation(index+1));}
+        catch(IOException e){error(e);}
     }
-    /** Required shared introduction before entering either formal programming pathway. */
     private void programmingIntroduction() {
-        shell("programming-intro","REQUIRED INTRODUCTION  /  C & C++","From algorithms to programs.","Discover the languages, their history, and how source becomes executable.");
-        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/programming-languages.txt"));}catch(IOException e){error(e);}
-        action(content,"Continue to C and C++ history  →",true,this::languageHistory);
-        action(content,"Back to academy",false,this::academy);
+        try{readStory("REQUIRED INTRODUCTION","From algorithms to programs",asset("foundation/programming-languages.txt"),0,this::languageHistory);}
+        catch(IOException e){error(e);}
     }
     private void languageHistory() {
-        shell("language-history","REQUIRED INTRODUCTION  /  C & C++","Meet C and C++.","Two related languages with different strengths and rules.");
-        try{LinearLayout lesson=panel(false);body(lesson,asset("foundation/language-history.txt"));}catch(IOException e){error(e);}
-        action(content,"Continue to course pathways  →",true,()->{preferences.edit().putBoolean("intro_completed",true).apply();academy();});
-        action(content,"Previous: programming languages",false,this::programmingIntroduction);
+        try{readStory("REQUIRED INTRODUCTION","Meet C and C++",asset("foundation/language-history.txt"),0,()->{preferences.edit().putBoolean("intro_completed",true).apply();academy();});}
+        catch(IOException e){error(e);}
     }
     private void academy() {
         shell("academy","LEARNING ACADEMY  /  YOUR PATH","Understand.\nThen build.","Small lessons. Useful ideas. Progress at your pace.");
@@ -199,19 +236,48 @@ public final class MainActivity extends Activity {
         Lesson[] lessons=Curriculum.lessons(cpp);for(int i=0;i<lessons.length;i++){final int index=i;LinearLayout row=panel(false);row.addView(label(String.format(Locale.ROOT,"%02d  /  %s",i+1,progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i))?"COMPLETED":"FOUNDATION"),12,MINT));title(row,lessons[i].title,21);action(row,index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1))?"Open lesson  →":"Locked — complete previous lesson",false,()->{if(index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1)))lesson(index);else message("Lesson locked","Complete the previous lesson checkpoint before continuing.");});}
         action(content,"Worked math problems",false,this::mathProblems);action(content,"Guided projects",true,this::projects);action(content,"Your achievements",false,this::achievements);
     }
-    private void lesson(int index) {
-        Lesson lesson=Curriculum.lessons(cpp)[index];shell("lesson",(cpp?"C++":"C")+" FOUNDATIONS  /  "+(index+1)+" OF 10",lesson.title,"Read, experiment, and check your understanding.");
-        LinearLayout explanation=panel(false);body(explanation,lesson.explanation);
-        if(index==0)action(explanation,"Explore the syntax, token by token",true,()->readGuide("First program: syntax anatomy","lessons/first-program.txt"));
-        LinearLayout example=panel(false);example.addView(label("WORKED EXAMPLE  /  SOURCE",12,MINT));TextView code=label(lesson.code,14,INK);code.setTypeface(Typeface.MONOSPACE);code.setTextIsSelectable(true);example.addView(code);action(example,"Open a copy in Studio",true,()->copyLesson(index));
-        LinearLayout challenge=panel(true);title(challenge,"Your turn",22);body(challenge,lesson.challenge);
-        LinearLayout quiz=panel(false);quiz.addView(label("PRACTICE CHECK  /  OFFLINE",12,LILAC));title(quiz,lesson.question,19);RadioGroup choices=new RadioGroup(this);int[] order=index%2==0?new int[]{0,1}:new int[]{1,0};for(int option:order){RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(option);button.setText(lesson.options[option]);button.setTextColor(INK);button.setTextSize(16);button.setMinHeight(dp(52));choices.addView(button);}quiz.addView(choices);TextView feedback=label("Choose an answer to check your understanding.",14,MUTED);quiz.addView(feedback);
-        action(quiz,"Check answer",true,()->{if(choices.getCheckedRadioButtonId()==-1){feedback.setText(R.string.select_answer);return;}RadioButton selected=choices.findViewById(choices.getCheckedRadioButtonId());boolean right=((Integer)selected.getTag())==lesson.answer;feedback.setText(getString(right?R.string.correct_feedback:R.string.retry_feedback,lesson.feedback));feedback.setTextColor(right?MINT:0xffffd5a4);if(right){progress.complete(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));if(index<9)feedback.append("\nCheckpoint passed. Return to the course to open the next lesson.");}feedback.announceForAccessibility(feedback.getText());});
-        if(index<9) {
-            if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index)))action(content,"Continue to next lesson  →",true,()->lesson(index+1));
-            else action(content,"Complete the practice check to continue",false,()->message("Practice checkpoint","Answer this lesson's question correctly to unlock the next lesson. You can return and review at any time."));
+    private void lesson(int index) { lessonPage(index,0); }
+    private void lessonPage(int index,int page) {
+        Lesson lesson=Curriculum.lessons(cpp)[index];
+        String[] explanation=storyPages(lesson.explanation);
+        int examplePage=explanation.length,challengePage=examplePage+1,quizPage=examplePage+2,total=quizPage+1;
+        if(page<examplePage) {
+            storyShell((cpp?"C++":"C")+" · LESSON "+(index+1),lesson.title,page,total,explanation[page],
+                page==0?null:()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next  →");
+        }else if(page==examplePage) {
+            storyShell("WORKED SOURCE · COPY TO STUDIO",lesson.title,page,total,lesson.code,
+                ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next: practise  →");
+        }else if(page==challengePage) {
+            storyShell("YOUR TURN · INDEPENDENT PRACTICE",lesson.title,page,total,lesson.challenge,
+                ()->lessonPage(index,page-1),()->lessonPage(index,page+1),"Next: knowledge check  →");
+        }else {
+            questionPage(index);
         }
-        action(content,"Back to course",false,this::academy);
+    }
+    private void questionPage(int index) {
+        Lesson lesson=Curriculum.lessons(cpp)[index];
+        handler.removeCallbacks(autosave);editor=null;dirty=false;screen="quiz";
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(22),dp(22),dp(22),dp(22));root.setBackgroundColor(Color.WHITE);
+        root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(22)+insets.getSystemWindowInsetLeft(),dp(22)+insets.getSystemWindowInsetTop(),dp(22)+insets.getSystemWindowInsetRight(),dp(22)+insets.getSystemWindowInsetBottom());return insets;});
+        TextView eyebrow=label("CHECK YOUR UNDERSTANDING  ·  "+(index+1)+"/10",13,MINT);root.addView(eyebrow);
+        LinearLayout middle=new LinearLayout(this);middle.setOrientation(LinearLayout.VERTICAL);middle.setGravity(Gravity.CENTER_VERTICAL);root.addView(middle,new LinearLayout.LayoutParams(-1,0,1));
+        title(middle,lesson.question,23);
+        RadioGroup choices=new RadioGroup(this);middle.addView(choices);
+        int[] order=index%2==0?new int[]{0,1}:new int[]{1,0};
+        for(int option:order){RadioButton button=new RadioButton(this);button.setId(View.generateViewId());button.setTag(option);button.setText(lesson.options[option]);button.setTextColor(INK);button.setTextSize(17);button.setPadding(dp(8),dp(12),dp(8),dp(12));button.setMinHeight(dp(64));choices.addView(button);}
+        TextView feedback=label("Choose one answer, then check.",15,MUTED);middle.addView(feedback);
+        action(root,"← Review previous page",false,()->lessonPage(index,storyPages(lesson.explanation).length+1));
+        action(root,"Check answer",true,()->{
+            if(choices.getCheckedRadioButtonId()==-1){feedback.setText("Select an answer first.");return;}
+            RadioButton selected=choices.findViewById(choices.getCheckedRadioButtonId());
+            boolean correct=((Integer)selected.getTag())==lesson.answer;
+            if(correct)progress.complete(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));
+            new AlertDialog.Builder(this).setTitle(correct?"Correct answer":"Not quite — review and retry")
+                .setMessage(lesson.feedback)
+                .setPositiveButton(correct?"Continue  →":"Try again",(dialog,which)->{if(correct){if(index+1<Curriculum.lessons(cpp).length)lesson(index+1);else academy();}})
+                .show();
+        });
+        setContentView(root);
     }
     private void copyLesson(int index) {
         String base=(cpp?"cpp":"c")+"-lesson-"+(index+1),extension=cpp?".cpp":".c",name=base+extension;int n=2;
