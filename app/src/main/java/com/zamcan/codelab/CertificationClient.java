@@ -10,15 +10,18 @@ import java.nio.charset.StandardCharsets;
 public final class CertificationClient {
     private CertificationClient() {}
     public interface Callback { void completed(int httpStatus, String response, Exception error); }
-    public static void verify(String certificateId, Callback callback) {
+    public static void verify(String baseUrl, String certificateId, Callback callback) {
         if (callback == null) throw new IllegalArgumentException("callback required");
+        if (baseUrl == null || !baseUrl.matches("https://[A-Za-z0-9.-]+")) {
+            callback.completed(0, null, new IllegalArgumentException("Verified HTTPS API base URL required")); return;
+        }
         if (certificateId == null || !certificateId.matches("[A-Za-z0-9_-]{1,100}")) {
             callback.completed(0, null, new IllegalArgumentException("Invalid certificate ID")); return;
         }
         new Thread(() -> {
             HttpURLConnection connection = null;
             try {
-                URL url = new URL("https://zamcan-codelab-certification.zamcannexus.workers.dev/v1/credentials/" + certificateId + "/status");
+                URL url = new URL(baseUrl + "/v1/credentials/" + certificateId + "/status");
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(8000);
