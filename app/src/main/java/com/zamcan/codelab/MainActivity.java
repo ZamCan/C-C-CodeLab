@@ -101,8 +101,13 @@ public final class MainActivity extends Activity {
     }
     private void home() {
         shell("home","","C/C++ CodeLab","");
-        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,"Compiler",23);  action(studio,"Open",false,this::studio);
-        LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,"Learn C/C++",23);  action(academy,"Learn",false,this::academy);
+        LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,"Compiler",23); body(studio,"Your source workspace · offline"); action(studio,"Open compiler",true,this::studio);
+        LinearLayout academy=panel(false); academy.addView(label("02  /  LEARN",12,MINT)); title(academy,"Learn C/C++",23); body(academy,"Two separate courses · real progress"); action(academy,"Explore courses",false,this::academy);
+        if(preferences.getBoolean("intro_completed",false)) {
+            LinearLayout resume=panel(true); title(resume,"Continue learning",20);
+            body(resume,(cpp?"C++":"C")+" · "+completed()+" of 10 lessons completed");
+            action(resume,"Resume course",true,this::academy);
+        }
         body(content,"LOCAL FIRST  •  No account required\nLearning and source files stay on this device.");
         
     }
@@ -235,11 +240,44 @@ public final class MainActivity extends Activity {
         shell("academy","LEARN C/C++","Learn C/C++","Courses");
         LinearLayout intro=panel(false);title(intro,"Start with problem solving",22);body(intro,"Optional: algorithms, computers, five ways to express solutions, decision tables and pseudocode.");action(intro,"Explore",false,()->foundation(0));
         if(!preferences.getBoolean("intro_completed",false)){LinearLayout required=panel(true);title(required,"C & C++ introduction",22);body(required,"Required: what programming languages are, the history of C and C++, and their relationship.");action(required,"Continue",true,this::programmingIntroduction);return;}
-        LinearLayout p=panel(true); title(p,cpp?"C++ foundations":"C foundations",25);body(p,completed()+" of 10 lessons completed");
+        LinearLayout p=panel(true); title(p,cpp?"C++ Programming":"C Programming",25);body(p,completed()+" of 10 lessons completed · "+(completed()*10)+"%");
         ProgressBar courseProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);courseProgress.setMax(10);courseProgress.setProgress(completed());courseProgress.setProgressTintList(ColorStateList.valueOf(MINT));p.addView(courseProgress,new LinearLayout.LayoutParams(-1,dp(8)));
         action(p,cpp?"Switch to C":"Switch to C++",false,()->{cpp=!cpp;preferences.edit().putBoolean("cpp",cpp).apply();academy();});
-        Lesson[] lessons=Curriculum.lessons(cpp);for(int i=0;i<lessons.length;i++){final int index=i;LinearLayout row=panel(false);row.addView(label(String.format(Locale.ROOT,"%02d  /  %s",i+1,progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i))?"COMPLETED":"FOUNDATION"),12,MINT));title(row,lessons[i].title,21);action(row,index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1))?"Open":"Locked — complete previous lesson",false,()->{if(index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1)))lesson(index);else message("Lesson locked","Complete the previous lesson checkpoint before continuing.");});}
+        Lesson[] lessons=Curriculum.lessons(cpp);
+        for(int i=0;i<lessons.length;i++){
+            final int index=i;
+            boolean done=progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i));
+            boolean ready=i==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i-1));
+            LinearLayout row=panel(false);
+            row.addView(label(String.format(Locale.ROOT,"%02d  /  %s",i+1,done?"COMPLETED":LessonAccessPolicy.isAdvanced(i)?"ADVANCED COURSE":"FOUNDATIONS"),12,MINT));
+            title(row,lessons[i].title,21);
+            if(LessonAccessPolicy.needsReward(i))body(row,"Rewarded-ad unlock · "+(LessonAccessPolicy.isAdvanced(i)?"Advanced course":"Foundation lesson")+" · No premium membership");
+            action(row,done?"Review lesson":ready?"Continue":"Complete previous lesson first",false,()->requestLesson(index));
+        }
         action(content,"Worked math problems",false,this::mathProblems);action(content,"Guided projects",true,this::projects);action(content,"Your achievements",false,this::achievements);
+    }
+    /**
+     * A rewarded-ad unlock must only be recorded by a verified onUserEarnedReward
+     * callback from a real ads SDK. This build does not bundle that SDK.
+     * Never fake an impression or an unlock, and never show an inert ad spinner.
+     */
+    private void requestLesson(int index) {
+        boolean previous=index==0||progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index-1));
+        if(!previous) {
+            message("Complete the previous lesson","Finish the previous lesson checkpoint before continuing.");
+            return;
+        }
+        boolean earned=preferences.getBoolean("reward-"+LessonAccessPolicy.key(cpp,index),false);
+        if(!LessonAccessPolicy.needsReward(index)||earned) {
+            lesson(index);
+            return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Unlock "+(cpp?"C++":"C")+" lesson "+(index+1))
+            .setMessage("This lesson is designed to unlock after a rewarded advertisement. Ads are not configured in this development build, so a reward cannot be verified. No premium purchase is required.")
+            .setPositiveButton("OK",null)
+            .setNegativeButton("Back to courses",(d,w)->academy())
+            .show();
     }
     private void lesson(int index) { lessonPage(index,0); }
     private void lessonPage(int index,int page) {
@@ -279,7 +317,7 @@ public final class MainActivity extends Activity {
             if(correct)progress.complete(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));
             new AlertDialog.Builder(this).setTitle(correct?"Correct answer":"Not quite — review and retry")
                 .setMessage(lesson.feedback)
-                .setPositiveButton(correct?"Next":"Try again",(dialog,which)->{if(correct){if(index+1<Curriculum.lessons(cpp).length)lesson(index+1);else academy();}})
+                .setPositiveButton(correct?"Next":"Try again",(dialog,which)->{if(correct){if(index+1<Curriculum.lessons(cpp).length)requestLesson(index+1);else academy();}})
                 .show();
         });
         setContentView(root);
