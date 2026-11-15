@@ -23,6 +23,7 @@ public final class MainActivity extends Activity {
     private WorkspaceRepository workspaces;
     private String project="Practice";
     private LearningStore progress;
+    private RewardedLessonGate rewardedGate;
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
     private String screen="home", filename="main.c", exportSource="";
@@ -35,6 +36,7 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
         progress=new LearningStore(this);
+        rewardedGate=new RewardedLessonGate(this);
         progress.importLegacy(preferences);
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
@@ -114,7 +116,7 @@ public final class MainActivity extends Activity {
     private void status() {
         shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.1.0");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
-        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An Android-compatible C/C++ compiler and isolated execution runtime are not bundled. Compile and Run are unavailable. No program output is simulated.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThis build requests no network or storage permissions and includes no analytics or advertising SDK.");
+        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An Android-compatible C/C++ compiler and isolated execution runtime are not bundled. Compile and Run are unavailable. No program output is simulated.\n\nOnline certificate exams, signed credentials, and public verification are not integrated. Practice completion is not certification.\n\nRewarded advertisements use Google's test ad unit in this development build. No production ad revenue is generated.");
         action(content,"Back home",true,this::home);
     }
     private void studio() {
@@ -273,11 +275,26 @@ public final class MainActivity extends Activity {
             lesson(index);
             return;
         }
+        final boolean targetCpp=cpp;
         new AlertDialog.Builder(this)
-            .setTitle("Unlock "+(cpp?"C++":"C")+" lesson "+(index+1))
-            .setMessage("This lesson is designed to unlock after a rewarded advertisement. Ads are not configured in this development build, so a reward cannot be verified. No premium purchase is required.")
-            .setPositiveButton("OK",null)
-            .setNegativeButton("Back to courses",(d,w)->academy())
+            .setTitle("Unlock "+(targetCpp?"C++":"C")+" lesson "+(index+1))
+            .setMessage("Watch one short advertisement to unlock this lesson permanently on this device. No premium membership is required.")
+            .setPositiveButton("Watch ad", (dialog,which)->{
+                rewardedGate.show(this,new RewardedLessonGate.Callback(){
+                    @Override public void earned(){
+                        String key="reward-"+LessonAccessPolicy.key(targetCpp,index);
+                        if(!preferences.edit().putBoolean(key,true).commit()){
+                            message("Unlock could not be saved","Please retry when local storage is available.");
+                            return;
+                        }
+                        if(cpp==targetCpp)lesson(index);else academy();
+                    }
+                    @Override public void unavailable(String reason){
+                        message("Advertisement unavailable","No reward was earned. Please check your connection and try again. "+reason);
+                    }
+                });
+            })
+            .setNegativeButton("Not now",null)
             .show();
     }
     private void lesson(int index) { lessonPage(index,0); }
