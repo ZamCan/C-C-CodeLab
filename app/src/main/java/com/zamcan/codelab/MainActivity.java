@@ -100,7 +100,7 @@ public final class MainActivity extends Activity {
         setContentView(root);
     }
     private void home() {
-        shell("home","BY ZAMCAN ACADEMY","C/C++ CodeLab","Learn • Code • Compile • Build\nYour offline-first C and C++ programming laboratory.");
+        shell("home","","C/C++ CodeLab","");
         LinearLayout studio=panel(false); studio.addView(label("01  /  CREATE",12,LILAC)); title(studio,"Compiler",23); body(studio,"A quiet workspace for your C and C++ source files. Save, edit, and export on your phone."); action(studio,"Open",false,this::studio);
         LinearLayout academy=panel(false); academy.addView(label("02  /  UNDERSTAND",12,MINT)); title(academy,"Learn C/C++",23); body(academy,"20 foundation lessons · offline quizzes\nTwo languages. One clear starting point."); action(academy,"Learn",false,this::academy);
         body(content,"LOCAL FIRST  •  No account required\nLearning and source files stay on this device.");
