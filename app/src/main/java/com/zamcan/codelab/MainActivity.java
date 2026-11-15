@@ -268,7 +268,8 @@ public final class MainActivity extends Activity {
             return;
         }
         boolean earned=preferences.getBoolean("reward-"+LessonAccessPolicy.key(cpp,index),false);
-        if(!LessonAccessPolicy.needsReward(index)||earned) {
+        boolean alreadyCompleted=progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(index));
+        if(!LessonAccessPolicy.needsReward(index)||earned||alreadyCompleted) {
             lesson(index);
             return;
         }
