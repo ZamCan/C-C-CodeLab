@@ -153,9 +153,24 @@ public final class MainActivity extends Activity {
     private void home() {
         shell("home","","C/C++ CodeLab","");
         artwork(content);
+        row(content,"☁","Learning progress","Local-first • Cloud sign-in setup",false,this::progressSettings);
         action(content,"Compiler",true,this::studio);
         action(content,"Learn C/C++",true,this::academy);
         row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
+    }
+    private void progressSettings() {
+        String mode=preferences.getString("progress_mode","local");
+        new AlertDialog.Builder(this).setTitle("Learning progress")
+            .setMessage("Current mode: "+("online".equals(mode)?"Cloud requested (not connected)":"Local")+
+                "\\n\\nLocal progress works without an account or internet. Online progress will require verified Amazon or Google sign-in before any upload. No progress is uploaded in this build.")
+            .setPositiveButton("Keep local", (d,w)->{
+                preferences.edit().putString("progress_mode","local").apply();
+                home();
+            })
+            .setNeutralButton("Request online", (d,w)->{
+                message("Cloud sign-in not yet configured",
+                    "Amazon and Google identity provider credentials and a secure AWS sync API are required. Your existing local progress is preserved; no upload has occurred.");
+            }).setNegativeButton("Cancel",null).show();
     }
     private void advertisingSettings() {
         boolean enabled=preferences.getBoolean("test_ads_opt_in",false);
