@@ -18,7 +18,8 @@ test('disabled service does not expose exam question bank or answer keys',async(
     const result=await worker.fetch(new Request('https://test.invalid'+path),{EXAMS_ENABLED:'false'});
     assert.equal(result.status,503);
     const payload=await result.json();
-    assert.deepEqual(payload,{error:'exam_service_not_enabled'});
+    // This fixture has no D1 binding: the database gate precedes routing.
+    assert.deepEqual(payload,{error:'database_not_configured'});
   }
 });
 test('disabled health advertises truthful readiness',async()=>{

@@ -251,3 +251,5 @@ User policy is now authoritative: three official names before examination; pass 
 
 
 Main reconciliation: checkpoint `53f803d` preserves the tested certification implementation. Remote main `e52241b` adds binding Cloudflare/curriculum handoffs and CertificationClient; these are retained in the merge. The shared Wrangler configuration retains the verified account/database and all disabled feature flags, and adopts the remote compatibility date. The Android verification client is source integration only, not a built/device-verified certificate flow. Weighted multipart grading, ten blueprint variants and practical sandbox grading remain unfinished under the new handoff.
+
+Remote main through `efead4f` was subsequently merged without discarding its consent-gated AdMob test banner controller or stale-attempt expiry fix. The legacy disabled-service test now expects the actual earlier missing-database gate for its unbound fixture; HTTP 503 and absence of question data remain asserted. The newly merged Android changes have not been rebuilt or verified on-device in this checkpoint.
