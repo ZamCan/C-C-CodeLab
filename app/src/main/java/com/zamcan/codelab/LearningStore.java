@@ -3,6 +3,9 @@ package com.zamcan.codelab;
 import android.content.*;
 import android.database.Cursor;
 import android.database.sqlite.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 /** Subject-neutral progress records; never trusted as certificate eligibility. */
 public final class LearningStore extends SQLiteOpenHelper {
@@ -18,6 +21,47 @@ public final class LearningStore extends SQLiteOpenHelper {
     public void complete(String course,String lesson){
         ContentValues values=new ContentValues();values.put("course",course);values.put("lesson",lesson);values.put("completed_at",System.currentTimeMillis());
         getWritableDatabase().insertWithOnConflict("progress",null,values,SQLiteDatabase.CONFLICT_IGNORE);
+    }
+    /** Portable, minimal snapshot for a future authenticated sync service. */
+    public synchronized JSONObject exportProgress() throws JSONException {
+        JSONObject result=new JSONObject();
+        result.put("schema",1);
+        JSONArray entries=new JSONArray();
+        try(Cursor cursor=getReadableDatabase().rawQuery(
+                "SELECT course,lesson,completed_at FROM progress ORDER BY course,lesson",null)){
+            while(cursor.moveToNext()){
+                JSONObject entry=new JSONObject();
+                entry.put("course",cursor.getString(0));
+                entry.put("lesson",cursor.getString(1));
+                entry.put("completed_at",cursor.getLong(2));
+                entries.put(entry);
+            }
+        }
+        result.put("progress",entries);
+        return result;
+    }
+    /** Monotonic merge: a cloud snapshot cannot erase completed local lessons. */
+    public synchronized void mergeProgress(JSONObject snapshot) throws JSONException {
+        if(snapshot.optInt("schema",-1)!=1)throw new JSONException("Unsupported progress schema");
+        JSONArray entries=snapshot.optJSONArray("progress");
+        if(entries==null || entries.length()>10000)throw new JSONException("Invalid progress count");
+        SQLiteDatabase db=getWritableDatabase();
+        db.beginTransaction();
+        try{
+            for(int i=0;i<entries.length();i++){
+                JSONObject entry=entries.getJSONObject(i);
+                String course=entry.getString("course"),lesson=entry.getString("lesson");
+                long completedAt=entry.getLong("completed_at");
+                if(course.length()<1||course.length()>100||lesson.length()<1||lesson.length()>100||
+                   !course.matches("[A-Za-z0-9_-]+")||!lesson.matches("[A-Za-z0-9_-]+")||
+                   completedAt<=0||completedAt>System.currentTimeMillis()+86400000L)
+                    throw new JSONException("Invalid progress entry");
+                db.execSQL("INSERT INTO progress(course,lesson,completed_at) VALUES(?,?,?) "+
+                    "ON CONFLICT(course,lesson) DO UPDATE SET completed_at=MIN(completed_at,excluded.completed_at)",
+                    new Object[]{course,lesson,completedAt});
+            }
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
     }
     public void importLegacy(SharedPreferences preferences){
         SQLiteDatabase db=getWritableDatabase();
