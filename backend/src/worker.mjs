@@ -35,6 +35,9 @@ async function resume(env,attempt) {
 async function createAttempt(request,env,learner) {
   const input=await body(request);if(!idPattern.test(input.course_id??''))throw new ApiError(400,'invalid_course');
   const time=now();
+  // Expire stale attempts before checking the one-active-attempt uniqueness constraint.
+  // Otherwise a timed-out attempt can permanently block a learner's next attempt.
+  await env.DB.prepare("UPDATE attempts SET status='expired',finalized_at=? WHERE learner_id=? AND course_id=? AND status='active' AND deadline_at<=?").bind(time,learner,input.course_id,time).run();
   const active=await env.DB.prepare("SELECT * FROM attempts WHERE learner_id=? AND course_id=? AND status='active'").bind(learner,input.course_id).first();
   if(active)return resume(env,active);
   const name=officialName(input.official_names);

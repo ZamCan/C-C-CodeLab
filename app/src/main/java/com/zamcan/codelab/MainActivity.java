@@ -32,6 +32,7 @@ public final class MainActivity extends Activity {
     private EditText editor;
     private TextView saveStatus;
     private OfflineCompiler compiler;
+    private CodeLabAds ads;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable autosave=() -> saveSource(false);
 
@@ -41,6 +42,7 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
+        ads=new CodeLabAds(this,preferences);
         progress=new LearningStore(this);
         progress.importLegacy(preferences);
         cpp=preferences.getBoolean("cpp", false);
@@ -58,6 +60,7 @@ public final class MainActivity extends Activity {
     }
     @Override public void setContentView(View view) {
         if(compiler!=null){compiler.close();compiler=null;}
+        if(ads!=null)ads.detach();
         super.setContentView(view);
         LearningFeedback.configureClicks(view,preferences==null||preferences.getBoolean("click_sounds",true));
     }
@@ -65,7 +68,7 @@ public final class MainActivity extends Activity {
         saveSource(false); out.putString("screen",screen); out.putInt("lesson",activeLesson); out.putInt("stage",activeStage); super.onSaveInstanceState(out);
     }
     @Override protected void onPause() { saveSource(false); super.onPause(); }
-    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); handler.removeCallbacksAndMessages(null); if(ads!=null)ads.destroy(); super.onDestroy(); }
     @Override public void onBackPressed() {
         if("home".equals(screen)) super.onBackPressed();
         else if("story".equals(screen) && readingBack!=null)readingBack.run();
@@ -122,6 +125,7 @@ public final class MainActivity extends Activity {
             b.setOnClickListener(v->{if(leaveEditor()){if(destination==0)home();else if(destination==1)studio();else academy();}});
         }
         setContentView(root);
+        if(ads!=null)ads.attach(stack,name);
     }
     private void artwork(LinearLayout parent) {
         ImageView art=new ImageView(this);BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=2;
@@ -151,7 +155,16 @@ public final class MainActivity extends Activity {
         artwork(content);
         action(content,"Compiler",true,this::studio);
         action(content,"Learn C/C++",true,this::academy);
-        row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else status();}).show());
+        row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
+    }
+    private void advertisingSettings() {
+        boolean enabled=preferences.getBoolean("test_ads_opt_in",false);
+        new AlertDialog.Builder(this).setTitle("AdMob test banners")
+            .setMessage("Optional Google test ads appear only on Home. No real ad units are configured. Consent may be requested. Turning this off disables ad requests on subsequent screens.")
+            .setPositiveButton(enabled?"Disable test ads":"Enable test ads",(dialog,which)->{
+                preferences.edit().putBoolean("test_ads_opt_in",!enabled).apply();
+                home();
+            }).setNegativeButton("Cancel",null).show();
     }
     private void feedbackSettings() {
         String[] keys={"click_sounds","success_sound","success_motion"};
@@ -172,7 +185,7 @@ public final class MainActivity extends Activity {
     private void status() {
         shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.4.0");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
-        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and AdMob are not integrated. Practice completion is not certification.\n\nThe bundled compiler runs offline. Network permissions and Google test-ad SDK scaffolding are present for upcoming online features; ad consent and display integration remain pending.");
+        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and production AdMob are not integrated. Practice completion is not certification.\n\nThe bundled compiler runs offline. Network permissions and Google test-ad SDK scaffolding are present for upcoming online features; optional consent-gated test banners are available from Settings; production ads remain disabled.");
         action(content,"Back home",true,this::home);
     }
     private void studio() { try { if(store.list().isEmpty())store.write("main.c",Curriculum.C[0].code);openEditor(store.exists(filename)?filename:store.list().get(0)); } catch(IOException e){error(e);} }

@@ -12,3 +12,23 @@ test('grading uses exact values and missing answers are wrong',()=>{const questi
 test('practical coding requires a dedicated grader',()=>assert.throws(()=>selectQuestions(bank,[{...slots[0],style:'practical_coding'},slots[1]]),/unsupported_blueprint/));
 test('disabled exam and credential endpoints fail closed',async()=>{for(const path of ['/v1/exams/attempts','/v1/credentials/issue','/v1/auth/session']){const result=await worker.fetch(new Request('https://test.invalid'+path,{method:'POST'}),{});assert.equal(result.status,503);}});
 test('health never claims credential issuance is available',async()=>{const result=await worker.fetch(new Request('https://test.invalid/health'),{});assert.equal((await result.json()).credential_issuance,false);});
+
+test('disabled service does not expose exam question bank or answer keys',async()=>{
+  for(const path of ['/v1/exams/attempts/example','/v1/exams/attempts/example/submit','/v1/credentials/example/status']){
+    const result=await worker.fetch(new Request('https://test.invalid'+path),{EXAMS_ENABLED:'false'});
+    assert.equal(result.status,503);
+    const payload=await result.json();
+    assert.deepEqual(payload,{error:'exam_service_not_enabled'});
+  }
+});
+test('disabled health advertises truthful readiness',async()=>{
+  const result=await worker.fetch(new Request('https://test.invalid/health'),{EXAMS_ENABLED:'false'});
+  assert.equal(result.status,200);
+  const health=await result.json();
+  assert.equal(health.exams_enabled,false);
+  assert.equal(health.credential_issuance,false);
+});
+test('a request cannot bypass disabled exam gate by posting a fake learner identity',async()=>{
+  const result=await worker.fetch(new Request('https://test.invalid/v1/exams/attempts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({course_id:'c17',learner_id:'admin',passed:true,score:100})}),{EXAMS_ENABLED:'false'});
+  assert.equal(result.status,503);
+});
