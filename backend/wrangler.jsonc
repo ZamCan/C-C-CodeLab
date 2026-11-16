@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "zamcan-codelab-certification",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "build": {
+    "command": "npm run build"
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    "PUBLIC_ORIGIN": "https://replace-with-your-preview-host.workers.dev",
+    "AUTH_ENABLED": "false",
+    "EXAMS_ENABLED": "false",
+    "ISSUANCE_ENABLED": "false",
+    "ISSUER_KEY_ID": "https://replace-with-your-preview-host.workers.dev/#keys/issuer-1"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zamcan-codelab-certification",
+      "database_id": "c3efb3e2-9e4d-42a4-89f8-9a54016c2978",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "*/15 * * * *"
+    ]
+  },
+  "observability": {
+    "enabled": false
+  },
+  "account_id": "4603d64520de2639996e13d44985f4fa"
+}

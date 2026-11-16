@@ -8,3 +8,8 @@ backend/wrangler.toml
 backend/.dev.vars
 backend/.wrangler/
 backend/node_modules/
+
+backend/public/app.js
+backend/dist/
+backend/.private/
+backend/.env*

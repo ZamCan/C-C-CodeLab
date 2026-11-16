@@ -1,0 +1,28 @@
+
+> dry-run
+> wrangler deploy --dry-run
+
+
+ ⛅️ wrangler 4.162.0
+────────────────────
+[custom build] Running: npm run build
+[custom build] 
+[custom build] > build
+[custom build] > node tools/build.mjs
+[custom build] 
+[custom build] 
+[custom build] Built bilingual dashboard with locally bundled passkey and verification code.
+[custom build] 
+✨ Read 6 files from the assets directory /root/C-C-CodeLab/backend/public
+Total Upload: 3226.20 KiB / gzip: 797.34 KiB
+Your Worker has access to the following bindings:
+Binding                                                                Resource                  
+env.DB (zamcan-codelab-certification)                                  D1 Database               
+env.ASSETS                                                             Assets                    
+env.PUBLIC_ORIGIN ("https://replace-with-your-preview-hos...")         Environment Variable      
+env.AUTH_ENABLED ("false")                                             Environment Variable      
+env.EXAMS_ENABLED ("false")                                            Environment Variable      
+env.ISSUANCE_ENABLED ("false")                                         Environment Variable      
+env.ISSUER_KEY_ID ("https://replace-with-your-preview-hos...")         Environment Variable      
+
+--dry-run: exiting now.

@@ -1,0 +1,34 @@
+
+> test
+> node --test test/*.test.mjs
+
+✔ encrypted independent backup restores SQLite and detects tampering and wrong passphrases (5943.878154ms)
+✔ server assessment, idempotent signed issuance, independent verification and PDF (2729.231769ms)
+✔ cross-account reads and issuance are denied (316.261846ms)
+✔ cookie mutations require same origin and CSRF; role escalation rejected (72.217769ms)
+✔ revocation is authorized, audited and visible; issued records are immutable (340.116538ms)
+✔ altered token, unknown key, compromised key and future claims fail verification (309.360307ms)
+✔ expiry cannot be extended by resume and concurrent creates reuse one attempt (92.899307ms)
+✔ logout revokes session and PKCE code is single-use and verifier bound (108.604ms)
+(node:31238) ExperimentalWarning: The supports Web Crypto API method is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31238) ExperimentalWarning: The ML-DSA-44 Web Crypto API algorithm is an experimental feature and might change at any time
+✔ passkey challenge rejects wrong origin and replay; service defaults stay disabled (101.977847ms)
+✔ real passkey registration and signed login create only a student session (202.436616ms)
+✔ official names required before exam and reconfirmed before issuance (361.019307ms)
+✔ selects 25 unique fresh questions with the required coverage (15.814769ms)
+✔ fails closed when freshness cannot be met (3.036923ms)
+✔ never sends answer keys to the learner (10.105538ms)
+✔ deadline equality is expired and reopening cannot reset it (2.812923ms)
+✔ grading uses exact values and missing answers are wrong (6.444615ms)
+✔ practical coding requires a dedicated grader (2.619923ms)
+✔ disabled exam and credential endpoints fail closed (220.694154ms)
+✔ health never claims credential issuance is available (10.339154ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13522.468616

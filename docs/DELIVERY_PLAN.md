@@ -224,3 +224,27 @@ User explicitly requested main as the only branch. Local checkpoint `d3ebb26` is
 The Clang 22.1.8 / LLD release and WASI SDK 33 sysroot are now bundled (gzip compressed) with runtime SHA-256 validation and notices. Compilation and program execution run in a disposable Web Worker under a restricted local WebView origin; program WASI imports are checked, host files/network/Java bridges are unavailable. Programs use a fresh virtual filesystem. Limits: 32 files, 1 MiB project, 64 KiB stdin/output, 64 MiB program memory, 128 MiB virtual filesystem linear memory, 8 MiB virtual file, 16 MiB open write buffers, 120-second compile/link and 3-second execution watchdogs. Compiler renderer total memory still requires profiling/hardening.
 
 Build before latest merge: unit/lint/assemble passed in 5m15s; APK SHA-256 025fa4528aba5b282805bc9d2fa8df237ab16ce59f27df6d69570584bfd78ace. This hash is historical, not the final merged APK. Packaged-engine tests are running. Node initially aborted with a host futex error after three passes; the failure log is retained and cases are rerun in separate processes. No Android WebView runtime or installation claim is made.
+
+
+## Certification continuation — 2026-11-16
+
+Base commit `ec551d45962995c446b52f67adfcd8e2a5576eef` is on main; prior feature history was merged before removing the preview branch. All new work remains on main. This entry supersedes earlier stale statements that PDF/signing/authentication source is absent; it does not establish deployment readiness.
+
+- **Done locally:** passkey authentication, role/CSRF/session protections, D1 migrations, bilingual dashboard, server assessment, signed credentials, PDF/QR, status/revocation, name snapshots/reconfirmation and fixed 70% policy. Backend integration log: `verification/backend-integration-tests.log`, 19/19 tests passing, including genuine cryptographic passkey assertions, independent credential verification, PDF parsing, backup encryption/restore and name policy. `npm run build` and `npm run check` passed. These are host tests, not deployed tests.
+- **Done locally:** compiler assets passed 14 host integration cases; Android 0.4.0 build/unit/lint/assemble succeeded. Signed APK placed in the phone Downloads folder. Package/signature acceptance is not proof of installation or on-device compilation; the requested six-case phone self-test has no reported result yet.
+- **Partial:** Cloudflare configuration/dry-run and deployment tooling exist; `wrangler whoami` reports not authenticated. No live D1 binding or issuer secrets are configured. No production-readiness claim.
+- **Partial:** existing selected-answer exams cover five supported grading styles. Practical isolated grading, remaining response types, full independently reviewed C/C++ question bank, 16-module-per-language content and five complete course-to-exam competency journeys remain unfinished. Target practical emphasis is documented, not falsely implemented.
+- **Blocked externally:** live deployment needs account-owner OAuth completion, database provisioning and protected issuer-key configuration. Continue preparation locally meanwhile.
+- **Not completed:** Android certification synchronization, AdMob consent/banner integration, real browser/PDF visual QA, physical-phone UI/accessibility QA, deployed load/security/backup tests and independent credential interoperability certification.
+
+User policy is now authoritative: three official names before examination; pass >=70%; explicit post-pass name confirmation before certificate generation. Verified name mismatches fail closed and need academic identity review. The dashboard autosave failure tracking now retains failures per question so a later successful save cannot hide an earlier unsaved answer.
+
+
+## Cloudflare account verification — 2026-11-16
+
+- **Done:** owner-approved Wrangler OAuth completed; `npx wrangler whoami` confirmed membership in `Zamcannexus@gmail.com's Account` (the requested ZamCan Nexus account). Configuration explicitly selects account `4603d64520de2639996e13d44985f4fa`; no OAuth token is recorded here or in source.
+- **Done:** existing D1 `zamcan-codelab-certification`, ID `c3efb3e2-9e4d-42a4-89f8-9a54016c2978`, is bound in `backend/wrangler.jsonc`. Remote read-only inspection reports zero rows written. `verification/cloudflare-existing-schema.json` contains schema definitions only. `python3 tools/check_existing_d1.py` confirms the original migration's tables/indexes match.
+- **Important migration gate:** the remote database has the original tables but no `d1_migrations` table. Do not replay migration 0001. Obtain a protected backup and establish the matching baseline history before applying only 0002/0003. No remote migration was applied in this session.
+- **Observed:** the planned Worker name is absent (Cloudflare code 10007); no existing Worker was overwritten. The public origin remains a placeholder until the account's actual Worker hostname is established.
+- **Runtime blocker:** local Wrangler D1 migration execution failed in Android/PRoot workerd with TCMalloc virtual-address allocation failure and EPIPE. This is not a passing D1 runtime test. SQLite integration tests remain separate evidence. CI now includes local D1 migration execution on Ubuntu for the real runtime check.
+- **Still disabled:** authentication, examinations and certificate issuance flags. No real certificates issued, student records modified, private keys provisioned, or production readiness asserted.

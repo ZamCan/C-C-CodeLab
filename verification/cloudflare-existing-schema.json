@@ -1,0 +1,94 @@
+[
+  {
+    "results": [
+      {
+        "name": "active_blueprint",
+        "type": "index",
+        "sql": "CREATE UNIQUE INDEX active_blueprint ON blueprints(course_id) WHERE active=1"
+      },
+      {
+        "name": "attempt_questions",
+        "type": "table",
+        "sql": "CREATE TABLE attempt_questions(attempt_id TEXT NOT NULL REFERENCES attempts(id), question_id TEXT NOT NULL REFERENCES questions(id), position INTEGER NOT NULL CHECK(position BETWEEN 0 AND 24), prompt TEXT NOT NULL, choices_json TEXT NOT NULL CHECK(json_valid(choices_json)), correct_index INTEGER NOT NULL, style TEXT NOT NULL, objective TEXT NOT NULL, difficulty TEXT NOT NULL, PRIMARY KEY(attempt_id,question_id), UNIQUE(attempt_id,position))"
+      },
+      {
+        "name": "attempts",
+        "type": "table",
+        "sql": "CREATE TABLE attempts(id TEXT PRIMARY KEY, learner_id TEXT NOT NULL REFERENCES learners(id), course_id TEXT NOT NULL REFERENCES courses(id), blueprint_id TEXT NOT NULL REFERENCES blueprints(id), policy_version TEXT NOT NULL, started_at INTEGER NOT NULL, deadline_at INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN('active','submitted','expired')), answers_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(answers_json)), score INTEGER, passed INTEGER CHECK(passed IN(0,1)), finalized_at INTEGER, pass_percent INTEGER NOT NULL, cooldown_seconds INTEGER NOT NULL)"
+      },
+      {
+        "name": "audit_events",
+        "type": "table",
+        "sql": "CREATE TABLE audit_events(id TEXT PRIMARY KEY, actor_ref TEXT, event_type TEXT NOT NULL, object_ref TEXT, created_at INTEGER NOT NULL, metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)))"
+      },
+      {
+        "name": "blueprints",
+        "type": "table",
+        "sql": "CREATE TABLE blueprints(id TEXT PRIMARY KEY, course_id TEXT NOT NULL REFERENCES courses(id), version TEXT NOT NULL, slots_json TEXT NOT NULL CHECK(json_valid(slots_json)), duration_seconds INTEGER NOT NULL CHECK(duration_seconds BETWEEN 300 AND 14400), pass_percent INTEGER NOT NULL CHECK(pass_percent BETWEEN 1 AND 100), cooldown_seconds INTEGER NOT NULL CHECK(cooldown_seconds>=0), active INTEGER NOT NULL DEFAULT 0 CHECK(active IN(0,1)))"
+      },
+      {
+        "name": "courses",
+        "type": "table",
+        "sql": "CREATE TABLE courses(id TEXT PRIMARY KEY, version TEXT NOT NULL, criteria_hash TEXT NOT NULL)"
+      },
+      {
+        "name": "credentials",
+        "type": "table",
+        "sql": "CREATE TABLE credentials(id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL UNIQUE REFERENCES attempts(id), learner_id TEXT NOT NULL REFERENCES learners(id), course_id TEXT NOT NULL REFERENCES courses(id), course_version TEXT NOT NULL, issued_at INTEGER NOT NULL, key_id TEXT NOT NULL REFERENCES issuer_keys(id), digest TEXT NOT NULL UNIQUE, signed_document TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN('active','revoked')), revoked_at INTEGER)"
+      },
+      {
+        "name": "eligibility",
+        "type": "table",
+        "sql": "CREATE TABLE eligibility(learner_id TEXT NOT NULL REFERENCES learners(id), course_id TEXT NOT NULL REFERENCES courses(id), approved_at INTEGER NOT NULL, evidence_ref TEXT NOT NULL, PRIMARY KEY(learner_id,course_id))"
+      },
+      {
+        "name": "issuer_keys",
+        "type": "table",
+        "sql": "CREATE TABLE issuer_keys(id TEXT PRIMARY KEY, public_jwk TEXT NOT NULL CHECK(json_valid(public_jwk)), status TEXT NOT NULL CHECK(status IN('active','retired','compromised')), created_at INTEGER NOT NULL)"
+      },
+      {
+        "name": "learners",
+        "type": "table",
+        "sql": "CREATE TABLE learners(id TEXT PRIMARY KEY, account_ref TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL)"
+      },
+      {
+        "name": "one_active_attempt",
+        "type": "index",
+        "sql": "CREATE UNIQUE INDEX one_active_attempt ON attempts(learner_id,course_id) WHERE status='active'"
+      },
+      {
+        "name": "questions",
+        "type": "table",
+        "sql": "CREATE TABLE questions(id TEXT PRIMARY KEY, course_id TEXT NOT NULL REFERENCES courses(id), style TEXT NOT NULL CHECK(style IN('multiple_choice','true_false','output_prediction','error_identification','code_completion','code_ordering','debugging','trace_table','algorithm_selection','practical_coding')), objective TEXT NOT NULL, difficulty TEXT NOT NULL CHECK(difficulty IN('easy','medium','hard')), version TEXT NOT NULL, prompt TEXT NOT NULL, choices_json TEXT NOT NULL CHECK(json_valid(choices_json)), correct_index INTEGER NOT NULL CHECK(correct_index>=0), active INTEGER NOT NULL DEFAULT 0 CHECK(active IN(0,1)))"
+      },
+      {
+        "name": "rate_limits",
+        "type": "table",
+        "sql": "CREATE TABLE rate_limits(session_hash TEXT NOT NULL, window INTEGER NOT NULL, requests INTEGER NOT NULL, PRIMARY KEY(session_hash,window))"
+      },
+      {
+        "name": "sessions",
+        "type": "table",
+        "sql": "CREATE TABLE sessions(token_hash TEXT PRIMARY KEY, learner_id TEXT NOT NULL REFERENCES learners(id), expires_at INTEGER NOT NULL, revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0,1)))"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "OC",
+      "served_by_colo": "SYD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.4483
+      },
+      "duration": 0.4483,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 143360,
+      "rows_read": 45,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

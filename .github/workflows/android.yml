@@ -1,7 +1,7 @@
 name: Android verification
 on:
   push:
-    branches: [main, 'preview/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -65,7 +65,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned backend dependencies
+        run: npm ci --prefix backend
+      - name: Build certification dashboard
+        run: npm run build --prefix backend
       - name: Check exam policy
         run: node --test backend/test/*.test.mjs
+      - name: Apply migrations with local D1 runtime
+        working-directory: backend
+        run: npx wrangler d1 migrations apply zamcan-codelab-certification --local
+        env:
+          WRANGLER_SEND_METRICS: "false"
       - name: Check D1-compatible schema
         run: python3 tools/test_backend_schema.py
