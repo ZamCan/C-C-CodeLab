@@ -1,0 +1,13 @@
+{
+  "name": "codelab-progress-sync",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.900.0",
+    "@aws-sdk/lib-dynamodb": "^3.900.0",
+    "jose": "^6.0.0"
+  }
+}
