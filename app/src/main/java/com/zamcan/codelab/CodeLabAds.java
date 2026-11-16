@@ -26,6 +26,10 @@ public final class CodeLabAds {
     private boolean initialized;
     private boolean destroyed;
     private boolean requestStarted;
+    private int generation;
+    private boolean debugBuild() {
+        return (activity.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
 
     public CodeLabAds(Activity activity, SharedPreferences preferences) {
         this.activity=activity;
@@ -33,7 +37,7 @@ public final class CodeLabAds {
     }
     public void attach(LinearLayout parent, String screen) {
         detach();
-        if (destroyed || !"home".equals(screen) || !preferences.getBoolean("test_ads_opt_in",false)) return;
+        if (destroyed || !debugBuild() || !"home".equals(screen) || !preferences.getBoolean("test_ads_opt_in",false)) return;
         container=new FrameLayout(activity);
         parent.addView(container,new LinearLayout.LayoutParams(-1,-2));
         refreshConsent();
@@ -41,29 +45,31 @@ public final class CodeLabAds {
     public void refreshConsent() {
         if (destroyed || container==null || consentChecked) return;
         consentChecked=true;
+        final int ticket=generation;
         ConsentInformation info=UserMessagingPlatform.getConsentInformation(activity);
         ConsentRequestParameters parameters=new ConsentRequestParameters.Builder().build();
         info.requestConsentInfoUpdate(activity,parameters,()->{
-            if(destroyed || container==null)return;
+            if(destroyed || ticket!=generation || container==null)return;
             UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity,error->{
                 if(destroyed || container==null)return;
                 if(info.canRequestAds()) startBanner();
             });
         },error->{
             // No ad request without a confirmed current or previously valid consent state.
-            if(!destroyed && container!=null && info.canRequestAds())startBanner();
+            if(!destroyed && ticket==generation && container!=null && info.canRequestAds())startBanner();
         });
     }
     private void startBanner() {
-        if(requestStarted || destroyed || container==null || !preferences.getBoolean("test_ads_opt_in",false))return;
+        if(requestStarted || destroyed || !debugBuild() || container==null || !preferences.getBoolean("test_ads_opt_in",false))return;
         requestStarted=true;
         if(!initialized) {
             initialized=true;
-            new Thread(()->MobileAds.initialize(activity,status->activity.runOnUiThread(this::loadBanner)),"codelab-ads-init").start();
+            final int ticket=generation;
+            MobileAds.initialize(activity,status->activity.runOnUiThread(()->{if(ticket==generation)loadBanner();}));
         } else loadBanner();
     }
     private void loadBanner() {
-        if(destroyed || container==null || !preferences.getBoolean("test_ads_opt_in",false))return;
+        if(destroyed || !debugBuild() || container==null || !preferences.getBoolean("test_ads_opt_in",false))return;
         int width=(int)(activity.getResources().getDisplayMetrics().widthPixels/activity.getResources().getDisplayMetrics().density);
         if(width<=0)return;
         banner=new AdView(activity);
@@ -78,6 +84,7 @@ public final class CodeLabAds {
         banner.loadAd(new AdRequest.Builder().build());
     }
     public void detach() {
+        generation++;
         requestStarted=false;
         consentChecked=false;
         if(banner!=null){banner.destroy();banner=null;}
