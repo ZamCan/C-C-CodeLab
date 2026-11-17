@@ -10,9 +10,11 @@ export function randomIndex(length) {
   return bytes[0] % length;
 }
 export function selectQuestions(bank, slots, exposed = new Set(), choose = randomIndex) {
-  if (!Array.isArray(slots) || slots.length === 0 || slots.reduce((n, s) => n + s.count, 0) !== 25)
+  if (!Array.isArray(slots) || slots.length === 0 || slots.some(s => !s || !Number.isInteger(s.count) || s.count < 1) || slots.reduce((n, s) => n + s.count, 0) !== 25)
     throw new ApiError(503, 'blueprint_requires_25_questions');
   if (new Set(slots.map(s => s.style)).size !== 2) throw new ApiError(503, 'blueprint_requires_two_reviewed_styles');
+  if (!Array.isArray(bank) || bank.length > 10000 || bank.some(q => !q || !/^[A-Za-z0-9_-]{1,100}$/.test(q.id)) || new Set(bank.map(q => q.id)).size !== bank.length)
+    throw new ApiError(503, 'invalid_question_bank');
   const seen = new Set(exposed), selected = [];
   for (const slot of slots) {
     if (!automaticStyles.has(slot.style) || !Number.isInteger(slot.count) || slot.count < 1 || !slot.objective || !['easy','medium','hard'].includes(slot.difficulty))
