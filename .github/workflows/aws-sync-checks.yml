@@ -1,0 +1,29 @@
+name: AWS progress sync source checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'aws/sync/**'
+      - '.github/workflows/aws-sync-checks.yml'
+  pull_request:
+    paths:
+      - 'aws/sync/**'
+      - '.github/workflows/aws-sync-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  progress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check backend syntax
+        run: |
+          node --check aws/sync/src/progress.mjs
+          node --check aws/sync/src/handler.mjs
+      - name: Run progress unit tests
+        run: node --test aws/sync/test/*.test.mjs
