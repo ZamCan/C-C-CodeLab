@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CodeLab optional authenticated progress API (deploy only after AWS activation and budget review)
+Parameters:
+  ProgressTableName:
+    Type: String
+    Default: zamcan-codelab-progress
+  CognitoUserPoolId:
+    Type: String
+    Description: Existing Cognito user pool ID (created and reviewed separately)
+    AllowedPattern: '^[a-z0-9-]+_[A-Za-z0-9]+$'
+  CognitoAppClientId:
+    Type: String
+    Description: Existing public Cognito app client ID (no client secret)
+    MinLength: 8
+Resources:
+  ProgressApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+  ProgressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src/handler.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 20
+      Environment:
+        Variables:
+          PROGRESS_TABLE: !Ref ProgressTableName
+          COGNITO_ISSUER: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}'
+          COGNITO_CLIENT_ID: !Ref CognitoAppClientId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource: !Sub 'arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProgressTableName}'
+      Events:
+        ReadProgress:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProgressApi
+            Path: /v1/progress
+            Method: GET
+        SaveProgress:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProgressApi
+            Path: /v1/progress
+            Method: PUT
+        DeleteProgress:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProgressApi
+            Path: /v1/progress
+            Method: DELETE
+Outputs:
+  ProgressEndpoint:
+    Description: HTTPS URL for Android opt-in progress synchronization
+    Value: !Sub 'https://${ProgressApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1/progress'
