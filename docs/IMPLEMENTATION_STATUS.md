@@ -37,3 +37,22 @@ Source-store tests cover Unicode/restart persistence, traversal rejection, atomi
 ## Later changes in this session
 
 The current delivery ledger supersedes the initial inventory above: isolated project directories, line numbers/indentation, SQLite progress migration, English/Swahili scaffolding, detailed syntax/math notes, five source-backed guides, and a disabled Cloudflare exam foundation have since been added. Full native execution, deep curricula, advanced editor features, physical-device verification, and trusted credential issuance are still incomplete.
+
+## November 17, 2026 engineering checkpoint (supersedes stale inventory above)
+
+- SQLite progress now uses Android 8-compatible INSERT OR IGNORE and UPDATE, avoiding SQLite 3.24+ UPSERT syntax.
+- Cloud progress source includes Cognito ID-token verification, merge with optimistic revision control, size bounds, and authenticated DELETE of the cloud progress record. Account identity deletion remains unimplemented and must be treated separately.
+- Android HTTPS sync blocks HTTP redirects to avoid forwarding bearer credentials to an unexpected destination.
+- AWS CloudFormation contains a DynamoDB table template, **not** a complete deployed service. Cognito federation, Lambda deployment, API Gateway, least-privilege IAM, billing safeguards, and real authentication integration are still required.
+- The AWS sync source workflow checks JavaScript syntax and unit tests; successful execution must be confirmed in GitHub Actions.
+- Android APK build job is manual-only (workflow_dispatch); pushes still run lesson and backend source checks. No final APK build, installation, or release certification is authorized yet.
+- The application has not passed physical Android compiler execution, complete curriculum/exam coverage, or end-to-end certificate verification. Do not claim release readiness.
+
+### Deployment safety gates
+
+1. Verify AWS DynamoDB and Cognito service activation before attempting deployment.
+2. Review costs and configure billing alerts before provisioning.
+3. Provision Cognito identity providers and OAuth2 PKCE redirect configuration without committing secrets.
+4. Deploy Lambda/API Gateway with minimum table permissions, authenticated access, throttling, and operational logs without tokens.
+5. Validate two-device progress merge, conflict retries, unauthorized access rejection, cloud progress deletion, and offline recovery.
+6. Review exam/certificate security and compiler functionality before any production APK build.
