@@ -37,7 +37,7 @@ public final class OfflineCompiler {
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){return true;}
             @Override public WebResourceResponse shouldInterceptRequest(WebView v,WebResourceRequest request){
                 Uri uri=request.getUrl();String path=uri.getPath();
-                if(!"https".equals(uri.getScheme())||!"compiler.codelab.invalid".equals(uri.getHost())||uri.getPort()!=-1||!"GET".equals(request.getMethod())||path==null||!path.matches("/[A-Za-z0-9_.-]+"))return denied();
+                if(!"https".equals(uri.getScheme())||!"compiler.codelab.invalid".equals(uri.getHost())||uri.getPort()!=-1||uri.getQuery()!=null||uri.getFragment()!=null||uri.getUserInfo()!=null||!"GET".equals(request.getMethod())||path==null||!path.matches("/[A-Za-z0-9_.-]+"))return denied();
                 String name=path.substring(1);
                 if(!java.util.Arrays.asList("index.html","controller.js","worker.js","shared.js","engine.js","clang22-noeh","lld22-noeh","sysroot22.tar","memfs","empty.tar").contains(name))return denied();
                 try{return new WebResourceResponse(name.endsWith(".html")?"text/html":name.endsWith(".js")?"application/javascript":"application/octet-stream","UTF-8",200,"OK",Collections.singletonMap("Cache-Control","no-store"),openAsset(context,name));}
