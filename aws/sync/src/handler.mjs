@@ -46,6 +46,10 @@ export async function handler(event){
     const current=await client.send(new GetCommand({TableName:table,Key:key,ConsistentRead:true}));
     const revision=current.Item?.revision||0;
     const merged=mergeSnapshots({schema:1,progress:current.Item?.progress||[]},input);
+    // DynamoDB's 400 KB item limit and Android's 256 KiB response cap require
+    // a smaller bound; never acknowledge an upload the client cannot read back.
+    if(Buffer.byteLength(JSON.stringify({...merged,revision:revision+1}),'utf8')>240000)
+      return json(413,{error:'progress_limit_reached'});
     await client.send(new PutCommand({TableName:table,Item:{...key,progress:merged.progress,revision:revision+1,updated_at:Date.now()},ConditionExpression:current.Item?'revision = :revision':'attribute_not_exists(pk)',ExpressionAttributeValues:current.Item?{':revision':revision}:undefined}));
     return json(200,{...merged,revision:revision+1});
   }catch(error){
