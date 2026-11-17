@@ -4,7 +4,7 @@ import {createRemoteJWKSet,jwtVerify} from 'jose';
 import {validateSnapshot,mergeSnapshots} from './progress.mjs';
 
 const client=DynamoDBDocumentClient.from(new DynamoDBClient({}),{marshallOptions:{removeUndefinedValues:true}});
-const json=(status,data)=>({statusCode:status,headers:{'content-type':'application/json','cache-control':'no-store','access-control-allow-origin':'null'},body:JSON.stringify(data)});
+const json=(status,data)=>({statusCode:status,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(data)});
 const issuer=process.env.COGNITO_ISSUER;
 const audience=process.env.COGNITO_CLIENT_ID;
 const table=process.env.PROGRESS_TABLE;
@@ -36,9 +36,11 @@ export async function handler(event){
       return json(200,{schema:1,progress:r.Item?.progress||[],revision:r.Item?.revision||0});
     }
     const body=event.body||'';
-    if(body.length>262144)return json(413,{error:'payload_too_large'});
+    if(body.length>349528)return json(413,{error:'payload_too_large'});
     let input;
-    try{input=JSON.parse(event.isBase64Encoded?Buffer.from(body,'base64').toString('utf8'):body);validateSnapshot(input);}
+    try{const raw=event.isBase64Encoded?Buffer.from(body,'base64').toString('utf8'):body;
+      if(Buffer.byteLength(raw,'utf8')>262144) return json(413,{error:'payload_too_large'});
+      input=JSON.parse(raw);validateSnapshot(input);}
     catch{return json(400,{error:'invalid_progress'});}
     // Optimistic concurrency prevents overwriting updates from another device.
     const current=await client.send(new GetCommand({TableName:table,Key:key,ConsistentRead:true}));
