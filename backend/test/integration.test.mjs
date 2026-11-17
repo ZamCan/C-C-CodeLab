@@ -119,3 +119,19 @@ test('official names required before exam and reconfirmed before issuance',async
  assert.equal((await f.call('/v1/credentials/issue',{method:'POST',body:{attempt_id:id,official_names:['Amina','Juma','Mkwawa'],name_confirmed:true}})).status,201);
  assert.ok(f.DB.raw.prepare('SELECT name_confirmed_at FROM attempts WHERE id=?').get(id).name_confirmed_at);
  }finally{f.DB.close();}});
+
+test('certificate issuance requires all production feature gates',async()=>{
+ const f=await fixture();
+ try{
+   const attempt=await f.pass();
+   for(const flag of ['AUTH_ENABLED','EXAMS_ENABLED','ISSUANCE_ENABLED']){
+     f.env[flag]='false';
+     const result=await f.call('/v1/credentials/issue',{method:'POST',body:{
+       attempt_id:attempt,official_names:['Amina','Juma','Mkwawa'],name_confirmed:true
+     }});
+     assert.equal(result.status,503,flag+' must block issuance');
+     f.env[flag]='true';
+   }
+   assert.equal(f.DB.raw.prepare('SELECT COUNT(*) AS n FROM credentials').get().n,0);
+ }finally{f.DB.close();}
+});
