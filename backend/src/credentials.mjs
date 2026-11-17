@@ -27,7 +27,7 @@ export async function verifyCredential(token,resolveKey,expectedIssuer,time=Date
  return {payload,keyId:header.kid};
 }
 export async function recordState(env,record){
- if(!record)return {state:'invalid'};
+ if(!record || !['active','revoked'].includes(record.status))return {state:'invalid'};
  try{
    if(await digest(record.signed_document)!==record.digest)throw Error('Digest mismatch');
    const checked=await verifyCredential(record.signed_document,async id=>{const key=await env.DB.prepare('SELECT * FROM issuer_keys WHERE id=?').bind(id).first();return key?{status:key.status,jwk:JSON.parse(key.public_jwk)}:null;},origin(env).origin);
@@ -36,7 +36,7 @@ export async function recordState(env,record){
  }catch{return {state:'invalid'};}
 }
 async function issue(request,env){
- if(env.ISSUANCE_ENABLED!=='true')throw new ApiError(503,'issuance_not_enabled');
+ if(env.ISSUANCE_ENABLED!=='true'||env.EXAMS_ENABLED!=='true'||env.AUTH_ENABLED!=='true')throw new ApiError(503,'issuance_not_enabled');
  const learner=await session(request,env),input=await readJson(request);
  if(!uuid.test(input.attempt_id||''))throw new ApiError(400,'invalid_attempt');
  const attempt=await env.DB.prepare("SELECT a.*,c.version AS course_version,c.criteria_hash,c.title_en,c.title_sw FROM attempts a JOIN courses c ON c.id=a.course_id JOIN eligibility e ON e.course_id=a.course_id AND e.learner_id=a.learner_id WHERE a.id=? AND a.learner_id=? AND a.status='submitted' AND a.passed=1").bind(input.attempt_id,learner.id).first();
