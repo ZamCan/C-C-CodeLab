@@ -48,6 +48,8 @@ public final class ProgressSync {
     private static JSONObject request(URL url,String token,String method,String body)throws Exception{
         HttpURLConnection conn=(HttpURLConnection)url.openConnection();
         try{
+            // Never follow a redirect with an identity token to another host.
+            conn.setInstanceFollowRedirects(false);
             conn.setConnectTimeout(12000);conn.setReadTimeout(15000);
             conn.setRequestMethod(method);
             conn.setRequestProperty("Authorization","Bearer "+token);
