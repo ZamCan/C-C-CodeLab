@@ -1,5 +1,5 @@
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient,GetCommand,PutCommand} from '@aws-sdk/lib-dynamodb';
+import {DynamoDBDocumentClient,GetCommand,PutCommand,DeleteCommand} from '@aws-sdk/lib-dynamodb';
 import {createRemoteJWKSet,jwtVerify} from 'jose';
 import {validateSnapshot,mergeSnapshots} from './progress.mjs';
 
@@ -28,8 +28,10 @@ export async function handler(event){
   const key={pk:'LEARNER#'+identity,sk:'PROGRESS'};
   try{
     if(method==='DELETE'){
-      // Account deletion requires a separate authenticated flow; no accidental destructive sync.
-      return json(501,{error:'account_deletion_flow_required'});
+      // Explicit authenticated deletion of cloud progress only; Cognito identity
+      // deletion is a separate account lifecycle operation.
+      await client.send(new DeleteCommand({TableName:table,Key:key}));
+      return json(200,{deleted:true});
     }
     if(method==='GET'){
       const r=await client.send(new GetCommand({TableName:table,Key:key,ConsistentRead:true}));
