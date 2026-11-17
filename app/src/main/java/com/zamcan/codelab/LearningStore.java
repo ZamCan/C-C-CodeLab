@@ -56,9 +56,12 @@ public final class LearningStore extends SQLiteOpenHelper {
                    !course.matches("[A-Za-z0-9_-]+")||!lesson.matches("[A-Za-z0-9_-]+")||
                    completedAt<=0||completedAt>System.currentTimeMillis()+86400000L)
                     throw new JSONException("Invalid progress entry");
-                db.execSQL("INSERT INTO progress(course,lesson,completed_at) VALUES(?,?,?) "+
-                    "ON CONFLICT(course,lesson) DO UPDATE SET completed_at=MIN(completed_at,excluded.completed_at)",
-                    new Object[]{course,lesson,completedAt});
+                // Android 8 ships SQLite older than 3.24; avoid UPSERT syntax.
+                ContentValues values=new ContentValues();
+                values.put("course",course);values.put("lesson",lesson);values.put("completed_at",completedAt);
+                db.insertWithOnConflict("progress",null,values,SQLiteDatabase.CONFLICT_IGNORE);
+                db.execSQL("UPDATE progress SET completed_at=MIN(completed_at,?) WHERE course=? AND lesson=?",
+                    new Object[]{completedAt,course,lesson});
             }
             db.setTransactionSuccessful();
         }finally{db.endTransaction();}
