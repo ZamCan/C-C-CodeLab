@@ -33,3 +33,18 @@ test('a request cannot bypass disabled exam gate by posting a fake learner ident
   const result=await worker.fetch(new Request('https://test.invalid/v1/exams/attempts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({course_id:'c17',learner_id:'admin',passed:true,score:100})}),{EXAMS_ENABLED:'false'});
   assert.equal(result.status,503);
 });
+
+test('malformed blueprint counts fail closed before selecting questions',()=>{
+  for(const count of [0,-1,1.5,'13',null,undefined]){
+    const malformed=[{...slots[0],count},slots[1]];
+    assert.throws(()=>selectQuestions(bank,malformed),/blueprint_requires_25_questions/);
+  }
+});
+test('question bank rejects duplicate identifiers even when different styles are used',()=>{
+  const duplicate=[...bank,{...bank[0],style:'true_false'}];
+  assert.throws(()=>selectQuestions(duplicate,slots),/invalid_question_bank/);
+});
+test('question bank rejects unsafe identifiers',()=>{
+  const malformed=[...bank,{...bank[0],id:'../../secret'}];
+  assert.throws(()=>selectQuestions(malformed,slots),/invalid_question_bank/);
+});
