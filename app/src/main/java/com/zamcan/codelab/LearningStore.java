@@ -15,7 +15,7 @@ public final class LearningStore extends SQLiteOpenHelper {
     public LearningStore(Context context){this(context,null);}
     /** An authenticated Appwrite user ID must be validated by Account.get() before use here. */
     public LearningStore(Context context,String verifiedAppwriteUserId){
-        super(context,databaseName(verifiedAppwriteUserId),null,1);
+        super(context,databaseName(verifiedAppwriteUserId),null,2);
         guest=verifiedAppwriteUserId==null;
         ownerScope=guest?"guest":verifiedAppwriteUserId;
     }
@@ -27,14 +27,29 @@ public final class LearningStore extends SQLiteOpenHelper {
     @Override public void onCreate(SQLiteDatabase db){
         db.execSQL("CREATE TABLE progress(course TEXT NOT NULL, lesson TEXT NOT NULL, completed_at INTEGER NOT NULL, PRIMARY KEY(course,lesson))");
         db.execSQL("CREATE TABLE metadata(name TEXT PRIMARY KEY, value TEXT NOT NULL)");
+        db.execSQL("CREATE TABLE sync_queue(course TEXT NOT NULL, lesson TEXT NOT NULL, queued_at INTEGER NOT NULL, PRIMARY KEY(course,lesson))");
     }
-    @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion){throw new IllegalStateException("A reviewed migration is required");}
+    @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion){
+        if(oldVersion==1 && newVersion==2){
+            db.execSQL("CREATE TABLE sync_queue(course TEXT NOT NULL, lesson TEXT NOT NULL, queued_at INTEGER NOT NULL, PRIMARY KEY(course,lesson))");
+            // Existing progress must be synchronized when an authenticated session is established.
+            db.execSQL("INSERT OR IGNORE INTO sync_queue SELECT course,lesson,completed_at FROM progress");
+            return;
+        }
+        throw new IllegalStateException("A reviewed migration is required");
+    }
     public boolean completed(String course,String lesson){
         try(Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM progress WHERE course=? AND lesson=?",new String[]{course,lesson})){return c.moveToFirst();}
     }
     public void complete(String course,String lesson){
         ContentValues values=new ContentValues();values.put("course",course);values.put("lesson",lesson);values.put("completed_at",System.currentTimeMillis());
-        getWritableDatabase().insertWithOnConflict("progress",null,values,SQLiteDatabase.CONFLICT_IGNORE);
+        SQLiteDatabase db=getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.insertWithOnConflict("progress",null,values,SQLiteDatabase.CONFLICT_IGNORE);
+            if(!guest)db.execSQL("INSERT OR IGNORE INTO sync_queue(course,lesson,queued_at) VALUES(?,?,?)",new Object[]{course,lesson,System.currentTimeMillis()});
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
     }
     /** Portable, minimal snapshot for a future authenticated sync service. */
     public synchronized JSONObject exportProgress() throws JSONException {
