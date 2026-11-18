@@ -153,10 +153,36 @@ public final class MainActivity extends Activity {
     private void home() {
         shell("home","","C/C++ CodeLab","");
         artwork(content);
-        row(content,"☁","Learning progress","Local-first • Cloud sign-in setup",false,this::progressSettings);
+        googleProgressRow();
         action(content,"Compiler",true,this::studio);
         action(content,"Learn C/C++",true,this::academy);
         row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
+    }
+    /** Appwrite-provided Google mark; this is an entry point, not a completed OAuth login. */
+    private void googleProgressRow() {
+        LinearLayout line=new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        line.setPadding(dp(14),dp(12),dp(14),dp(12));
+        line.setMinimumHeight(dp(76));
+        line.setBackground(glass(false));
+        ImageView google=new ImageView(this);
+        google.setImageResource(R.drawable.appwrite_google_g);
+        google.setContentDescription("Google");
+        line.addView(google,new LinearLayout.LayoutParams(dp(32),dp(32)));
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(14),0,0,0);
+        TextView title=label("Learning progress",17,INK);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        copy.addView(title);
+        copy.addView(label("Local-first • Google sign-in coming soon",13,MUTED));
+        line.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        line.setClickable(true);
+        line.setFocusable(true);
+        line.setContentDescription("Learning progress. Google sign-in is not yet available.");
+        line.setOnClickListener(v->progressSettings());
+        content.addView(line,new LinearLayout.LayoutParams(-1,-2));
     }
     private void progressSettings() {
         String mode=preferences.getString("progress_mode","local");
