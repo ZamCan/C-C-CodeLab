@@ -12,7 +12,7 @@ public final class ProgressRowIds {
             throw new IllegalArgumentException("Invalid lesson key");
         try {
             byte[] digest=MessageDigest.getInstance("SHA-256")
-                .digest((course+"\\u0000"+lesson).getBytes(StandardCharsets.UTF_8));
+                .digest((course+":"+lesson).getBytes(StandardCharsets.UTF_8));
             StringBuilder id=new StringBuilder("p_");
             for(int i=0;i<16;i++){
                 int b=digest[i]&255;
