@@ -8,7 +8,6 @@ permissions:
   contents: read
 jobs:
   android:
-    if: github.event_name == 'workflow_dispatch'
     name: Manual Android build and lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
