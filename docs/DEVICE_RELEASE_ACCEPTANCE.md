@@ -43,5 +43,12 @@ This is an evidence checklist, not a release announcement. Check the [GitHub Act
 4. Deliver real offline Android C/C++ compiler and verify on physical devices.
 5. Fix any GitHub Actions Android failures, produce evidence-backed debug APK and then prepare a separately signed release candidate.
 
+## Engineering update — 2026-11-18
+- Appwrite SDK 31.0.1 dependency and `io.appwrite.views.CallbackActivity` with `appwrite-callback-codelab-zamcan` were committed to `main`. These are configuration scaffolding, not a verified login.
+- The Appwrite-provided Google SVG was converted to an Android vector and displayed in the learning-progress entry. The entry does **not** start Google OAuth yet.
+- Academic references and truthful technology acknowledgements were added; no third-party sponsorship is claimed.
+- Connected Appwrite provider readback reports Google enabled and a nonempty client ID, but returned `clientSecret` is empty. Confirm saved secret privately in console and perform an actual OAuth round-trip.
+- Next implementation: Android account/session API, launch browser OAuth, resume callback, verify `Account.get()`, logout and user separation, then CI and physical-device tests. Do not turn on cloud progress sync until backend authorization is enforced.
+
 ## Status as of 2026-11-18
-Appwrite project, Android platform and progress table exist. The Appwrite JWT verification adapter and tests have been committed but the tests have not been verified passing. Google provider is disabled. Cloudflare exchange and full Android OAuth are not yet implemented. A production APK and working offline compiler are not verified.
+Appwrite project, Android platform and progress table exist. The Appwrite JWT verification adapter and tests have been committed but the tests have not been verified passing. Google provider was subsequently observed enabled; its returned client secret was empty, and authentication remains untested. Cloudflare exchange and full Android OAuth are not yet implemented. A production APK and working offline compiler are not verified.
