@@ -156,6 +156,7 @@ public final class MainActivity extends Activity {
         googleProgressRow();
         action(content,"Compiler",true,this::studio);
         action(content,"Learn C/C++",true,this::academy);
+        row(content,"§","Academic references","Standards, trusted reading and attribution",true,this::academicReferences);
         row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
     }
     /** Appwrite-provided Google mark; this is an entry point, not a completed OAuth login. */
@@ -183,6 +184,33 @@ public final class MainActivity extends Activity {
         line.setContentDescription("Learning progress. Google sign-in is not yet available.");
         line.setOnClickListener(v->progressSettings());
         content.addView(line,new LinearLayout.LayoutParams(-1,-2));
+    }
+    /** Educational references, not sponsorships or claims of textbook reproduction. */
+    private void academicReferences() {
+        shell("references","ABOUT THE LEARNING MATERIAL","Academic references","Official standards and independent reading");
+        LinearLayout intro=panel(false);
+        title(intro,"How CodeLab uses references",20);
+        body(intro,"Lessons and examples are written for CodeLab. These links are independent resources for checking language rules and reading further. Listing a publisher or project does not mean it endorses or sponsors this app.");
+        reference("ISO C language (WG14)","Official working group for the C language standard.","https://www.open-std.org/jtc1/sc22/wg14/");
+        reference("ISO C++ language (WG21)","Official C++ standards committee and public papers.","https://isocpp.org/std/the-standard");
+        reference("cppreference","Independent reference for C and C++ library and language features.","https://en.cppreference.com/w/");
+        reference("The C Programming Language","Brian W. Kernighan and Dennis M. Ritchie; classic C textbook. Obtain from an authorized source.","https://www.pearson.com/");
+        reference("Programming: Principles and Practice Using C++","Bjarne Stroustrup; textbook for learning programming with C++. Obtain from an authorized source.","https://www.stroustrup.com/programming.html");
+        reference("Learn C++","Free online C++ learning resource; independent of CodeLab.","https://www.learncpp.com/");
+        LinearLayout technology=panel(false);
+        title(technology,"Technology acknowledgements",20);
+        body(technology,"Appwrite: planned account authentication and learner data sync. Cloudflare: planned certification and verification services. Neither organization is a sponsor or endorser of CodeLab. Integration and deployment status must be verified separately.");
+        action(content,"Back home",false,this::home);
+    }
+    private void reference(String name,String detail,String url) {
+        row(content,"↗",name,detail,true,()->{
+            try {
+                Intent intent=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(url));
+                startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                message("No browser available",url);
+            }
+        });
     }
     private void progressSettings() {
         String mode=preferences.getString("progress_mode","local");
