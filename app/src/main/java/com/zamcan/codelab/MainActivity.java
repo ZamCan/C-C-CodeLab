@@ -199,7 +199,7 @@ public final class MainActivity extends Activity {
         reference("Learn C++","Free online C++ learning resource; independent of CodeLab.","https://www.learncpp.com/");
         LinearLayout technology=panel(false);
         title(technology,"Technology acknowledgements",20);
-        body(technology,"Appwrite: planned account authentication and learner data sync. Cloudflare: planned certification and verification services. Neither organization is a sponsor or endorser of CodeLab. Integration and deployment status must be verified separately.");
+        body(technology,"Appwrite: Google OAuth provider and private progress table configured; Android login and sync pending. Cloudflare: certification Worker deployed; certificate issuance disabled pending verification. Neither organization is a sponsor or endorser of CodeLab. Integration and deployment status must be verified separately.");
         action(content,"Back home",false,this::home);
     }
     private void reference(String name,String detail,String url) {
@@ -216,14 +216,14 @@ public final class MainActivity extends Activity {
         String mode=preferences.getString("progress_mode","local");
         new AlertDialog.Builder(this).setTitle("Learning progress")
             .setMessage("Current mode: "+("online".equals(mode)?"Cloud requested (not connected)":"Local")+
-                "\\n\\nLocal progress works without an account or internet. Online progress will require verified Amazon or Google sign-in before any upload. No progress is uploaded in this build.")
+                "\\n\\nLocal progress works without an account or internet. Online progress requires a verified Appwrite session before any upload. No progress is uploaded in this build.")
             .setPositiveButton("Keep local", (d,w)->{
                 preferences.edit().putString("progress_mode","local").apply();
                 home();
             })
             .setNeutralButton("Request online", (d,w)->{
-                message("Cloud sign-in not yet configured",
-                    "Amazon and Google identity provider credentials and a secure AWS sync API are required. Your existing local progress is preserved; no upload has occurred.");
+                message("Cloud sync is not yet available",
+                    "Google OAuth is configured in Appwrite, but the Android sign-in and private progress synchronization are not implemented yet. Your existing local progress is preserved; no upload has occurred.");
             }).setNegativeButton("Cancel",null).show();
     }
     private void advertisingSettings() {
