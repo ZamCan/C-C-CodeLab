@@ -10,12 +10,14 @@ import org.json.JSONException;
 /** Subject-neutral progress records; never trusted as certificate eligibility. */
 public final class LearningStore extends SQLiteOpenHelper {
     private final String ownerScope;
+    private final boolean guest;
     /** Guest storage is never automatically treated as authenticated account storage. */
     public LearningStore(Context context){this(context,null);}
     /** An authenticated Appwrite user ID must be validated by Account.get() before use here. */
     public LearningStore(Context context,String verifiedAppwriteUserId){
         super(context,databaseName(verifiedAppwriteUserId),null,1);
-        ownerScope=verifiedAppwriteUserId==null?"guest":verifiedAppwriteUserId;
+        guest=verifiedAppwriteUserId==null;
+        ownerScope=guest?"guest":verifiedAppwriteUserId;
     }
     private static String databaseName(String id){
         if(id==null)return "learning.db"; // preserve existing guest progress
@@ -27,7 +29,7 @@ public final class LearningStore extends SQLiteOpenHelper {
             return out.append(".db").toString();
         }catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}
     }
-    public boolean isGuest(){return "guest".equals(ownerScope);}
+    public boolean isGuest(){return guest;}
     public String ownerScope(){return ownerScope;}
     @Override public void onCreate(SQLiteDatabase db){
         db.execSQL("CREATE TABLE progress(course TEXT NOT NULL, lesson TEXT NOT NULL, completed_at INTEGER NOT NULL, PRIMARY KEY(course,lesson))");
