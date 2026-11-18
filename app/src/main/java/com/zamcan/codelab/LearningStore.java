@@ -9,7 +9,26 @@ import org.json.JSONException;
 
 /** Subject-neutral progress records; never trusted as certificate eligibility. */
 public final class LearningStore extends SQLiteOpenHelper {
-    public LearningStore(Context context){super(context,"learning.db",null,1);}
+    private final String ownerScope;
+    /** Guest storage is never automatically treated as authenticated account storage. */
+    public LearningStore(Context context){this(context,null);}
+    /** An authenticated Appwrite user ID must be validated by Account.get() before use here. */
+    public LearningStore(Context context,String verifiedAppwriteUserId){
+        super(context,databaseName(verifiedAppwriteUserId),null,1);
+        ownerScope=verifiedAppwriteUserId==null?"guest":verifiedAppwriteUserId;
+    }
+    private static String databaseName(String id){
+        if(id==null)return "learning.db"; // preserve existing guest progress
+        if(!id.matches("[A-Za-z0-9._-]{1,128}"))throw new IllegalArgumentException("Invalid Appwrite user ID");
+        try{
+            byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(id.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder out=new StringBuilder("learning-user-");
+            for(byte b:digest)out.append(String.format(java.util.Locale.ROOT,"%02x",b & 0xff));
+            return out.append(".db").toString();
+        }catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}
+    }
+    public boolean isGuest(){return "guest".equals(ownerScope);}
+    public String ownerScope(){return ownerScope;}
     @Override public void onCreate(SQLiteDatabase db){
         db.execSQL("CREATE TABLE progress(course TEXT NOT NULL, lesson TEXT NOT NULL, completed_at INTEGER NOT NULL, PRIMARY KEY(course,lesson))");
         db.execSQL("CREATE TABLE metadata(name TEXT PRIMARY KEY, value TEXT NOT NULL)");
@@ -67,6 +86,7 @@ public final class LearningStore extends SQLiteOpenHelper {
         }finally{db.endTransaction();}
     }
     public void importLegacy(SharedPreferences preferences){
+        if(!isGuest())throw new SecurityException("Legacy guest progress must not be imported into an account automatically");
         SQLiteDatabase db=getWritableDatabase();
         try(Cursor c=db.rawQuery("SELECT 1 FROM metadata WHERE name='legacy_import'",null)){if(c.moveToFirst())return;}
         db.beginTransaction();
