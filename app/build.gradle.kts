@@ -8,6 +8,7 @@ android {
 }
 
 dependencies {
+ implementation("io.appwrite:sdk-for-android:31.0.1")
  implementation("com.google.android.gms:play-services-ads:24.7.0")
  implementation("com.google.android.ump:user-messaging-platform:3.2.0")
  testImplementation("junit:junit:4.13.2")
