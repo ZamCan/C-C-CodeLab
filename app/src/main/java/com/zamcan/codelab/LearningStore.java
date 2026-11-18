@@ -20,14 +20,7 @@ public final class LearningStore extends SQLiteOpenHelper {
         ownerScope=guest?"guest":verifiedAppwriteUserId;
     }
     private static String databaseName(String id){
-        if(id==null)return "learning.db"; // preserve existing guest progress
-        if(!id.matches("[A-Za-z0-9._-]{1,128}"))throw new IllegalArgumentException("Invalid Appwrite user ID");
-        try{
-            byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(id.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder out=new StringBuilder("learning-user-");
-            for(byte b:digest)out.append(String.format(java.util.Locale.ROOT,"%02x",b & 0xff));
-            return out.append(".db").toString();
-        }catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}
+        return id==null?"learning.db":LearnerDatabaseNames.forVerifiedUser(id);
     }
     public boolean isGuest(){return guest;}
     public String ownerScope(){return ownerScope;}
