@@ -151,7 +151,7 @@ public final class MainActivity extends Activity {
         View line=new View(this);line.setBackgroundColor(light?0x197080a0:0x19d0dcff);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
     private void home() {
-        shell("home","","C/C++ CodeLab","");
+        shell("home","","CodeLab","C/C++ Compiler & Learning Academy");
         artwork(content);
         googleProgressRow();
         action(content,"Compiler",true,this::studio);
