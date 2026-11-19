@@ -24,6 +24,7 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
     }
     @Override public void onReceive(Context context,Intent intent){
         if(!context.getSharedPreferences("academy",Context.MODE_PRIVATE).getBoolean(PREF,false))return;
+        if(Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())){configure(context,true);return;}
         NotificationManager manager=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
         if(Build.VERSION.SDK_INT>=26)manager.createNotificationChannel(
             new NotificationChannel(CHANNEL,"Learning reminders",NotificationManager.IMPORTANCE_DEFAULT));
