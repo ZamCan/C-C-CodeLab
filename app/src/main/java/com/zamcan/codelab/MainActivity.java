@@ -293,12 +293,22 @@ public final class MainActivity extends Activity {
     private void reminderSettings() {
         boolean enabled=preferences.getBoolean(StudyReminders.PREF,false);
         new AlertDialog.Builder(this).setTitle("Offline study reminders")
-            .setMessage("Receive a daily learning reminder around 6 PM. Reminders are generated on your device and do not upload guest data.")
+            .setMessage("Daily local reminders at your chosen time, outside quiet hours (10 PM–7 AM). No guest data is uploaded.")
             .setPositiveButton(enabled?"Turn off":"Turn on",(dialog,which)->{
                 if(!enabled && android.os.Build.VERSION.SDK_INT>=33 &&
                     checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED)
                     requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},81);
                 StudyReminders.configure(this,!enabled);
+            }).setNeutralButton("Change time",(dialog,which)->{
+                int hour=preferences.getInt("study_reminder_hour",18);
+                int minute=preferences.getInt("study_reminder_minute",0);
+                new TimePickerDialog(this,(picker,h,m)->{
+                    if(h<7 || h>=22){message("Quiet hours","Choose a time between 7:00 AM and 9:59 PM.");return;}
+                    getSharedPreferences("academy",MODE_PRIVATE).edit()
+                        .putInt("study_reminder_hour",h).putInt("study_reminder_minute",m).apply();
+                    if(getSharedPreferences("academy",MODE_PRIVATE).getBoolean(StudyReminders.PREF,false))
+                        StudyReminders.configure(this,true);
+                },hour,minute,true).show();
             }).setNegativeButton("Cancel",null).show();
     }
     private void advertisingSettings() {
