@@ -100,6 +100,17 @@ public final class LearningStore extends SQLiteOpenHelper {
         SQLiteDatabase db=getWritableDatabase();
         try(Cursor c=db.rawQuery("SELECT 1 FROM metadata WHERE name='legacy_import'",null)){if(c.moveToFirst())return;}
         db.beginTransaction();
-        try{for(String language:new String[]{"c","cpp"})for(int i=0;i<10;i++)if(preferences.getBoolean(language+"-"+i,false))complete(language+"-foundation",Integer.toString(i));db.execSQL("INSERT INTO metadata VALUES('legacy_import','1')");db.setTransactionSuccessful();}finally{db.endTransaction();}
+        try{
+            for(String language:new String[]{"c","cpp"})for(int i=0;i<10;i++){
+                if(!preferences.getBoolean(language+"-"+i,false))continue;
+                ContentValues values=new ContentValues();
+                values.put("course",language+"-foundation");
+                values.put("lesson",Integer.toString(i));
+                values.put("completed_at",System.currentTimeMillis());
+                db.insertWithOnConflict("progress",null,values,SQLiteDatabase.CONFLICT_IGNORE);
+            }
+            db.execSQL("INSERT INTO metadata VALUES('legacy_import','1')");
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
     }
 }
