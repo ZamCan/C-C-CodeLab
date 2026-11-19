@@ -82,6 +82,7 @@ public final class MainActivity extends Activity {
                         if(learningSync!=null)learningSync.sync(progress);
                         return;
                     }
+                    if(learningSync!=null)learningSync.cancel();
                     if(progress!=null)progress.close();
                     verifiedAccountId=id;
                     preferences=getSharedPreferences("academy_user_"+id,MODE_PRIVATE);
@@ -90,10 +91,14 @@ public final class MainActivity extends Activity {
                     if("home".equals(screen))home();
                 });
             }
+            @Override public void unavailable(String reason) {
+                // Network loss must not silently erase an already verified offline account.
+            }
             @Override public void unauthenticated(String reason) {
                 runOnUiThread(()->{
                     if(isFinishing() || isDestroyed())return;
                     if(verifiedAccountId!=null){
+                        if(learningSync!=null)learningSync.cancel();
                         if(progress!=null)progress.close();
                         progress=new LearningStore(MainActivity.this);
                         preferences=getSharedPreferences("academy",MODE_PRIVATE);
