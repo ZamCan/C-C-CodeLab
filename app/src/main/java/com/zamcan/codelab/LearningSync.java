@@ -82,6 +82,8 @@ public final class LearningSync {
                     entry.put("course",data.get("course"));
                     entry.put("lesson",data.get("lesson"));
                     entry.put("completed_at",((Number)data.get("completed_at")).longValue());
+                    if(!row.getId().equals(ProgressRowIds.forLesson(owner,entry.getString("course"),entry.getString("lesson"))))
+                        throw new SecurityException("Cloud row does not belong to verified learner");
                     entries.put(entry);
                 }
                 JSONObject snapshot=new JSONObject();snapshot.put("schema",1);snapshot.put("progress",entries);
