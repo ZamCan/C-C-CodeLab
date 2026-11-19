@@ -12,8 +12,9 @@ import io.appwrite.services.Account;
 public final class CodeLabAccount {
     private static volatile CodeLabAccount instance;
     private final Account account;
+    private final Client client;
     public CodeLabAccount(Context context) {
-        Client client=new Client(context.getApplicationContext())
+        client=new Client(context.getApplicationContext())
             .setEndpoint("https://cloud.appwrite.io/v1")
             .setProject("codelab-zamcan");
         account=new Account(client);
@@ -25,6 +26,7 @@ public final class CodeLabAccount {
         return instance;
     }
     public Account service(){return account;}
+    public Client client(){return client;}
     public interface Result {
         void authenticated(String verifiedUserId);
         void unauthenticated(String reason);
