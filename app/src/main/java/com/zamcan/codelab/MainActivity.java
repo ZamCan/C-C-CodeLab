@@ -35,6 +35,7 @@ public final class MainActivity extends Activity {
     private CodeLabAccount account;
     private LearningSync learningSync;
     private String verifiedAccountId;
+    private long accountVerificationGeneration;
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
     private int activeLesson, activeStage;
@@ -74,10 +75,11 @@ public final class MainActivity extends Activity {
     }
     /** Open a private database only after Appwrite confirms the active session. */
     private void restoreVerifiedAccount() {
+        final long request=++accountVerificationGeneration;
         account.verify(new CodeLabAccount.Result() {
             @Override public void authenticated(String id) {
                 runOnUiThread(()->{
-                    if(isFinishing() || isDestroyed())return;
+                    if(isFinishing() || isDestroyed() || request!=accountVerificationGeneration)return;
                     if(id.equals(verifiedAccountId)){
                         if(learningSync!=null)learningSync.sync(progress);
                         return;
@@ -96,7 +98,7 @@ public final class MainActivity extends Activity {
             }
             @Override public void unauthenticated(String reason) {
                 runOnUiThread(()->{
-                    if(isFinishing() || isDestroyed())return;
+                    if(isFinishing() || isDestroyed() || request!=accountVerificationGeneration)return;
                     if(verifiedAccountId!=null){
                         if(learningSync!=null)learningSync.cancel();
                         if(progress!=null)progress.close();
