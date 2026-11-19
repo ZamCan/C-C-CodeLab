@@ -113,10 +113,16 @@ public final class LearningStore extends SQLiteOpenHelper {
         return pending;
     }
     /** Acknowledgment is only valid after a successful remote write for this exact owner. */
-    public synchronized void acknowledgeUpload(String verifiedOwner,String course,String lesson) {
+    public synchronized void acknowledgeUpload(String verifiedOwner,String course,String lesson,long uploadedCompletedAt) {
         if(guest||!ownerScope.equals(verifiedOwner))
             throw new SecurityException("Cannot acknowledge another learner's sync queue");
-        getWritableDatabase().delete("sync_queue","course=? AND lesson=?",new String[]{course,lesson});
+        SQLiteDatabase db=getWritableDatabase();
+        db.beginTransaction();
+        try(Cursor c=db.rawQuery("SELECT p.completed_at FROM progress p INNER JOIN sync_queue q ON p.course=q.course AND p.lesson=q.lesson WHERE p.course=? AND p.lesson=?",new String[]{course,lesson})){
+            if(c.moveToFirst() && c.getLong(0)==uploadedCompletedAt)
+                db.delete("sync_queue","course=? AND lesson=?",new String[]{course,lesson});
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
     }
     public void importLegacy(SharedPreferences preferences){
         if(!isGuest())throw new SecurityException("Legacy guest progress must not be imported into an account automatically");
