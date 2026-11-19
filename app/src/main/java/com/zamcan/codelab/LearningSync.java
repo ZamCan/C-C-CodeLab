@@ -66,8 +66,8 @@ public final class LearningSync {
     }
     private void download(LearningStore store,String owner,String after){
         List<String> queries=new ArrayList<>();
-        queries.add(Query.limit(100));
-        if(after!=null)queries.add(Query.cursorAfter(after));
+        queries.add(Query.Companion.limit(100));
+        if(after!=null)queries.add(Query.Companion.cursorAfter(after));
         tables.listRows(DB,TABLE,queries,new CoroutineCallback<>((result,error)->{
             if(error!=null || result==null){stop();return;}
             try{
