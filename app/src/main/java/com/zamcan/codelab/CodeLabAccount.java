@@ -10,6 +10,7 @@ import io.appwrite.services.Account;
 
 /** Appwrite session boundary. Never infer account identity from preferences or OAuth redirects. */
 public final class CodeLabAccount {
+    private static volatile CodeLabAccount instance;
     private final Account account;
     public CodeLabAccount(Context context) {
         Client client=new Client(context.getApplicationContext())
@@ -17,6 +18,13 @@ public final class CodeLabAccount {
             .setProject("codelab-zamcan");
         account=new Account(client);
     }
+    public static CodeLabAccount shared(Context context) {
+        if(instance==null) synchronized(CodeLabAccount.class) {
+            if(instance==null)instance=new CodeLabAccount(context);
+        }
+        return instance;
+    }
+    public Account service(){return account;}
     public interface Result {
         void authenticated(String verifiedUserId);
         void unauthenticated(String reason);
