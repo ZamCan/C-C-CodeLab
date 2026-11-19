@@ -33,3 +33,13 @@ Native Java Android source is now in `app/`, with a dark glass-style UI, two hom
 Build: `./gradlew testDebugUnitTest lintDebug assembleDebug`. Host teaching checks: `python3 tools/verify_lessons.py` and `python3 tools/verify_projects.py`. Backend policy tests: `node --test backend/test/*.test.mjs`; schema tests: `python3 tools/test_backend_schema.py`.
 
 The Cloudflare foundation in `backend/` is undeployed and disabled by default. Native Android C/C++ execution, live certification, visual/device validation, and several advanced editor/course features remain open. See [delivery evidence](docs/DELIVERY_PLAN.md) and [compiler investigation](docs/COMPILER_RESEARCH.md). This is not a production-readiness claim.
+
+## Connected Appwrite development resources (2026-11-19)
+
+- Project: `codelab-zamcan` (region `fra`), endpoint `https://cloud.appwrite.io/v1`.
+- Android platform: `android-codelab`, package `com.zamcan.codelab`. SHA-256 certificate fingerprints are not yet registered.
+- Native Appwrite Push provider: `codelab-push`, enabled, QoS 1, 86400-second retention.
+- Authenticated learning notifications topic: `learning-updates`, subscription role `users`, QoS 1, 86400-second retention.
+- Push backend configuration does not by itself establish Android SDK subscription, notification permission, or end-to-end delivery. Connect these only after verified account login; close push sessions on sign-out.
+- Development signing: Gradle's standard `debug` signing configuration generates/uses the developer's local debug keystore. Do not commit private keys or guess SHA-256 fingerprints. Run `./gradlew :app:signingReport` in the actual build environment, then register its debug SHA-256 fingerprint with Appwrite Android platform `android-codelab` if required.
+- Keep the production signing key separate and developer-owned. Do not use debug signing for release.
