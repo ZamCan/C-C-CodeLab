@@ -95,6 +95,29 @@ public final class LearningStore extends SQLiteOpenHelper {
             db.setTransactionSuccessful();
         }finally{db.endTransaction();}
     }
+
+    /** Account-only upload queue. Guest entries are never sent to a cloud account. */
+    public synchronized JSONArray pendingUploads() throws JSONException {
+        JSONArray pending=new JSONArray();
+        if(guest)return pending;
+        try(Cursor cursor=getReadableDatabase().rawQuery(
+                "SELECT p.course,p.lesson,p.completed_at FROM progress p INNER JOIN sync_queue q ON p.course=q.course AND p.lesson=q.lesson ORDER BY q.queued_at",null)){
+            while(cursor.moveToNext()){
+                JSONObject item=new JSONObject();
+                item.put("course",cursor.getString(0));
+                item.put("lesson",cursor.getString(1));
+                item.put("completed_at",cursor.getLong(2));
+                pending.put(item);
+            }
+        }
+        return pending;
+    }
+    /** Acknowledgment is only valid after a successful remote write for this exact owner. */
+    public synchronized void acknowledgeUpload(String verifiedOwner,String course,String lesson) {
+        if(guest||!ownerScope.equals(verifiedOwner))
+            throw new SecurityException("Cannot acknowledge another learner's sync queue");
+        getWritableDatabase().delete("sync_queue","course=? AND lesson=?",new String[]{course,lesson});
+    }
     public void importLegacy(SharedPreferences preferences){
         if(!isGuest())throw new SecurityException("Legacy guest progress must not be imported into an account automatically");
         SQLiteDatabase db=getWritableDatabase();
