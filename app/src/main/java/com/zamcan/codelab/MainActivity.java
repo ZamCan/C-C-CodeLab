@@ -76,7 +76,7 @@ public final class MainActivity extends Activity {
         saveSource(false); out.putString("screen",screen); out.putInt("lesson",activeLesson); out.putInt("stage",activeStage); super.onSaveInstanceState(out);
     }
     @Override protected void onPause() { saveSource(false); super.onPause(); }
-    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); handler.removeCallbacksAndMessages(null); if(ads!=null)ads.destroy(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); handler.removeCallbacksAndMessages(null); if(ads!=null)ads.destroy(); if(progress!=null)progress.close(); super.onDestroy(); }
     @Override public void onBackPressed() {
         if("home".equals(screen)) super.onBackPressed();
         else if("story".equals(screen) && readingBack!=null)readingBack.run();
