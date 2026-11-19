@@ -253,3 +253,42 @@ User policy is now authoritative: three official names before examination; pass 
 Main reconciliation: checkpoint `53f803d` preserves the tested certification implementation. Remote main `e52241b` adds binding Cloudflare/curriculum handoffs and CertificationClient; these are retained in the merge. The shared Wrangler configuration retains the verified account/database and all disabled feature flags, and adopts the remote compatibility date. The Android verification client is source integration only, not a built/device-verified certificate flow. Weighted multipart grading, ten blueprint variants and practical sandbox grading remain unfinished under the new handoff.
 
 Remote main through `efead4f` was subsequently merged without discarding its consent-gated AdMob test banner controller or stale-attempt expiry fix. The legacy disabled-service test now expects the actual earlier missing-database gate for its unbound fixture; HTTP 503 and absence of question data remain asserted. The newly merged Android changes have not been rebuilt or verified on-device in this checkpoint.
+
+## Build 0.5.0 verification — 2026-11-19 (Ubuntu cloud VM, not Termux)
+
+**Source commit:** `846d49a`. **Environment:** Ubuntu 24.04, Temurin JDK 17.0.21, Android SDK
+platform 35 with build-tools 35.0.0, Gradle 8.9 wrapper. No physical device, emulator or KVM:
+`adb devices` had no target.
+
+### Fixed and implemented in this build
+
+| Area | Change |
+| --- | --- |
+| Compilation | Appwrite 23.1.0 Java interop was broken: `Client.setEndpoint` is overloaded by return type (Kotlin property setter plus a fluent builder), which Java cannot resolve, and `TablesDB.updateRow` had an ambiguous `null` permissions argument. The endpoint is now set through the documented `Client(Context, endpoint, realtime, selfSigned)` constructor and the update passes an explicit `(List<String>) null`. These were real compile errors. |
+| Account isolation | New `AccountSyncGuard` (pure Java, unit tested) admits one sync run per token and verified owner; every Appwrite callback re-checks the token, so a late response for account A cannot write account B's database. |
+| Offline accounts | The last server-verified Appwrite user ID is remembered only to pick a private local database. An offline start opens that learner's data with no cloud access; Appwrite must confirm the session before any upload or download. A 401/403 closes the account database and returns to guest without deleting data. |
+| Sign-out ordering | Sign-out deletes the Appwrite session first and only then opens guest storage, so a failed sign-out cannot strand account data; account switching starts OAuth strictly after the old session is closed. |
+| Guest data | Guest progress is never queued or uploaded. An explicit, confirmed "Copy guest progress here" action merges guest checkpoints into the verified account and queues only those rows; the guest database is untouched. |
+| Sync reliability | Bounded retry (3 attempts, 1.5 s steps) only for transient failures (network/408/429/5xx); 400/401/403/404/409 stop immediately. A duplicate row is read under the user's ACL and merged by earliest completion. Cursor pagination uses a stable `orderAsc("$id")` with page size 100. Queue entries clear only after a confirmed write for the same owner and timestamp. |
+| Schema | `LearningStore.SCHEMA_VERSION` documents schema 2; migration 1→2 creates `sync_queue` and back-fills existing completions. |
+| Reminders | Android 13 permission, one stable notification ID, reboot **and** package-replace rescheduling, quiet hours 22:00–06:59, configurable time, and a resume hint limited to the active lesson title. |
+| UI | Native elevated surfaces (22 dp radius, hairline border, 2 dp elevation), two large home destinations labelled exactly **Compiler** and **Learn C/C++**, medium-weight 52 dp buttons, letter-spaced section labels, refined row typography and disabled-state contrast. No web-style screen was introduced. |
+
+### Actual results
+
+- `bash gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug` (clean build): **BUILD SUCCESSFUL**.
+- Unit tests: **62 tests, 0 failures, 0 errors, 0 skipped**, including 7 Robolectric SQLite tests covering offline persistence, schema 1→2 migration with queue back-fill, foreign-owner acknowledgement rejection, stale acknowledgement rejection, monotonic merge, malformed snapshot rejection, guest-import refusal and cross-account database separation.
+- Lint: **0 errors, 27 warnings** (dependency update notices, unused legacy strings, custom-view constructors, `SetTextI18n` on the diagnostics screen). No baseline or suppression was added.
+- Host engine: `python3 tools/verify_toolchain.py` PASS (artifact hashes and notices); `node tools/test_packaged_compiler.cjs` **14/14** real Clang/LLD C11 and C++17 compile/run checks including stdin, stderr, exit status, diagnostics, timeout, output and memory budgets.
+- Host content: `verify_lessons.py` 20/20 worked examples compile with `-Wall -Wextra -Werror`; `verify_projects.py` ten reference builds with exact transcripts PASS.
+- APK: `app/build/outputs/apk/debug/app-debug.apk`, **44,321,952 bytes**, `versionCode 5`, `versionName 0.5.0`, minSdk 26, targetSdk 35.
+- SHA-256: `6ac55d4e4cdcb8e014a9edf2f8d069959c75d8be1c6096022565bd94cd82d998`.
+- `apksigner verify`: Verifies, APK Signature Scheme v2, one debug signer. Debug signing only.
+- Evidence: `verification/android-build.log`, `verification/android-lint-results.txt`, `verification/apk-sha256.txt`.
+
+### Not verified — do not claim
+
+- No device or emulator: installation, launch, WebView compiler execution, notification delivery, and TalkBack/font-scale review are **not** verified.
+- Live Google OAuth, session restoration and Appwrite row read/write against `codelab-zamcan` are **not** verified; the project owner must complete OAuth on a device/browser and register the certificate fingerprint for Appwrite Android platform `android-codelab`.
+- Appwrite Messaging push delivery is **not** verified; local reminders are independent of the backend.
+- Certificate examinations and issuance are unchanged and remain disabled.

@@ -1,0 +1,184 @@
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/AndroidManifest.xml:6: Warning: Attribute localeConfig is only used in API level 33 and higher (current min is 26) [UnusedAttribute]
+<application android:localeConfig="@xml/locales_config" android:allowBackup="false" android:label="@string/app_name" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:theme="@style/AppTheme" android:supportsRtl="true">
+             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedAttribute":
+   This check finds attributes set in XML files that were introduced in a
+   version newer than the oldest version targeted by your application (with
+   the minSdkVersion attribute).
+
+   This is not an error; the application will simply ignore the attribute.
+   However, if the attribute is important to the appearance or functionality
+   of your application, you should consider finding an alternative way to
+   achieve the same result with only available attributes, and then you can
+   optionally create a copy of the layout in a layout-vNN folder which will be
+   used on API NN or higher where you can take advantage of the newer
+   attribute.
+
+   Note: This check does not only apply to attributes. For example, some tags
+   can be unused too, such as the new <tag> element in layouts introduced in
+   API 21.
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:23: Warning: Found dynamic locale changes, but did not find corresponding Play Core library calls for downloading languages and splitting by language is not disabled in the bundle configuration [AppBundleLocaleChanges]
+        config.setLocale(Locale.ENGLISH);
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "AppBundleLocaleChanges":
+   When changing locales at runtime (e.g. to provide an in-app language
+   switcher), the Android App Bundle must be configured to not split by locale
+   or the Play Core library must be used to download additional locales at
+   runtime.
+
+   https://developer.android.com/guide/app-bundle/configure-base#handling_language_changes
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/build.gradle.kts:15: Warning: A newer version of androidx.appcompat:appcompat than 1.6.1 is available: 1.8.0 [GradleDependency]
+ implementation("androidx.appcompat:appcompat:1.6.1")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/build.gradle.kts:16: Warning: A newer version of androidx.activity:activity than 1.9.3 is available: 1.13.0 [GradleDependency]
+ implementation("androidx.activity:activity:1.9.3")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/build.gradle.kts:17: Warning: A newer version of com.google.android.gms:play-services-ads than 24.7.0 is available: 25.5.0 [GradleDependency]
+ implementation("com.google.android.gms:play-services-ads:24.7.0")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/build.gradle.kts:18: Warning: A newer version of com.google.android.ump:user-messaging-platform than 3.2.0 is available: 4.0.0 [GradleDependency]
+ implementation("com.google.android.ump:user-messaging-platform:3.2.0")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/build.gradle.kts:22: Warning: A newer version of androidx.test:core than 1.6.1 is available: 1.7.0 [GradleDependency]
+    testImplementation("androidx.test:core:1.6.1")
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/AndroidManifest.xml:6: Warning: The attribute android:dataExtractionRules only applies for Android 12 and higher; since minSdkVersion is API 26 you should also set android:fullBackupContent [DataExtractionRules]
+<application android:localeConfig="@xml/locales_config" android:allowBackup="false" android:label="@string/app_name" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:theme="@style/AppTheme" android:supportsRtl="true">
+                                                                                                                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "DataExtractionRules":
+   Before Android 12, the attributes android:allowBackup and
+   android:fullBackupContent were used to configure all forms of backup,
+   including cloud backups, device-to-device transfers and adb backup.
+
+   In Android 12 and higher, these attributes have been deprecated and will
+   only apply to cloud backups. You should instead use the attribute
+   android:dataExtractionRules, specifying an @xml resource that configures
+   which files to back up, for cloud backups and for device-to-device
+   transfers, separately. If your minSdkVersion supports older versions,
+   you'll still want to specify an android:fullBackupContent resource if the
+   default behavior is not right for your app.
+
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   https://goo.gle/DataExtractionRules
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/mipmap-anydpi-v26: Warning: This folder configuration (v26) is unnecessary; minSdkVersion is 26. Merge all the resources in this folder into mipmap-anydpi. [ObsoleteSdkInt]
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/drawable/ic_launcher.xml:1: Warning: The resource R.drawable.ic_launcher appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+^
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/values/strings.xml:1: Warning: The resource R.string.academy appears to be unused [UnusedResources]
+<resources><string name="app_name">Compile • Learn C/C++</string><string name="launcher_name">Compile • Learn C/C++</string><string name="saving">Saving…</string><string name="saved">Saved on this device</string><string name="save_failed">Not saved • retry Save source</string><string name="select_answer">Select an answer first.</string><string name="correct_feedback">Correct. %1$s</string><string name="retry_feedback">Try again. %1$s</string><string name="studio">Code Studio</string><string name="academy">Learning Academy</string></resources>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/values/strings.xml:1: Warning: The resource R.string.correct_feedback appears to be unused [UnusedResources]
+<resources><string name="app_name">Compile • Learn C/C++</string><string name="launcher_name">Compile • Learn C/C++</string><string name="saving">Saving…</string><string name="saved">Saved on this device</string><string name="save_failed">Not saved • retry Save source</string><string name="select_answer">Select an answer first.</string><string name="correct_feedback">Correct. %1$s</string><string name="retry_feedback">Try again. %1$s</string><string name="studio">Code Studio</string><string name="academy">Learning Academy</string></resources>
+                                                                                                                                                                                                                                                                                                                                                          ~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/values/strings.xml:1: Warning: The resource R.string.retry_feedback appears to be unused [UnusedResources]
+<resources><string name="app_name">Compile • Learn C/C++</string><string name="launcher_name">Compile • Learn C/C++</string><string name="saving">Saving…</string><string name="saved">Saved on this device</string><string name="save_failed">Not saved • retry Save source</string><string name="select_answer">Select an answer first.</string><string name="correct_feedback">Correct. %1$s</string><string name="retry_feedback">Try again. %1$s</string><string name="studio">Code Studio</string><string name="academy">Learning Academy</string></resources>
+                                                                                                                                                                                                                                                                                                                                                                                                                ~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/values/strings.xml:1: Warning: The resource R.string.select_answer appears to be unused [UnusedResources]
+<resources><string name="app_name">Compile • Learn C/C++</string><string name="launcher_name">Compile • Learn C/C++</string><string name="saving">Saving…</string><string name="saved">Saved on this device</string><string name="save_failed">Not saved • retry Save source</string><string name="select_answer">Select an answer first.</string><string name="correct_feedback">Correct. %1$s</string><string name="retry_feedback">Try again. %1$s</string><string name="studio">Code Studio</string><string name="academy">Learning Academy</string></resources>
+                                                                                                                                                                                                                                                                                             ~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/res/values/strings.xml:1: Warning: The resource R.string.studio appears to be unused [UnusedResources]
+<resources><string name="app_name">Compile • Learn C/C++</string><string name="launcher_name">Compile • Learn C/C++</string><string name="saving">Saving…</string><string name="saved">Saved on this device</string><string name="save_failed">Not saved • retry Save source</string><string name="select_answer">Select an answer first.</string><string name="correct_feedback">Correct. %1$s</string><string name="retry_feedback">Try again. %1$s</string><string name="studio">Code Studio</string><string name="academy">Learning Academy</string></resources>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/CodeEditor.java:11: Warning: Custom view CodeEditor is missing constructor used by tools: (Context) or (Context,AttributeSet) or (Context,AttributeSet,int) [ViewConstructor]
+public final class CodeEditor extends AppCompatEditText {
+                   ~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/ReadingView.java:16: Warning: Custom view ReadingView is missing constructor used by tools: (Context) or (Context,AttributeSet) or (Context,AttributeSet,int) [ViewConstructor]
+public final class ReadingView extends LinearLayout {
+                   ~~~~~~~~~~~
+
+   Explanation for issues of type "ViewConstructor":
+   Some layout tools (such as the Android layout editor) need to find a
+   constructor with one of the following signatures:
+   * View(Context context)
+   * View(Context context, AttributeSet attrs)
+   * View(Context context, AttributeSet attrs, int defStyle)
+
+   If your custom view needs to perform initialization which does not apply
+   when used in a layout editor, you can surround the given code with a check
+   to see if View#isInEditMode() is false, since that method will return false
+   at runtime but true within a user interface editor.
+
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/CompilerDiagnosticsActivity.java:34: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        TextView title=new TextView(this);title.setText("Compiler self-test");title.setTextSize(24);root.addView(title);
+                                                        ~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/CompilerDiagnosticsActivity.java:36: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        export=new Button(this);export.setText("Export report");export.setEnabled(false);root.addView(export);export.setOnClickListener(v->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,"CodeLab-device-compiler-test.txt"),42));
+                                               ~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/CompilerDiagnosticsActivity.java:37: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        Button back=new Button(this);back.setText("Close");back.setOnClickListener(v->finish());root.addView(back);setContentView(root);
+                                                  ~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:538: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        CheckBox multi=new CheckBox(this);multi.setText("Build all source files in this project");multi.setTextColor(INK);terminal.addView(multi);
+                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:545: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        Button run=new Button(this);run.setText("Compile & run");run.setAllCaps(false);run.setEnabled(false);terminal.addView(run);
+                                                ~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:548: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+            if(type.equals("ready")){state.setText("Ready · offline toolchain");run.setEnabled(true);}
+                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:549: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+            else if(type.equals("phase"))state.setText(event.optString("phase")+"…");
+                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/ReadingView.java:90: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+        body.setText(source.substring(offset,end));rail.setText("Page "+(page+1)+" / "+starts.size());
+                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/ReadingView.java:90: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+        body.setText(source.substring(offset,end));rail.setText("Page "+(page+1)+" / "+starts.size());
+                                                                         ~~~~~~
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/ReadingView.java:90: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        body.setText(source.substring(offset,end));rail.setText("Page "+(page+1)+" / "+starts.size());
+                                                                ~~~~~~~
+
+   Explanation for issues of type "SetTextI18n":
+   When calling TextView#setText
+   * Never call Number#toString() to format numbers; it will not handle
+   fraction separators and locale-specific digits properly. Consider using
+   String#format with proper format specifications (%d or %f) instead.
+   * Do not pass a string literal (e.g. "Hello") to display text. Hardcoded
+   text can not be properly translated to other languages. Consider using
+   Android resource strings instead.
+   * Do not build messages by concatenating text chunks. Such messages can not
+   be properly translated.
+
+   https://developer.android.com/guide/topics/resources/localization.html
+
+0 errors, 27 warnings
