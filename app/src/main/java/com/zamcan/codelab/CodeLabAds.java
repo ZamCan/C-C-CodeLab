@@ -51,7 +51,7 @@ public final class CodeLabAds {
         info.requestConsentInfoUpdate(activity,parameters,()->{
             if(destroyed || ticket!=generation || container==null)return;
             UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity,error->{
-                if(destroyed || container==null)return;
+                if(destroyed || ticket!=generation || container==null)return;
                 if(info.canRequestAds()) startBanner();
             });
         },error->{
@@ -72,16 +72,22 @@ public final class CodeLabAds {
         if(destroyed || !debugBuild() || container==null || !preferences.getBoolean("test_ads_opt_in",false))return;
         int width=(int)(activity.getResources().getDisplayMetrics().widthPixels/activity.getResources().getDisplayMetrics().density);
         if(width<=0)return;
-        banner=new AdView(activity);
-        banner.setAdUnitId(TEST_BANNER);
-        banner.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity,width));
-        banner.setVisibility(View.GONE);
-        banner.setAdListener(new AdListener() {
-            @Override public void onAdLoaded() {if(banner!=null)banner.setVisibility(View.VISIBLE);}
-            @Override public void onAdFailedToLoad(LoadAdError error) {if(banner!=null)banner.setVisibility(View.GONE);}
+        final int ticket=generation;
+        final AdView view=new AdView(activity);
+        banner=view;
+        view.setAdUnitId(TEST_BANNER);
+        view.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity,width));
+        view.setVisibility(View.GONE);
+        view.setAdListener(new AdListener() {
+            @Override public void onAdLoaded() {
+                if(!destroyed && ticket==generation && banner==view) view.setVisibility(View.VISIBLE);
+            }
+            @Override public void onAdFailedToLoad(LoadAdError error) {
+                if(ticket==generation && banner==view) view.setVisibility(View.GONE);
+            }
         });
-        container.addView(banner);
-        banner.loadAd(new AdRequest.Builder().build());
+        container.addView(view);
+        view.loadAd(new AdRequest.Builder().build());
     }
     public void detach() {
         generation++;
