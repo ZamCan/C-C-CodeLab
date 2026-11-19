@@ -81,6 +81,7 @@ public final class MainActivity extends Activity {
                     if(id.equals(verifiedAccountId))return;
                     if(progress!=null)progress.close();
                     verifiedAccountId=id;
+                    preferences=getSharedPreferences("academy_user_"+id,MODE_PRIVATE);
                     progress=new LearningStore(MainActivity.this,id);
                     learningSync.sync(progress);
                     if("home".equals(screen))home();
@@ -92,6 +93,7 @@ public final class MainActivity extends Activity {
                     if(verifiedAccountId!=null){
                         if(progress!=null)progress.close();
                         progress=new LearningStore(MainActivity.this);
+                        preferences=getSharedPreferences("academy",MODE_PRIVATE);
                         verifiedAccountId=null;
                         if("home".equals(screen))home();
                     }
