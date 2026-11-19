@@ -32,6 +32,8 @@ public final class MainActivity extends Activity {
     private WorkspaceRepository workspaces;
     private String project="Practice";
     private LearningStore progress;
+    private CodeLabAccount account;
+    private String verifiedAccountId;
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
     private int activeLesson, activeStage;
@@ -53,6 +55,8 @@ public final class MainActivity extends Activity {
         ads=new CodeLabAds(this,preferences);
         progress=new LearningStore(this);
         progress.importLegacy(preferences);
+        account=new CodeLabAccount(this);
+        restoreVerifiedAccount();
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
         try {
@@ -65,6 +69,36 @@ public final class MainActivity extends Activity {
         if(state!=null && "editor".equals(state.getString("screen"))) openEditor(filename);
         else if(state!=null && ("lesson".equals(state.getString("screen"))||"story".equals(state.getString("screen"))) && preferences.getString("reading_key","").startsWith(courseKey()+":")) lesson(state.getInt("lesson"),state.getInt("stage"));
         else home();
+    }
+    /** Open a private database only after Appwrite confirms the active session. */
+    private void restoreVerifiedAccount() {
+        account.verify(new CodeLabAccount.Result() {
+            @Override public void authenticated(String id) {
+                runOnUiThread(()->{
+                    if(isFinishing() || isDestroyed())return;
+                    if(id.equals(verifiedAccountId))return;
+                    if(progress!=null)progress.close();
+                    verifiedAccountId=id;
+                    progress=new LearningStore(MainActivity.this,id);
+                    if("home".equals(screen))home();
+                });
+            }
+            @Override public void unauthenticated(String reason) {
+                runOnUiThread(()->{
+                    if(isFinishing() || isDestroyed())return;
+                    if(verifiedAccountId!=null){
+                        if(progress!=null)progress.close();
+                        progress=new LearningStore(MainActivity.this);
+                        verifiedAccountId=null;
+                        if("home".equals(screen))home();
+                    }
+                });
+            }
+        });
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        if(account!=null)restoreVerifiedAccount();
     }
     @Override public void setContentView(View view) {
         if(compiler!=null){compiler.close();compiler=null;}
@@ -185,11 +219,11 @@ public final class MainActivity extends Activity {
         TextView title=label("Learning progress",17,INK);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         copy.addView(title);
-        copy.addView(label("Local-first • Google sign-in coming soon",13,MUTED));
+        copy.addView(label(verifiedAccountId==null?"Guest • local progress":"Verified account • private offline progress",13,MUTED));
         line.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
         line.setClickable(true);
         line.setFocusable(true);
-        line.setContentDescription("Learning progress. Google sign-in is not yet available.");
+        line.setContentDescription("Learning progress and account status.");
         line.setOnClickListener(v->progressSettings());
         content.addView(line,new LinearLayout.LayoutParams(-1,-2));
     }
