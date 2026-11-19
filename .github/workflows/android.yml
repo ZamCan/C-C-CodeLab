@@ -25,7 +25,14 @@ jobs:
       - name: Build debug APK and run unit tests
         run: |
           set -o pipefail
-          bash gradlew --no-daemon --stacktrace --console=plain testDebugUnitTest assembleDebug 2>&1 | tee android-build.log
+          if bash gradlew --no-daemon --stacktrace --console=plain testDebugUnitTest assembleDebug 2>&1 | tee android-build.log; then
+            exit 0
+          fi
+          # A restored Gradle cache can remember a module lookup that predates a new test
+          # dependency. Retry once with refreshed metadata; genuine build or test failures
+          # still fail this step because the retry uses the same tasks.
+          echo 'Retrying once with refreshed dependency metadata' | tee -a android-build.log
+          bash gradlew --no-daemon --refresh-dependencies --stacktrace --console=plain testDebugUnitTest assembleDebug 2>&1 | tee -a android-build.log
       - name: Android lint
         if: success()
         run: |
