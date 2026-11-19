@@ -262,6 +262,7 @@ public final class MainActivity extends Activity {
             new AlertDialog.Builder(this).setTitle("Learning account")
                 .setMessage("Guest progress stays on this device. Google sign-in uses Appwrite and will keep the authenticated account's learning data separate.")
                 .setPositiveButton("Sign in with Google",(d,w)->startActivity(new Intent(this,GoogleSignInActivity.class)))
+                .setNeutralButton("Study reminders",(d,w)->reminderSettings())
                 .setNegativeButton("Continue as guest",null).show();
         } else {
             new AlertDialog.Builder(this).setTitle("Learning account")
@@ -274,8 +275,19 @@ public final class MainActivity extends Activity {
                         startActivity(new Intent(this,GoogleSignInActivity.class));
                     })));
                 })
-                .setNegativeButton("Cancel",null).show();
+                .setNegativeButton("Study reminders",(d,w)->reminderSettings()).show();
         }
+    }
+    private void reminderSettings() {
+        boolean enabled=preferences.getBoolean(StudyReminders.PREF,false);
+        new AlertDialog.Builder(this).setTitle("Offline study reminders")
+            .setMessage("Receive a daily learning reminder around 6 PM. Reminders are generated on your device and do not upload guest data.")
+            .setPositiveButton(enabled?"Turn off":"Turn on",(dialog,which)->{
+                if(!enabled && android.os.Build.VERSION.SDK_INT>=33 &&
+                    checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED)
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},81);
+                StudyReminders.configure(this,!enabled);
+            }).setNegativeButton("Cancel",null).show();
     }
     private void advertisingSettings() {
         boolean enabled=preferences.getBoolean("test_ads_opt_in",false);
