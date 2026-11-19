@@ -33,6 +33,7 @@ public final class MainActivity extends Activity {
     private String project="Practice";
     private LearningStore progress;
     private CodeLabAccount account;
+    private LearningSync learningSync;
     private String verifiedAccountId;
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
@@ -56,6 +57,7 @@ public final class MainActivity extends Activity {
         progress=new LearningStore(this);
         progress.importLegacy(preferences);
         account=CodeLabAccount.shared(this);
+        learningSync=new LearningSync(this);
         restoreVerifiedAccount();
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
@@ -80,6 +82,7 @@ public final class MainActivity extends Activity {
                     if(progress!=null)progress.close();
                     verifiedAccountId=id;
                     progress=new LearningStore(MainActivity.this,id);
+                    learningSync.sync(progress);
                     if("home".equals(screen))home();
                 });
             }
@@ -467,7 +470,10 @@ public final class MainActivity extends Activity {
             boolean correct=choice==answer;
             boolean firstSuccess=correct&&!preferences.getBoolean(key+":celebrated",false);
             if(firstSuccess)preferences.edit().putBoolean(key+":celebrated",true).apply();
-            if(correct && key.equals(lessonKey(activeLesson)))progress.complete(courseKey(),Integer.toString(activeLesson));
+            if(correct && key.equals(lessonKey(activeLesson))){
+                progress.complete(courseKey(),Integer.toString(activeLesson));
+                if(learningSync!=null)learningSync.sync(progress);
+            }
             preferences.edit().putInt(key+":attempts",preferences.getInt(key+":attempts",0)+1).apply();
             String feedback=(correct?"Correct. ":"Review and retry. ")+reason;
             readStory(key+":feedback",correct?"Well understood":"Keep exploring",feedback,false,correct?passed:()->quizScreen(title,question,options,answer,reason,key,passed,review),review,"Review");
