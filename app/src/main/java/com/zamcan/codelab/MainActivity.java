@@ -55,7 +55,7 @@ public final class MainActivity extends Activity {
         ads=new CodeLabAds(this,preferences);
         progress=new LearningStore(this);
         progress.importLegacy(preferences);
-        account=new CodeLabAccount(this);
+        account=CodeLabAccount.shared(this);
         restoreVerifiedAccount();
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
@@ -255,18 +255,24 @@ public final class MainActivity extends Activity {
         });
     }
     private void progressSettings() {
-        String mode=preferences.getString("progress_mode","local");
-        new AlertDialog.Builder(this).setTitle("Learning progress")
-            .setMessage("Current mode: "+("online".equals(mode)?"Cloud requested (not connected)":"Local")+
-                "\\n\\nLocal progress works without an account or internet. Online progress requires a verified Appwrite session before any upload. No progress is uploaded in this build.")
-            .setPositiveButton("Keep local", (d,w)->{
-                preferences.edit().putString("progress_mode","local").apply();
-                home();
-            })
-            .setNeutralButton("Request online", (d,w)->{
-                message("Cloud sync is not yet available",
-                    "Google OAuth is configured in Appwrite, but the Android sign-in and private progress synchronization are not implemented yet. Your existing local progress is preserved; no upload has occurred.");
-            }).setNegativeButton("Cancel",null).show();
+        if(verifiedAccountId==null) {
+            new AlertDialog.Builder(this).setTitle("Learning account")
+                .setMessage("Guest progress stays on this device. Google sign-in uses Appwrite and will keep the authenticated account's learning data separate.")
+                .setPositiveButton("Sign in with Google",(d,w)->startActivity(new Intent(this,GoogleSignInActivity.class)))
+                .setNegativeButton("Continue as guest",null).show();
+        } else {
+            new AlertDialog.Builder(this).setTitle("Learning account")
+                .setMessage("Signed in. Account-specific offline learning data is stored separately from guest data.")
+                .setPositiveButton("OK",null)
+                .setNeutralButton("Switch Google account",(d,w)->{
+                    account.service().deleteSession("current",new io.appwrite.coroutines.CoroutineCallback<>((result,error)->runOnUiThread(()->{
+                        if(error!=null){message("Could not sign out",error.getMessage());return;}
+                        restoreVerifiedAccount();
+                        startActivity(new Intent(this,GoogleSignInActivity.class));
+                    })));
+                })
+                .setNegativeButton("Cancel",null).show();
+        }
     }
     private void advertisingSettings() {
         boolean enabled=preferences.getBoolean("test_ads_opt_in",false);
