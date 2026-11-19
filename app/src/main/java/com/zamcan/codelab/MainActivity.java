@@ -78,7 +78,10 @@ public final class MainActivity extends Activity {
             @Override public void authenticated(String id) {
                 runOnUiThread(()->{
                     if(isFinishing() || isDestroyed())return;
-                    if(id.equals(verifiedAccountId))return;
+                    if(id.equals(verifiedAccountId)){
+                        if(learningSync!=null)learningSync.sync(progress);
+                        return;
+                    }
                     if(progress!=null)progress.close();
                     verifiedAccountId=id;
                     preferences=getSharedPreferences("academy_user_"+id,MODE_PRIVATE);
