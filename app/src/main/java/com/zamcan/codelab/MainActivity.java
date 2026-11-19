@@ -65,13 +65,7 @@ public final class MainActivity extends Activity {
         restoreVerifiedAccount();
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
-        try {
-            workspaces=new WorkspaceRepository(getFilesDir());
-            project=preferences.getString("project","Practice");
-            store=workspaces.open(project);
-            if (!store.exists("main.c")) store.write("main.c", Curriculum.C[0].code);
-            if (!store.exists("main.cpp")) store.write("main.cpp", Curriculum.CPP[0].code);
-        } catch(IOException e) { fatal(e); return; }
+        if(!openWorkspaces())return;
         if(state!=null && "editor".equals(state.getString("screen"))) openEditor(filename);
         else if(state!=null && ("lesson".equals(state.getString("screen"))||"story".equals(state.getString("screen"))) && preferences.getString("reading_key","").startsWith(courseKey()+":")) lesson(state.getInt("lesson"),state.getInt("stage"));
         else home();
@@ -136,6 +130,7 @@ public final class MainActivity extends Activity {
                     onlineVerified=false;
                     progress=new LearningStore(MainActivity.this);
                     progress.importLegacy(preferences);
+                    if(!reopenLearnerWorkspace())return;
                     if("home".equals(screen))home();
                 });
             }
@@ -156,6 +151,7 @@ public final class MainActivity extends Activity {
         preferences=getSharedPreferences("academy_user_"+id,MODE_PRIVATE);
         progress=new LearningStore(MainActivity.this,id);
         if(learningSync!=null)learningSync.sync(progress);
+        if(!reopenLearnerWorkspace())return;
         if("home".equals(screen))home();
     }
     /**
@@ -179,6 +175,7 @@ public final class MainActivity extends Activity {
             preferences=settings();
             progress=new LearningStore(MainActivity.this);
             progress.importLegacy(preferences);
+            if(!reopenLearnerWorkspace())return;
             if(after!=null)after.run();else home();
         })));
     }
@@ -211,6 +208,31 @@ public final class MainActivity extends Activity {
     /** Device-wide settings; learner content stays in account-scoped preferences. */
     private android.content.SharedPreferences settings() {
         return getSharedPreferences("academy",MODE_PRIVATE);
+    }
+    /**
+     * Source workspaces are account-scoped, so one learner's saved code is not listed for a
+     * different identity on the same device. Guest keeps the legacy shared workspace.
+     */
+    private File learnerFilesDir() {
+        if(verifiedAccountId==null)return getFilesDir();
+        String scope=LearnerDatabaseNames.forVerifiedUser(verifiedAccountId).replace(".db","");
+        return new File(getFilesDir(),"learners/"+scope);
+    }
+    private boolean openWorkspaces() {
+        try {
+            workspaces=new WorkspaceRepository(learnerFilesDir());
+            project=preferences.getString("project","Practice");
+            store=workspaces.open(project);
+            if(!store.exists("main.c"))store.write("main.c",Curriculum.C[0].code);
+            if(!store.exists("main.cpp"))store.write("main.cpp",Curriculum.CPP[0].code);
+            return true;
+        } catch(IOException e){fatal(e);return false;}
+    }
+    /** Reopens the active learner's workspace after an identity change. */
+    private boolean reopenLearnerWorkspace() {
+        handler.removeCallbacks(autosave);
+        editor=null;dirty=false;
+        return openWorkspaces();
     }
     @Override protected void onResume() {
         super.onResume();
@@ -489,7 +511,7 @@ public final class MainActivity extends Activity {
         action(content,"Back home",false,this::home);
     }
     private void status() {
-        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.5.0");
+        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.5.1");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
         LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and production AdMob are not integrated. Practice completion is not certification.\n\nThe bundled compiler runs offline. Network permissions and Google test-ad SDK scaffolding are present for upcoming online features; optional consent-gated test banners are available from Settings; production ads remain disabled.");
         action(content,"Back home",true,this::home);

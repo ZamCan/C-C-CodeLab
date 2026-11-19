@@ -292,3 +292,17 @@ platform 35 with build-tools 35.0.0, Gradle 8.9 wrapper. No physical device, emu
 - Live Google OAuth, session restoration and Appwrite row read/write against `codelab-zamcan` are **not** verified; the project owner must complete OAuth on a device/browser and register the certificate fingerprint for Appwrite Android platform `android-codelab`.
 - Appwrite Messaging push delivery is **not** verified; local reminders are independent of the backend.
 - Certificate examinations and issuance are unchanged and remain disabled.
+
+### Build 0.5.1 — account-scoped source workspaces
+
+- Compiler workspaces are now stored per verified learner under
+  `getFilesDir()/learners/<hashed scope>`; guest keeps the legacy shared workspace. Switching
+  account or signing out closes the editor and reopens the new identity's workspace, so one
+  learner's saved code is not listed for another identity on the same device.
+- Version `0.5.1` (`versionCode` 6). Clean `testDebugUnitTest lintDebug assembleDebug`:
+  **BUILD SUCCESSFUL**, 62 tests / 0 failures, lint 0 errors / 27 warnings.
+- APK: `app/build/outputs/apk/debug/app-debug.apk`, **44,322,256 bytes**, SHA-256
+  `fd2dc87a9d68c2ec526b8801317ab71e9222cdc207d7e0f388cc91dc16848ced`.
+- `verification/android-build.log`, `verification/android-lint-results.txt` and
+  `verification/apk-sha256.txt` describe this artifact. Device, live OAuth/sync and push
+  verification remain outstanding exactly as listed in the 0.5.0 section.

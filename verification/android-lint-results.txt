@@ -146,16 +146,16 @@ public final class ReadingView extends LinearLayout {
 /workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/CompilerDiagnosticsActivity.java:37: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
         Button back=new Button(this);back.setText("Close");back.setOnClickListener(v->finish());root.addView(back);setContentView(root);
                                                   ~~~~~~~
-/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:538: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:560: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
         CheckBox multi=new CheckBox(this);multi.setText("Build all source files in this project");multi.setTextColor(INK);terminal.addView(multi);
                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:545: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:567: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
         Button run=new Button(this);run.setText("Compile & run");run.setAllCaps(false);run.setEnabled(false);terminal.addView(run);
                                                 ~~~~~~~~~~~~~~~
-/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:548: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:570: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
             if(type.equals("ready")){state.setText("Ready · offline toolchain");run.setEnabled(true);}
                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:549: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+/workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/MainActivity.java:571: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
             else if(type.equals("phase"))state.setText(event.optString("phase")+"…");
                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /workspace/chats/5de9ed40798f30668fe8143e/app/src/main/java/com/zamcan/codelab/ReadingView.java:90: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
