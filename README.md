@@ -1,6 +1,6 @@
-# C/C++ Compiler • Learn
+# Compile•Learn C/C++
 
-**In-app brand:** CodeLab — C/C++ Compiler & Learning Academy. **Android launcher:** C/C++ Compiler • Learn. **Intended store listing title:** C/C++ Compiler • Learn (must be set in each publisher console; repository edits cannot change a live store listing). **Package:** `com.zamcan.codelab` (unchanged).
+**In-app brand:** Compile•Learn C/C++ — Offline Compiler & Learning Academy. **Android launcher:** Compile•Learn C/C++. **Intended store listing title:** Compile•Learn C/C++ (must be set in each publisher console; repository edits cannot change a live store listing). **Package:** `com.zamcan.codelab` (unchanged).
 
 Offline-first Android academy with two primary home destinations: **Compiler** and **Learn C/C++**. C and C++ are the initial subjects; shared learning, assessment and credential engines are designed for additional academic subjects.
 
