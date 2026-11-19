@@ -21,8 +21,7 @@ public final class LearningSync {
     private boolean running;
     public LearningSync(Context context){
         identity=CodeLabAccount.shared(context);
-        tables=new TablesDB(new Client(context.getApplicationContext())
-            .setEndpoint("https://cloud.appwrite.io/v1").setProject("codelab-zamcan"));
+        tables=new TablesDB(identity.client());
     }
     public synchronized void sync(LearningStore store) {
         if(running || store==null || store.isGuest())return;
