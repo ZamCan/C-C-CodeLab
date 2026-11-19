@@ -560,10 +560,10 @@ public final class MainActivity extends Activity {
         Aurora(Context context,boolean light){super(context);this.light=light;setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
         @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
             if(w<=0||h<=0)return;
-            top=new RadialGradient(w*.95f,h*.08f,w*.95f,light?new int[]{0xffd7d2f5,0x00d7d2f5}:new int[]{0xff303465,0x00303465},null,Shader.TileMode.CLAMP);
-            bottom=new RadialGradient(w*.02f,h*.58f,w*.8f,light?new int[]{0xffc8e6f3,0x00c8e6f3}:new int[]{0xff103e48,0x00103e48},null,Shader.TileMode.CLAMP);
+            top=new RadialGradient(w*.95f,h*.08f,w*.95f,light?new int[]{0xffe5e6ff,0x00e5e6ff}:new int[]{0xff557cbb,0x00557cbb},null,Shader.TileMode.CLAMP);
+            bottom=new RadialGradient(w*.02f,h*.58f,w*.8f,light?new int[]{0xffd8f5ff,0x00d8f5ff}:new int[]{0xff326f91,0x00326f91},null,Shader.TileMode.CLAMP);
         }
-        @Override protected void onDraw(Canvas canvas){float w=getWidth(),h=getHeight();canvas.drawColor(light?0xfff5f7ff:0xff0b1025);paint.setShader(top);canvas.drawRect(0,0,w,h,paint);paint.setShader(bottom);canvas.drawRect(0,0,w,h,paint);paint.setShader(null);paint.setColor(light?0x0c344b80:0x12b6caff);paint.setStrokeWidth(1);for(int x=0;x<w;x+=64)canvas.drawLine(x,0,x,h,paint);for(int y=0;y<h;y+=64)canvas.drawLine(0,y,w,y,paint);}
+        @Override protected void onDraw(Canvas canvas){float w=getWidth(),h=getHeight();canvas.drawColor(light?0xfffcfdff:0xff203d62);paint.setShader(top);canvas.drawRect(0,0,w,h,paint);paint.setShader(bottom);canvas.drawRect(0,0,w,h,paint);paint.setShader(null);paint.setColor(light?0x0b344b80:0x12d9efff);paint.setStrokeWidth(1);for(int x=0;x<w;x+=64)canvas.drawLine(x,0,x,h,paint);for(int y=0;y<h;y+=64)canvas.drawLine(0,y,w,y,paint);}
 
     }
 }
