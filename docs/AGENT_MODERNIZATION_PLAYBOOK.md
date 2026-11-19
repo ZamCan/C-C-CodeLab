@@ -37,7 +37,7 @@ Deliver a genuinely premium **native Android**, offline-first C17/C++17 learning
 - Every symbol/keyword explanation must include name, meaning, why placed there, what changes if moved/removed, valid scope/versions, beginner mistake and an experiment. Differentiate C `int main(void)` and C++ `int main()`, `stdio.h` vs `iostream`, printf formats and iomanip.
 - Include bank interest 1000 at 10% until >2000, Celsius-to-Fahrenheit, grade eligibility and traffic-light decision tables. Correct original examples and test expected outputs.
 - Make progression staged and readable; add lesson review, formative feedback, offline exercises, 10 examinations × 25 items as an academic goal, with server-only final exam bank and verified eligibility. Do not bundle private final answers in APK.
-- Review all factual claims and translations (English/Swahili); accessibility, learning objectives and test coverage matter more than arbitrary lesson counts.
+- Review all factual claims and English copy; accessibility, learning objectives and test coverage matter more than arbitrary lesson counts.
 **Done when:** lesson coverage map, human review notes, runnable examples, quizzes with answer rationale and automated validation exist.
 
 ### D. Guest + Google/Appwrite launch

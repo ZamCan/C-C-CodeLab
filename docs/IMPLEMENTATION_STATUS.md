@@ -36,7 +36,7 @@ Source-store tests cover Unicode/restart persistence, traversal rejection, atomi
 
 ## Later changes in this session
 
-The current delivery ledger supersedes the initial inventory above: isolated project directories, line numbers/indentation, SQLite progress migration, English/Swahili scaffolding, detailed syntax/math notes, five source-backed guides, and a disabled Cloudflare exam foundation have since been added. Full native execution, deep curricula, advanced editor features, physical-device verification, and trusted credential issuance are still incomplete.
+The current delivery ledger supersedes the initial inventory above: isolated project directories, line numbers/indentation, SQLite progress migration, English-only UI resources, detailed syntax/math notes, five source-backed guides, and a disabled Cloudflare exam foundation have since been added. Full native execution, deep curricula, advanced editor features, physical-device verification, and trusted credential issuance are still incomplete.
 
 ## November 17, 2026 engineering checkpoint (supersedes stale inventory above)
 

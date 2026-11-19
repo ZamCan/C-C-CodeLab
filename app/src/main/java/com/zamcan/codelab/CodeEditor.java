@@ -3,16 +3,19 @@ package com.zamcan.codelab;
 import android.content.Context;
 import android.graphics.*;
 import android.text.*;
+import android.view.ContextThemeWrapper;
 import android.view.KeyEvent;
-import android.widget.EditText;
+import androidx.appcompat.widget.AppCompatEditText;
 
-/** Native editable text with a line gutter and conservative four-space indentation. */
-public final class CodeEditor extends EditText {
+/** Editable source text with a line gutter and conservative four-space indentation. */
+public final class CodeEditor extends AppCompatEditText {
     private final Paint gutter=new Paint(Paint.ANTI_ALIAS_FLAG);
     private boolean changing;
     private int newline=-1;
-    public CodeEditor(Context context) {
-        super(context);
+    public CodeEditor(Context context,boolean light) {
+        // AppCompat widgets require an AppCompat theme. Scope that theme to the
+        // editor so the rest of the native activity keeps its existing styling.
+        super(new ContextThemeWrapper(context,light?androidx.appcompat.R.style.Theme_AppCompat_Light:androidx.appcompat.R.style.Theme_AppCompat));
         setTextDirection(TEXT_DIRECTION_LTR);
         gutter.setColor(0xff90a0bc);gutter.setTypeface(Typeface.MONOSPACE);
         addTextChangedListener(new TextWatcher(){

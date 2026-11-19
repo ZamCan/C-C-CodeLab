@@ -37,7 +37,7 @@
 7. Do not claim success based on a static mockup, CI configuration, Linux-host build, or a generated file alone.
 8. Produce an installable debug APK and checksum only after actual build succeeds. Never fabricate download links, test reports, certificates or accreditation.
 9. Avoid forced monetization, lesson paywalls and blocking ads; optional restrained banners only, with privacy compliance and free core learning.
-10. Keep app usable on modest Android devices; optimize offline assets and storage. Add Swahili and English localization scaffolding; make future Arabic/RTL possible.
+10. Keep app usable on modest Android devices; optimize offline assets and storage. The Android app is English-only unless the product owner explicitly requests another locale; keep layouts ready for future RTL support.
 11. Before any destructive migration, backup existing code and preserve working versions. Use small, reviewable commits.
 12. If requirements conflict or are physically impossible (e.g., preventing force-close or guaranteeing a 1% repeat probability forever with finite questions), implement the secure achievable interpretation, document limitations and never mislead.
 

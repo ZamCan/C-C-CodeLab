@@ -68,7 +68,7 @@ Specification baseline: `ba198369a745100020e60422229c91a00100f7c6`. Implementati
 | Native offline compiler/runtime | blocked | No integrated licensed Android toolchain; no device execution/isolation proof. See COMPILER_RESEARCH.md. No simulated output |
 | Cloudflare exams | partial | D1 migration, disabled Worker API, authenticated session lookup, eligibility, 25-question/two-style policy, freshness exclusion, fixed deadline/resume, guarded writes/finalization; undeployed, no identity provider or reviewed exam bank, only five automatically gradable styles |
 | Credential path | not started | Schema and fail-closed endpoint only; no signed interoperable VC, PDF, protected key deployment, live verifier, revocation flow or encrypted restoration proof |
-| Localization/accessibility | partial | English/Swahili navigation/status resources, RTL scaffolding, native controls and scalable text; teaching content remains English, light theme/TalkBack/large-font verification pending |
+| Localization/accessibility | partial | English-only UI resources, RTL-ready layout, native controls and scalable text; teaching content remains English, light theme/TalkBack/large-font verification pending |
 | Physical device verification | blocked | User confirmed installation target is this same phone; ADB returned no devices. Opening installer is separate from proven installation, launch and functional testing |
 
 ### Completed verification
