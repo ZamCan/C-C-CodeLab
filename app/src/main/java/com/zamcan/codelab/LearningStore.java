@@ -9,13 +9,15 @@ import org.json.JSONException;
 
 /** Subject-neutral progress records; never trusted as certificate eligibility. */
 public final class LearningStore extends SQLiteOpenHelper {
+    /** Schema 2 adds the account-only upload queue; schema 3 would need a new reviewed step. */
+    static final int SCHEMA_VERSION = 2;
     private final String ownerScope;
     private final boolean guest;
     /** Guest storage is never automatically treated as authenticated account storage. */
     public LearningStore(Context context){this(context,null);}
     /** An authenticated Appwrite user ID must be validated by Account.get() before use here. */
     public LearningStore(Context context,String verifiedAppwriteUserId){
-        super(context,databaseName(verifiedAppwriteUserId),null,2);
+        super(context,databaseName(verifiedAppwriteUserId),null,SCHEMA_VERSION);
         guest=verifiedAppwriteUserId==null;
         ownerScope=guest?"guest":verifiedAppwriteUserId;
     }
@@ -111,6 +113,16 @@ public final class LearningStore extends SQLiteOpenHelper {
             }
         }
         return pending;
+    }
+    /**
+     * Queues every completed lesson for upload. Reserved for an explicit learner-authorized
+     * copy of guest progress; ordinary merges of cloud data never re-upload remote rows.
+     */
+    public synchronized void enqueueAllForUpload(String verifiedOwner) {
+        if(guest||!ownerScope.equals(verifiedOwner))
+            throw new SecurityException("Cannot queue another learner's progress");
+        getWritableDatabase().execSQL(
+            "INSERT OR IGNORE INTO sync_queue(course,lesson,queued_at) SELECT course,lesson,completed_at FROM progress");
     }
     /** Acknowledgment is only valid after a successful remote write for this exact owner. */
     public synchronized void acknowledgeUpload(String verifiedOwner,String course,String lesson,long uploadedCompletedAt) {

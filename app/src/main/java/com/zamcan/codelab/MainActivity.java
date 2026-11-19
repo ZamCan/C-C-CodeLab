@@ -34,7 +34,11 @@ public final class MainActivity extends Activity {
     private LearningStore progress;
     private CodeLabAccount account;
     private LearningSync learningSync;
+    /** Last server-verified Appwrite user ID. It selects a local database, nothing more. */
     private String verifiedAccountId;
+    /** True only while Appwrite has confirmed the session in this process. */
+    private boolean onlineVerified;
+    private static final String LAST_VERIFIED_USER = "last_verified_account";
     private long accountVerificationGeneration;
     private android.content.SharedPreferences preferences;
     private boolean cpp, dirty, highlighting;
@@ -54,11 +58,10 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
-        ads=new CodeLabAds(this,preferences);
-        progress=new LearningStore(this);
-        progress.importLegacy(preferences);
+        ads=new CodeLabAds(this,settings());
         account=CodeLabAccount.shared(this);
         learningSync=new LearningSync(this);
+        openRememberedLearner();
         restoreVerifiedAccount();
         cpp=preferences.getBoolean("cpp", false);
         filename=preferences.getString("file", "main.c");
@@ -73,43 +76,141 @@ public final class MainActivity extends Activity {
         else if(state!=null && ("lesson".equals(state.getString("screen"))||"story".equals(state.getString("screen"))) && preferences.getString("reading_key","").startsWith(courseKey()+":")) lesson(state.getInt("lesson"),state.getInt("stage"));
         else home();
     }
-    /** Open a private database only after Appwrite confirms the active session. */
+    /**
+     * Opens the learner storage used in the previous session. A remembered ID only chooses a
+     * private local database; it never authorizes upload or download. Cloud work waits for
+     * Appwrite to confirm the session.
+     */
+    private void openRememberedLearner() {
+        String remembered=settings().getString(LAST_VERIFIED_USER,null);
+        if(remembered!=null && remembered.matches("[A-Za-z0-9_-]{1,36}")){
+            verifiedAccountId=remembered;
+            onlineVerified=false;
+            preferences=getSharedPreferences("academy_user_"+remembered,MODE_PRIVATE);
+            progress=new LearningStore(this,remembered);
+            return;
+        }
+        verifiedAccountId=null;
+        onlineVerified=false;
+        progress=new LearningStore(this);
+        progress.importLegacy(preferences);
+    }
+    /** Verifies the server session; account storage is opened only for a confirmed identity. */
     private void restoreVerifiedAccount() {
+        if(account==null)return;
         final long request=++accountVerificationGeneration;
         account.verify(new CodeLabAccount.Result() {
             @Override public void authenticated(String id) {
                 runOnUiThread(()->{
                     if(isFinishing() || isDestroyed() || request!=accountVerificationGeneration)return;
                     if(id.equals(verifiedAccountId)){
+                        boolean newlyVerified=!onlineVerified;
+                        onlineVerified=true;
                         if(learningSync!=null)learningSync.sync(progress);
+                        if(newlyVerified && "home".equals(screen))home();
                         return;
                     }
-                    if(learningSync!=null)learningSync.cancel();
-                    if(progress!=null)progress.close();
-                    verifiedAccountId=id;
-                    preferences=getSharedPreferences("academy_user_"+id,MODE_PRIVATE);
-                    progress=new LearningStore(MainActivity.this,id);
-                    learningSync.sync(progress);
-                    if("home".equals(screen))home();
+                    switchToAccount(id);
                 });
             }
             @Override public void unavailable(String reason) {
-                // Network loss must not silently erase an already verified offline account.
+                // Offline: the last verified learner keeps working locally. No cloud call is
+                // made until Appwrite verifies the session again, and nothing is deleted.
+                runOnUiThread(()->{
+                    if(request!=accountVerificationGeneration)return;
+                    boolean wasVerified=onlineVerified;
+                    onlineVerified=false;
+                    if(wasVerified && verifiedAccountId!=null && "home".equals(screen))home();
+                });
             }
             @Override public void unauthenticated(String reason) {
                 runOnUiThread(()->{
                     if(isFinishing() || isDestroyed() || request!=accountVerificationGeneration)return;
-                    if(verifiedAccountId!=null){
-                        if(learningSync!=null)learningSync.cancel();
-                        if(progress!=null)progress.close();
-                        progress=new LearningStore(MainActivity.this);
-                        preferences=getSharedPreferences("academy",MODE_PRIVATE);
-                        verifiedAccountId=null;
-                        if("home".equals(screen))home();
-                    }
+                    if(verifiedAccountId==null)return;
+                    // Expired or revoked session: close the account database and return to
+                    // guest storage. Account data stays on disk for a later sign-in.
+                    closeLearnerStorage();
+                    settings().edit().remove(LAST_VERIFIED_USER).apply();
+                    preferences=settings();
+                    verifiedAccountId=null;
+                    onlineVerified=false;
+                    progress=new LearningStore(MainActivity.this);
+                    progress.importLegacy(preferences);
+                    if("home".equals(screen))home();
                 });
             }
         });
+    }
+    /** Closes the active learner database without deleting any stored progress. */
+    private void closeLearnerStorage() {
+        if(learningSync!=null)learningSync.cancel();
+        if(progress!=null){progress.close();progress=null;}
+    }
+    /** Activates a newly verified account; invalidates every callback from the previous one. */
+    private void switchToAccount(String id) {
+        if(learningSync!=null)learningSync.cancel();
+        if(progress!=null)progress.close();
+        verifiedAccountId=id;
+        onlineVerified=true;
+        settings().edit().putString(LAST_VERIFIED_USER,id).apply();
+        preferences=getSharedPreferences("academy_user_"+id,MODE_PRIVATE);
+        progress=new LearningStore(MainActivity.this,id);
+        if(learningSync!=null)learningSync.sync(progress);
+        if("home".equals(screen))home();
+    }
+    /**
+     * Ends the Appwrite session. The learner database is closed only after the server confirms
+     * the sign-out, so a failed sign-out never strands account data behind a guest store.
+     */
+    private void signOut(Runnable after) {
+        if(learningSync!=null)learningSync.cancel();
+        final long request=++accountVerificationGeneration;
+        account.service().deleteSession("current",new io.appwrite.coroutines.CoroutineCallback<>((result,error)->runOnUiThread(()->{
+            if(isFinishing() || isDestroyed() || request!=accountVerificationGeneration)return;
+            if(error!=null){
+                restoreVerifiedAccount();
+                message("Could not sign out","The session could not be closed. Check your connection and try again.");
+                return;
+            }
+            if(progress!=null)progress.close();
+            settings().edit().remove(LAST_VERIFIED_USER).apply();
+            verifiedAccountId=null;
+            onlineVerified=false;
+            preferences=settings();
+            progress=new LearningStore(MainActivity.this);
+            progress.importLegacy(preferences);
+            if(after!=null)after.run();else home();
+        })));
+    }
+    /** Merges guest progress only after an explicit confirmation from the learner. */
+    private void offerGuestTransfer() {
+        new AlertDialog.Builder(this).setTitle("Copy guest progress?")
+            .setMessage("Completed guest checkpoints will be merged into this account and queued for upload. Guest progress is not uploaded and is not deleted.")
+            .setPositiveButton("Copy",(d,w)->transferGuestProgress())
+            .setNegativeButton("Cancel",null).show();
+    }
+    private void transferGuestProgress() {
+        final String owner=verifiedAccountId;
+        final LearningStore target=progress;
+        if(owner==null || target==null || target.isGuest())return;
+        new Thread(()->{
+            String status;
+            try(LearningStore guest=new LearningStore(getApplicationContext())){
+                target.mergeProgress(guest.exportProgress());
+                target.enqueueAllForUpload(owner);
+                status="Guest progress copied to this account";
+            }catch(Exception e){status="Guest progress could not be copied";}
+            final String report=status;
+            runOnUiThread(()->{
+                if(isFinishing() || isDestroyed())return;
+                Toast.makeText(this,report,Toast.LENGTH_LONG).show();
+                if(learningSync!=null)learningSync.sync(target);
+            });
+        },"guest-progress-copy").start();
+    }
+    /** Device-wide settings; learner content stays in account-scoped preferences. */
+    private android.content.SharedPreferences settings() {
+        return getSharedPreferences("academy",MODE_PRIVATE);
     }
     @Override protected void onResume() {
         super.onResume();
@@ -125,7 +226,7 @@ public final class MainActivity extends Activity {
         saveSource(false); out.putString("screen",screen); out.putInt("lesson",activeLesson); out.putInt("stage",activeStage); super.onSaveInstanceState(out);
     }
     @Override protected void onPause() { saveSource(false); super.onPause(); }
-    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); handler.removeCallbacksAndMessages(null); if(ads!=null)ads.destroy(); if(progress!=null)progress.close(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(compiler!=null)compiler.close(); if(learningSync!=null)learningSync.cancel(); handler.removeCallbacksAndMessages(null); if(ads!=null)ads.destroy(); if(progress!=null)progress.close(); super.onDestroy(); }
     @Override public void onBackPressed() {
         if("home".equals(screen)) super.onBackPressed();
         else if("story".equals(screen) && readingBack!=null)readingBack.run();
@@ -139,9 +240,13 @@ public final class MainActivity extends Activity {
     private void error(Exception e) { new AlertDialog.Builder(this).setTitle("Could not complete action").setMessage(e.getMessage()).setPositiveButton("OK",null).show(); }
     private void message(String title,String body) { new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("Got it",null).show(); }
     private boolean leaveEditor() { return editor==null || !dirty || saveSource(true); }
+    /** Native elevated surface: quiet fill, hairline border and a generous corner radius. */
     private GradientDrawable glass(boolean accent) {
-        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,light ? (accent ? new int[]{0xfaffffff,0xeef0fbff} : new int[]{0xfaffffff,0xf0edf8ff}) : (accent ? new int[]{0xee315c8d,0xe8484b86} : new int[]{0xe43b6287,0xe42d476e}));
-        d.setCornerRadius(dp(20)); d.setStroke(dp(1),light ? 0x669bbfe7 : (accent ? 0x99b6e9ff : 0x66d0e9ff)); return d;
+        GradientDrawable d=new GradientDrawable();
+        d.setCornerRadius(dp(22));
+        d.setColor(light?(accent?0xfff6f9ff:0xffffffff):(accent?0xff25375f:0xff1c2c4e));
+        d.setStroke(dp(1),light?(accent?0x332f5fe8:0x1a1d3a6b):(accent?0x4d8fb6ff:0x2e9ab4e8));
+        return d;
     }
     private TextView label(String text,int size,int color) {
         TextView v=new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color);
@@ -150,14 +255,28 @@ public final class MainActivity extends Activity {
     private void title(LinearLayout parent,String text,int size) { TextView t=label(text,size,INK); t.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); parent.addView(t); }
     private void body(LinearLayout parent,String text) { parent.addView(label(text,16,MUTED)); }
     private LinearLayout panel(boolean accent) {
-        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(20),dp(18),dp(20),dp(18)); p.setBackground(glass(accent));
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(16); p.setLayoutParams(lp); content.addView(p); return p;
+        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL);
+        p.setPadding(dp(20),dp(18),dp(20),dp(18)); p.setBackground(glass(accent));
+        p.setElevation(dp(2));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(14); p.setLayoutParams(lp); content.addView(p); return p;
     }
     private void action(LinearLayout parent,String text,boolean primary,Runnable run) {
-        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(primary?Color.WHITE:INK); b.setMinHeight(dp(50)); b.setPadding(dp(14),dp(10),dp(14),dp(10));
-        GradientDrawable background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?(new int[]{0xff425ff5,0xff7851db}):(light?new int[]{0xffe9e5fa,0xffe4ecf9}:new int[]{0x40b1a4ef,0x252b4767}));
-        background.setCornerRadius(dp(15)); background.setStroke(dp(1),primary?0x55ffffff:0x44ced9ff);
-        b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x40ffffff),background,null));
+        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(16);
+        b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); b.setLetterSpacing(0.01f);
+        b.setTextColor(primary?Color.WHITE:INK); b.setMinHeight(dp(52));
+        b.setPadding(dp(16),dp(12),dp(16),dp(12));
+        GradientDrawable background;
+        if(primary){
+            background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xff3f5cf6,0xff7a4ddb});
+            background.setCornerRadius(dp(16));
+        } else {
+            background=new GradientDrawable();
+            background.setCornerRadius(dp(16));
+            background.setColor(light?0xffffffff:0xff223351);
+            background.setStroke(dp(1),light?0x33223a6b:0x4d9ab4e8);
+        }
+        b.setBackground(new RippleDrawable(ColorStateList.valueOf(primary?0x40ffffff:0x33758cdb),background,null));
+        b.setElevation(dp(primary?2:0));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.topMargin=dp(10); b.setLayoutParams(lp);
         b.setOnClickListener(v->run.run()); parent.addView(b);
     }
@@ -191,30 +310,59 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,dp(144));layout.bottomMargin=dp(12);parent.addView(art,layout);
     }
     private void section(String text) {
-        TextView heading=label(text,14,MUTED);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        heading.setPadding(0,dp(18),0,dp(10));content.addView(heading);
+        TextView heading=label(text,12,MUTED);
+        heading.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+        heading.setLetterSpacing(0.09f);
+        heading.setPadding(dp(4),dp(20),0,dp(10));
+        content.addView(heading);
     }
     private void row(LinearLayout parent,String number,String name,String detail,boolean enabled,Runnable open) {
         LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(12),dp(12),dp(12),dp(12));row.setMinimumHeight(dp(76));
-        TextView marker=label(number,16,enabled?MINT:MUTED);marker.setGravity(Gravity.CENTER);marker.setTypeface(Typeface.MONOSPACE);
-        row.addView(marker,new LinearLayout.LayoutParams(dp(42),-2));
-        LinearLayout text=new LinearLayout(this);text.setOrientation(LinearLayout.VERTICAL);text.setPadding(dp(8),0,dp(8),0);
-        TextView title=label(name,17,INK);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);text.addView(title);text.addView(label(detail,14,MUTED));
+        row.setPadding(dp(14),dp(14),dp(14),dp(14));row.setMinimumHeight(dp(68));
+        TextView marker=label(number,15,enabled?MINT:MUTED);marker.setGravity(Gravity.CENTER);marker.setTypeface(Typeface.MONOSPACE);
+        row.addView(marker,new LinearLayout.LayoutParams(dp(40),-2));
+        LinearLayout text=new LinearLayout(this);text.setOrientation(LinearLayout.VERTICAL);text.setPadding(dp(10),0,dp(10),0);
+        TextView title=label(name,17,INK);title.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));text.addView(title);
+        text.addView(label(detail,14,enabled?MUTED:light?0xff8a97ad:0xff8fa1bd));
         row.addView(text,new LinearLayout.LayoutParams(0,-2,1));
-        TextView arrow=label("›",24,enabled?MINT:MUTED);row.addView(arrow,new LinearLayout.LayoutParams(dp(20),-2));
-        row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33758cdb),null,new android.graphics.drawable.ColorDrawable(Color.WHITE)));
+        TextView arrow=label("›",22,enabled?MINT:light?0xffb4bfd0:0xff63769a);row.addView(arrow,new LinearLayout.LayoutParams(dp(18),-2));
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(light?0x1a2f5fe8:0x33a8c6ff),null,null));
         row.setFocusable(true);row.setContentDescription(name+". "+detail);row.setOnClickListener(v->open.run());parent.addView(row);
-        View line=new View(this);line.setBackgroundColor(light?0x197080a0:0x19d0dcff);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
+        View line=new View(this);line.setBackgroundColor(light?0x141d3a6b:0x1a9ab4e8);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
     private void home() {
         shell("home","", "Compile • Learn C/C++","Offline C/C++ Compiler & Learning Academy");
         artwork(content);
         googleProgressRow();
-        action(content,"Compiler",true,this::studio);
-        action(content,"Learn C/C++",true,this::academy);
+        destination("Compiler","Write, compile and run C or C++","▶",this::studio);
+        destination("Learn C/C++","Guided lessons, practice and projects","◈",this::academy);
         row(content,"§","Academic references","Standards, trusted reading and attribution",true,this::academicReferences);
         row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
+    }
+    /** One of the two primary home destinations: a large, quiet, native surface. */
+    private void destination(String heading,String subtitle,String glyph,Runnable open) {
+        LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.HORIZONTAL);tile.setGravity(Gravity.CENTER_VERTICAL);
+        tile.setPadding(dp(18),dp(16),dp(16),dp(16));tile.setMinimumHeight(dp(92));
+        tile.setElevation(dp(3));tile.setClickable(true);tile.setFocusable(true);
+        tile.setContentDescription(heading+". "+subtitle);
+        LinearLayout badge=new LinearLayout(this);badge.setGravity(Gravity.CENTER);badge.setBackground(iconBadge());
+        TextView icon=label(glyph,20,MINT);icon.setGravity(Gravity.CENTER);icon.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);
+        badge.addView(icon,new LinearLayout.LayoutParams(-2,-2));
+        tile.addView(badge,new LinearLayout.LayoutParams(dp(52),dp(52)));
+        LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);copy.setPadding(dp(16),0,dp(8),0);
+        TextView title=label(heading,19,INK);title.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));copy.addView(title);
+        copy.addView(label(subtitle,14,MUTED));
+        tile.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        TextView arrow=label("›",26,MINT);tile.addView(arrow,new LinearLayout.LayoutParams(dp(20),-2));
+        tile.setBackground(new RippleDrawable(ColorStateList.valueOf(light?0x1a2f5fe8:0x33a8c6ff),glass(true),null));
+        tile.setOnClickListener(v->open.run());
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(14);content.addView(tile,params);
+    }
+    private GradientDrawable iconBadge() {
+        GradientDrawable badge=new GradientDrawable();badge.setShape(GradientDrawable.OVAL);
+        badge.setColor(light?0xffeaf1ff:0xff2c3f6a);
+        badge.setStroke(dp(1),light?0x332f5fe8:0x4d8fb6ff);
+        return badge;
     }
     /** Appwrite-provided Google mark; this is an entry point, not a completed OAuth login. */
     private void googleProgressRow() {
@@ -224,6 +372,7 @@ public final class MainActivity extends Activity {
         line.setPadding(dp(14),dp(12),dp(14),dp(12));
         line.setMinimumHeight(dp(76));
         line.setBackground(glass(false));
+        line.setElevation(dp(1));
         ImageView google=new ImageView(this);
         google.setImageResource(R.drawable.appwrite_google_g);
         google.setContentDescription("Google");
@@ -234,7 +383,9 @@ public final class MainActivity extends Activity {
         TextView title=label("Learning progress",17,INK);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         copy.addView(title);
-        copy.addView(label(verifiedAccountId==null?"Guest • local progress":"Verified account • private offline progress",13,MUTED));
+        copy.addView(label(verifiedAccountId==null?"Guest • progress stays on this device"
+            :onlineVerified?"Google account • verified • private progress"
+            :"Google account • offline • syncs after verification",13,MUTED));
         line.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
         line.setClickable(true);
         line.setFocusable(true);
@@ -256,7 +407,7 @@ public final class MainActivity extends Activity {
         reference("Learn C++","Free online C++ learning resource; independent of CodeLab.","https://www.learncpp.com/");
         LinearLayout technology=panel(false);
         title(technology,"Technology acknowledgements",20);
-        body(technology,"Appwrite: Google OAuth provider and private progress table configured; Android login and sync pending. Cloudflare: certification Worker deployed; certificate issuance disabled pending verification. Neither organization is a sponsor or endorser of CodeLab. Integration and deployment status must be verified separately.");
+        body(technology,"Appwrite: Google sign-in and account-scoped progress sync are implemented in this build; live verification against the configured project is still pending. Cloudflare: the certification Worker integration is not enabled and certificate issuance remains disabled pending verification. Neither organization is a sponsor or endorser of CodeLab.");
         action(content,"Back home",false,this::home);
     }
     private void reference(String name,String detail,String url) {
@@ -272,26 +423,27 @@ public final class MainActivity extends Activity {
     private void progressSettings() {
         if(verifiedAccountId==null) {
             new AlertDialog.Builder(this).setTitle("Learning account")
-                .setMessage("Guest progress stays on this device. Google sign-in uses Appwrite and will keep the authenticated account's learning data separate.")
+                .setMessage("Guest progress stays on this device. Google sign-in uses Appwrite and keeps each account's learning data separate.")
                 .setPositiveButton("Sign in with Google",(d,w)->startActivity(new Intent(this,GoogleSignInActivity.class)))
                 .setNeutralButton("Study reminders",(d,w)->reminderSettings())
                 .setNegativeButton("Continue as guest",null).show();
-        } else {
-            new AlertDialog.Builder(this).setTitle("Learning account")
-                .setMessage("Signed in. Account-specific offline learning data is stored separately from guest data.")
-                .setPositiveButton("OK",null)
-                .setNeutralButton("Switch Google account",(d,w)->{
-                    account.service().deleteSession("current",new io.appwrite.coroutines.CoroutineCallback<>((result,error)->runOnUiThread(()->{
-                        if(error!=null){message("Could not sign out",error.getMessage());return;}
-                        restoreVerifiedAccount();
-                        startActivity(new Intent(this,GoogleSignInActivity.class));
-                    })));
-                })
-                .setNegativeButton("Study reminders",(d,w)->reminderSettings()).show();
+            return;
         }
+        String[] actions={"Copy guest progress here","Study reminders","Switch Google account","Sign out"};
+        new AlertDialog.Builder(this).setTitle("Learning account")
+            .setMessage(onlineVerified
+                ?"Google account verified. This account keeps its own private progress, bookmarks and upload queue."
+                :"Available offline from the last verified session. New progress is saved locally and uploads once Appwrite verifies the session.")
+            .setItems(actions,(dialog,which)->{
+                if(which==0)offerGuestTransfer();
+                else if(which==1)reminderSettings();
+                else if(which==2)signOut(()->startActivity(new Intent(this,GoogleSignInActivity.class)));
+                else signOut(null);
+            })
+            .setNegativeButton("Close",null).show();
     }
     private void reminderSettings() {
-        boolean enabled=preferences.getBoolean(StudyReminders.PREF,false);
+        boolean enabled=settings().getBoolean(StudyReminders.PREF,false);
         new AlertDialog.Builder(this).setTitle("Offline study reminders")
             .setMessage("Daily local reminders at your chosen time, outside quiet hours (10 PM–7 AM). No guest data is uploaded.")
             .setPositiveButton(enabled?"Turn off":"Turn on",(dialog,which)->{
@@ -300,8 +452,8 @@ public final class MainActivity extends Activity {
                     requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},81);
                 StudyReminders.configure(this,!enabled);
             }).setNeutralButton("Change time",(dialog,which)->{
-                int hour=preferences.getInt("study_reminder_hour",18);
-                int minute=preferences.getInt("study_reminder_minute",0);
+                int hour=settings().getInt("study_reminder_hour",18);
+                int minute=settings().getInt("study_reminder_minute",0);
                 new TimePickerDialog(this,(picker,h,m)->{
                     if(h<7 || h>=22){message("Quiet hours","Choose a time between 7:00 AM and 9:59 PM.");return;}
                     getSharedPreferences("academy",MODE_PRIVATE).edit()
@@ -312,11 +464,11 @@ public final class MainActivity extends Activity {
             }).setNegativeButton("Cancel",null).show();
     }
     private void advertisingSettings() {
-        boolean enabled=preferences.getBoolean("test_ads_opt_in",false);
+        boolean enabled=settings().getBoolean("test_ads_opt_in",false);
         new AlertDialog.Builder(this).setTitle("AdMob test banners")
             .setMessage("Optional Google test ads appear only on Home. No real ad units are configured. Consent may be requested. Turning this off disables ad requests on subsequent screens.")
             .setPositiveButton(enabled?"Disable test ads":"Enable test ads",(dialog,which)->{
-                preferences.edit().putBoolean("test_ads_opt_in",!enabled).apply();
+                settings().edit().putBoolean("test_ads_opt_in",!enabled).apply();
                 home();
             }).setNegativeButton("Cancel",null).show();
     }
@@ -333,11 +485,11 @@ public final class MainActivity extends Activity {
         shell("appearance","SETTINGS / APPEARANCE","Your learning space.","Choose a theme. Text follows your device font scaling.");
         LinearLayout p=panel(false);title(p,light?"Light glass":"Midnight glass",24);
         body(p,"A full-screen gradient, translucent surfaces and clear controls. Theme choice is saved on this device.");
-        action(p,light?"Use midnight theme":"Use light theme",true,()->{preferences.edit().putBoolean("light_theme",!light).apply();recreate();});
+        action(p,light?"Use midnight theme":"Use light theme",true,()->{settings().edit().putBoolean("light_theme",!light).apply();recreate();});
         action(content,"Back home",false,this::home);
     }
     private void status() {
-        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.4.0");
+        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.5.0");
         LinearLayout p=panel(false); title(p,"Available offline",22); body(p,"Lessons, practice quizzes, saved progress, source editing, multiple source files, and source export work without an account. Uninstalling clears local data; export important source files first.");
         LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and production AdMob are not integrated. Practice completion is not certification.\n\nThe bundled compiler runs offline. Network permissions and Google test-ad SDK scaffolding are present for upcoming online features; optional consent-gated test banners are available from Settings; production ads remain disabled.");
         action(content,"Back home",true,this::home);
@@ -576,6 +728,8 @@ public final class MainActivity extends Activity {
         int stage=LearningPath.stage(requestedStage);activeLesson=index;activeStage=stage;
         preferences.edit().putInt(courseKey()+":resume",index).putInt(lessonKey(index)+":stage",stage).apply();
         Lesson lesson=lessons[index];
+        // Device-wide hint so an offline reminder never names another learner's content.
+        settings().edit().putString("resume_hint",lesson.title).apply();
         if(stage<3) {
             String text=stage==0?lesson.explanation:stage==1?lesson.code:lesson.challenge;
             Runnable extra=stage==1?()->copyLesson(index):stage==2?()->lessonTools(index):index==0?()->readGuide("First program: syntax anatomy","lessons/first-program.txt"):()->lessonTools(index);
