@@ -25,7 +25,7 @@ public final class MainActivity extends Activity {
         super.attachBaseContext(base.createConfigurationContext(config));
     }
 
-    private int INK=0xfff6f7ff, MUTED=0xffb5c5e8, MINT=0xff67c8ff, LILAC=0xffc2a5ff;
+    private int INK=0xfff9fbff, MUTED=0xffd4e3f6, MINT=0xff7ee7f5, LILAC=0xffd5b7ff;
     private boolean light;
     private LinearLayout content;
     private ProjectStore store;
@@ -46,7 +46,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",true);
-        if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff43516b;MINT=0xff125ba6;LILAC=0xff6240a6;}
+        if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff52617a;MINT=0xff126bb7;LILAC=0xff7250b5;}
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
@@ -91,8 +91,8 @@ public final class MainActivity extends Activity {
     private void message(String title,String body) { new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("Got it",null).show(); }
     private boolean leaveEditor() { return editor==null || !dirty || saveSource(true); }
     private GradientDrawable glass(boolean accent) {
-        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,light ? (accent ? new int[]{0xf0eef2ff,0xe8f1eaff} : new int[]{0xfaffffff,0xe8f0f4ff}) : (accent ? new int[]{0xdd172c59,0xdd29204c} : new int[]{0xc9202c4f,0xc9111833}));
-        d.setCornerRadius(dp(20)); d.setStroke(dp(1),light ? 0x66818eb2 : (accent ? 0x6682aaff : 0x36d0dcff)); return d;
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,light ? (accent ? new int[]{0xfaffffff,0xeef0fbff} : new int[]{0xfaffffff,0xf0edf8ff}) : (accent ? new int[]{0xee315c8d,0xe8484b86} : new int[]{0xe43b6287,0xe42d476e}));
+        d.setCornerRadius(dp(20)); d.setStroke(dp(1),light ? 0x669bbfe7 : (accent ? 0x99b6e9ff : 0x66d0e9ff)); return d;
     }
     private TextView label(String text,int size,int color) {
         TextView v=new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color);
@@ -414,7 +414,7 @@ public final class MainActivity extends Activity {
     }
     private void quizScreen(String title,String question,String[] options,int answer,String reason,String key,Runnable passed,Runnable review) {
         handler.removeCallbacks(autosave);editor=null;dirty=false;screen="quiz";
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(light?0xfffcfcff:0xff0b1025);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(light?0xfffcfcff:0xff203d62);
         root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(20)+insets.getSystemWindowInsetLeft(),dp(12)+insets.getSystemWindowInsetTop(),dp(20)+insets.getSystemWindowInsetRight(),dp(12)+insets.getSystemWindowInsetBottom());return insets;});
         TextView close=label("Close",16,MINT);close.setMinHeight(dp(48));close.setGravity(Gravity.CENTER_VERTICAL);close.setOnClickListener(v->academy());root.addView(close);
         root.addView(label(title,14,MUTED));
