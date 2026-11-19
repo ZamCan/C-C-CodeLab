@@ -17,6 +17,14 @@ import java.util.regex.*;
 
 /** Offline academy and source workspace. No fabricated compiler or certificate results. */
 public final class MainActivity extends Activity {
+    /** CodeLab currently provides an English-only interface, independent of device language. */
+    @Override protected void attachBaseContext(Context base) {
+        android.content.res.Configuration config = new android.content.res.Configuration(base.getResources().getConfiguration());
+        config.setLocale(Locale.ENGLISH);
+        config.setLocales(new android.os.LocaleList(Locale.ENGLISH));
+        super.attachBaseContext(base.createConfigurationContext(config));
+    }
+
     private int INK=0xfff6f7ff, MUTED=0xffb5c5e8, MINT=0xff67c8ff, LILAC=0xffc2a5ff;
     private boolean light;
     private LinearLayout content;
