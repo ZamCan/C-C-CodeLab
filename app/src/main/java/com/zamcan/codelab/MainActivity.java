@@ -542,7 +542,24 @@ public final class MainActivity extends Activity {
     private void newFile() {
         EditText input=new EditText(this); input.setSingleLine(true); input.setHint("example.cpp"); input.setPadding(dp(24),dp(12),dp(24),dp(12));
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("New source file").setMessage("Use .c, .cpp, .h, or .hpp. Existing files will not be replaced.").setView(input).setPositiveButton("Create",null).setNegativeButton("Cancel",null).create();
-        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{String name=input.getText().toString().trim();try {if(store.exists(name)) {input.setError("That file already exists");return;}store.write(name,name.endsWith(".cpp")?Curriculum.CPP[0].code:name.endsWith(".c")?Curriculum.C[0].code:"// Header declarations\n");dialog.dismiss();openEditor(name);}catch(IOException e){input.setError(e.getMessage());}}));dialog.show();
+        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{String name=input.getText().toString().trim();try {if(store.exists(name)) {input.setError("That file already exists");return;}store.write(name,"");dialog.dismiss();openEditor(name);}catch(IOException e){input.setError(e.getMessage());}}));dialog.show();
+    }
+    private void editSelection(String operation) {
+        if(editor==null)return;
+        Editable value=editor.getText();
+        int a=Math.min(editor.getSelectionStart(),editor.getSelectionEnd());
+        int b=Math.max(editor.getSelectionStart(),editor.getSelectionEnd());
+        if(a<0||b<0)return;
+        android.content.ClipboardManager clip=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+        if("Paste".equals(operation)){
+            if(clip.hasPrimaryClip()&&clip.getPrimaryClip().getItemCount()>0){
+                CharSequence pasted=clip.getPrimaryClip().getItemAt(0).coerceToText(this);
+                if(pasted!=null)value.replace(a,b,pasted);
+            }
+        }else if(b>a){
+            clip.setPrimaryClip(ClipData.newPlainText("CodeLab source",value.subSequence(a,b)));
+            if("Cut".equals(operation))value.delete(a,b);
+        }
     }
     private void openEditor(String file) {
         if(!leaveEditor()) return;
@@ -553,8 +570,15 @@ public final class MainActivity extends Activity {
         editor=new CodeEditor(this,light); editor.setTextColor(INK); editor.setTextSize(preferences.getInt("font",15)); editor.setTypeface(Typeface.MONOSPACE); editor.setGravity(Gravity.TOP|Gravity.START); editor.setPadding(dp(44),dp(12),dp(8),dp(12)); editor.setBackgroundColor(light?0xfff6f8ff:0x66101729); editor.setMinLines(12); editor.setHorizontallyScrolling(true); editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)}); editor.setContentDescription("Source code editor for "+file); editor.setText(source); p.addView(editor,new LinearLayout.LayoutParams(-1,-2));
         highlight(editor.getText());
         editor.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){}public void afterTextChanged(Editable s){if(highlighting)return;dirty=true;saveStatus.setText(R.string.saving);handler.removeCallbacks(autosave);handler.postDelayed(autosave,700);highlight(s);}});
-        action(p,"Save",true,()->saveSource(true));
-        LinearLayout terminal=panel(false);
+        LinearLayout toolbar=new LinearLayout(this);
+        for(String operation:new String[]{"Cut","Copy","Paste"}){
+            Button button=new Button(this);button.setText(operation);button.setAllCaps(false);
+            toolbar.addView(button,new LinearLayout.LayoutParams(0,dp(48),1));
+            button.setOnClickListener(v->editSelection(operation));
+        }
+        p.addView(toolbar);
+        action(p,"Save",false,()->saveSource(true));
+        LinearLayout terminal=panel(false);terminal.setVisibility(View.GONE);
         terminal.addView(label(file.endsWith(".cpp")?"C++17 · Clang 22 / WASI":"C17 · Clang 22 / WASI",12,LILAC));
         EditText stdin=new EditText(this);stdin.setTextColor(INK);stdin.setHintTextColor(MUTED);stdin.setHint("Program input (stdin)");stdin.setContentDescription("Program standard input");stdin.setMinLines(2);stdin.setFilters(new InputFilter[]{new InputFilter.LengthFilter(65536)});terminal.addView(stdin);
         CheckBox multi=new CheckBox(this);multi.setText("Build all source files in this project");multi.setTextColor(INK);terminal.addView(multi);
@@ -564,7 +588,7 @@ public final class MainActivity extends Activity {
         terminal.addView(label("Diagnostics",12,MUTED));terminal.addView(diagnostics);
         terminal.addView(label("stdout",12,MUTED));terminal.addView(stdout);
         terminal.addView(label("stderr",12,MUTED));terminal.addView(stderr);
-        Button run=new Button(this);run.setText("Compile & run");run.setAllCaps(false);run.setEnabled(false);terminal.addView(run);
+        Button run=new Button(this);run.setText("Run");run.setAllCaps(false);run.setEnabled(false);p.addView(run);
         compiler=new OfflineCompiler(this,event->{
             String type=event.optString("type");
             if(type.equals("ready")){state.setText("Ready · offline toolchain");run.setEnabled(true);}
@@ -574,13 +598,14 @@ public final class MainActivity extends Activity {
             else if(type.equals("failure")||type.equals("cancelled")){state.setText(type.equals("cancelled")?"Cancelled":event.optString("message"));run.setEnabled(compiler!=null&&compiler.isReady());}
         });
         run.setOnClickListener(v->{
-            if(!saveSource(true)||compiler==null)return;
+            if(compiler==null)return;
+            terminal.setVisibility(View.VISIBLE);
             try{
                 org.json.JSONObject files=new org.json.JSONObject();
                 int sourceBytes=0;
                 for(String name:store.list())if(name.equals(filename)||name.endsWith(".h")||name.endsWith(".hpp")||multi.isChecked()){
                     if(files.length()>=32)throw new IOException("Maximum 32 project files per build");
-                    String text=store.read(name);sourceBytes+=text.getBytes(StandardCharsets.UTF_8).length;
+                    String text=name.equals(filename)?editor.getText().toString():store.read(name);sourceBytes+=text.getBytes(StandardCharsets.UTF_8).length;
                     if(sourceBytes>1048576)throw new IOException("Build sources exceed 1 MiB");
                     files.put(name,text);
                 }
