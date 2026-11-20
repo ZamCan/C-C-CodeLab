@@ -36,7 +36,7 @@ public final class ReadingView extends LinearLayout {
         int ink=light?0xff202536:0xfff6f7ff;
         segments=new LinearLayout(context);addView(segments,new LayoutParams(-1,dp(4)));
         LinearLayout top=new LinearLayout(context);top.setGravity(Gravity.CENTER_VERTICAL);addView(top);
-        Button exit=button("Close",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
+        Button exit=button("Contents",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
         rail=new TextView(context);rail.setTextColor(light?0xff425ff5:0xff91b7ff);rail.setTextSize(14);rail.setGravity(Gravity.END);
         top.addView(rail,new LayoutParams(0,-2,1));
         heading=new TextView(context);heading.setText(title);heading.setTextColor(ink);heading.setTextSize(22);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(12),0,dp(12));addView(heading);
@@ -86,9 +86,9 @@ public final class ReadingView extends LinearLayout {
     private void showPage(){
         if(starts.isEmpty())return;
         int page=current();offset=starts.get(page);int end=page+1<starts.size()?starts.get(page+1):source.length();
-        segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<=page?0xff6670ed:0xffdce0ed);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
+        segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<page?0xff29b982:i==page?0xff6670ed:(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?0xff36405b:0xffdce0ed);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
         body.setText(source.substring(offset,end));rail.setText("Page "+(page+1)+" / "+starts.size());
-        back.setEnabled(page>0);back.setAlpha(page>0?1f:.4f);next.setText(page+1==starts.size()?"Continue":"Next");
+        back.setEnabled(page>0);back.setAlpha(page>0?1f:.4f);next.setText(page+1==starts.size()?"Finish":"Next");
         position.save(offset);body.announceForAccessibility("Page "+(page+1)+" of "+starts.size());
     }
 }
