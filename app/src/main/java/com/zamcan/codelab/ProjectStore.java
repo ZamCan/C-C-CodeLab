@@ -42,4 +42,15 @@ public final class ProjectStore {
             Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } finally { if (temp.exists()) temp.delete(); }
     }
+    public void rename(String oldName,String newName) throws IOException {
+        File from=resolve(oldName),to=resolve(newName);
+        if(!from.isFile())throw new IOException("Source file not found");
+        if(to.exists())throw new IOException("Destination already exists");
+        Files.move(from.toPath(),to.toPath(),StandardCopyOption.ATOMIC_MOVE);
+    }
+    public void delete(String name) throws IOException {
+        File file=resolve(name);
+        if(!file.isFile())throw new IOException("Source file not found");
+        Files.delete(file.toPath());
+    }
 }
