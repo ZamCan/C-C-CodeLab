@@ -518,13 +518,15 @@ public final class MainActivity extends Activity {
     }
     private void studio() { try { if(store.list().isEmpty())store.write("main.c",Curriculum.C[0].code);openEditor(store.exists(filename)?filename:store.list().get(0)); } catch(IOException e){error(e);} }
     private void compilerMenu() {
-        new AlertDialog.Builder(this).setTitle(project).setItems(new String[]{"Files","New file","Projects","Export","Text size","Compiler self-test"},(dialog,item)->{
+        new AlertDialog.Builder(this).setTitle(project).setItems(new String[]{"Files","New file","Projects","Rename file","Delete file","Export","Text size","Compiler self-test"},(dialog,item)->{
             if(item==0){String[] files=store.list().toArray(new String[0]);new AlertDialog.Builder(this).setTitle("Project files").setItems(files,(d,w)->openEditor(files[w])).show();}
             else if(item==1){if(leaveEditor())newFile();}
             else if(item==2){if(leaveEditor())chooseProject();}
-            else if(item==3 && saveSource(true)){exportSource=editor.getText().toString();try{startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename),41);}catch(ActivityNotFoundException e){error(e);}}
-            else if(item==5){if(saveSource(true))startActivity(new Intent(this,CompilerDiagnosticsActivity.class));}
-            else if(item==4)new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"16 sp","20 sp","24 sp"},(d,w)->{int size=new int[]{16,20,24}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show();
+            else if(item==3){renameCurrentFile();}
+            else if(item==4){deleteCurrentFile();}
+            else if(item==5 && saveSource(true)){exportSource=editor.getText().toString();try{startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain").putExtra(Intent.EXTRA_TITLE,filename),41);}catch(ActivityNotFoundException e){error(e);}}
+            else if(item==7){if(saveSource(true))startActivity(new Intent(this,CompilerDiagnosticsActivity.class));}
+            else if(item==6)new AlertDialog.Builder(this).setTitle("Text size").setItems(new String[]{"16 sp","20 sp","24 sp"},(d,w)->{int size=new int[]{16,20,24}[w];preferences.edit().putInt("font",size).apply();editor.setTextSize(size);}).show();
         }).show();
     }
     private void chooseProject(){
@@ -560,6 +562,34 @@ public final class MainActivity extends Activity {
             clip.setPrimaryClip(ClipData.newPlainText("CodeLab source",value.subSequence(a,b)));
             if("Cut".equals(operation))value.delete(a,b);
         }
+    }
+    private void renameCurrentFile(){
+        if(editor==null||!saveSource(false))return;
+        EditText input=new EditText(this);input.setSingleLine(true);input.setText(filename);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Rename file")
+            .setView(input).setPositiveButton("Rename",null).setNegativeButton("Cancel",null).create();
+        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{
+            try{
+                String target=input.getText().toString().trim();
+                store.rename(filename,target);
+                dialog.dismiss();
+                openEditor(target);
+            }catch(IOException e){input.setError(e.getMessage());}
+        }));
+        dialog.show();
+    }
+    private void deleteCurrentFile(){
+        if(editor==null)return;
+        new AlertDialog.Builder(this).setTitle("Delete "+filename+"?")
+            .setMessage("Delete this saved file from the current project? This cannot be undone.")
+            .setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{
+                try{
+                    handler.removeCallbacks(autosave);
+                    store.delete(filename);
+                    editor=null;dirty=false;
+                    studio();
+                }catch(IOException e){error(e);}
+            }).show();
     }
     private void openEditor(String file) {
         if(!leaveEditor()) return;
