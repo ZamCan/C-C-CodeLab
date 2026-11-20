@@ -788,7 +788,7 @@ public final class MainActivity extends Activity {
             boolean available=LearningPath.canOpen(preferences.getBoolean("intro_checkpoint_v1",false),i,lessons.length,i>0&&progress.completed(courseKey(),Integer.toString(i-1)));
             String detail=complete?"Checkpoint passed":available?"Ready to learn":"Complete the previous checkpoint";
             if(preferences.getBoolean(lessonKey(i)+":bookmark",false))detail+=" · Bookmarked";
-            row(group,String.format(Locale.ROOT,"%02d",i+1),lessons[i].title,detail,available,()->lesson(index));
+            row(group,complete?"✓":String.format(Locale.ROOT,"%02d",i+1),lessons[i].title,detail,available,()->lesson(index));
         }
         action(content,"Change pathway",false,this::pathways);
         action(content,"Back to journey",false,this::academy);
@@ -815,9 +815,41 @@ public final class MainActivity extends Activity {
         } else {
             quizScreen(lesson.title,lesson.question,lesson.options,lesson.answer,lesson.feedback,lessonKey(index),()->{
                 progress.complete(courseKey(),Integer.toString(index));
-                if(index+1<lessons.length)lesson(index+1,0);else readStory(courseKey()+":completed","Foundations completed",completed()+" of "+lessons.length+" preview checkpoints passed. Review the concepts or explore the guided projects. These are local learning achievements, not certificates.",false,this::courseMap,this::projects,"Projects");
+                if((index+1)%4==0 || index+1==lessons.length)
+                    celebrateCheckpoint(index+1,lessons.length,()->advanceAfterCheckpoint(index,lessons.length));
+                else advanceAfterCheckpoint(index,lessons.length);
             },()->lesson(index,0));
         }
+    }
+    private void advanceAfterCheckpoint(int index,int total){
+        if(index+1<total)lesson(index+1,0);
+        else readStory(courseKey()+":completed","Foundations completed",
+            completed()+" of "+total+" checkpoints passed. Review concepts or explore guided projects. These are learning achievements, not certificates.",
+            false,this::courseMap,this::projects,"Projects");
+    }
+    private void celebrateCheckpoint(int passed,int total,Runnable next){
+        final int green=0xff36d399;
+        LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER);layout.setPadding(dp(24),dp(24),dp(24),dp(20));
+        TextView emblem=new TextView(this);emblem.setText("✓");emblem.setTextSize(56);
+        emblem.setTextColor(green);emblem.setGravity(Gravity.CENTER);
+        layout.addView(emblem,new LinearLayout.LayoutParams(-1,dp(88)));
+        TextView heading=label(passed==total?"Course completed!":"Congratulations!",24,INK);
+        heading.setGravity(Gravity.CENTER);layout.addView(heading);
+        TextView description=label(passed+" of "+total+" checkpoints passed. Keep building your skills.",16,MUTED);
+        description.setGravity(Gravity.CENTER);description.setPadding(0,dp(12),0,dp(12));layout.addView(description);
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(layout)
+            .setPositiveButton(passed==total?"View progress":"Next lesson",(d,w)->next.run())
+            .setNegativeButton("Course contents",(d,w)->courseMap()).create();
+        dialog.setOnShowListener(d->{
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(green);
+            if(preferences.getBoolean("success_motion",true)&&android.animation.ValueAnimator.areAnimatorsEnabled()){
+                emblem.setScaleX(.4f);emblem.setScaleY(.4f);emblem.setAlpha(0f);
+                emblem.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(480).start();
+            }
+            LearningFeedback.success(this,emblem,preferences.getBoolean("success_sound",true),false);
+        });
+        dialog.show();
     }
     private void lessonTools(int index) {
         EditText notes=new EditText(this);notes.setTextSize(16);notes.setMinLines(4);notes.setMaxLines(8);notes.setHint("My prediction and reasoning");notes.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8000)});
