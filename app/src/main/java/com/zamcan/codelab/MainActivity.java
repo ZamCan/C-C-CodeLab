@@ -53,7 +53,7 @@ public final class MainActivity extends Activity {
     private final Runnable autosave=() -> saveSource(false);
 
     @Override public void onCreate(Bundle state) {
-        light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",true);
+        light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",false);
         if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff52617a;MINT=0xff126bb7;LILAC=0xff7250b5;}
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
@@ -353,7 +353,7 @@ public final class MainActivity extends Activity {
         View line=new View(this);line.setBackgroundColor(light?0x141d3a6b:0x1a9ab4e8);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
     private void home() {
-        shell("home","", "Compile • Learn C/C++","Offline C/C++ Compiler & Learning Academy");
+        shell("home","", "Compile • Learn C/C++","C & C++ Programming Academy");
         artwork(content);
         googleProgressRow();
         destination("Compiler","Write, compile and run C or C++","▶",this::studio);
