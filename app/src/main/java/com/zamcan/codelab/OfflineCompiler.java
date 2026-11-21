@@ -72,7 +72,7 @@ public final class OfflineCompiler {
     private static WebResourceResponse denied(){return new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.emptyMap(),new ByteArrayInputStream(new byte[0]));}
     private void emit(String type,String message){try{listener.onEvent(new JSONObject().put("type",type).put("message",message));}catch(Exception ignored){}}
     public boolean isReady(){return ready&&!closed&&!busy;}
-    public void run(JSONObject request){if(!isReady()){emit("failure","Compiler is loading or already running");return;}busy=true;handler.postDelayed(watchdog,125000);port.postMessage(new WebMessage(request.toString()));}
+    public void run(JSONObject request){if(!isReady()){emit("failure","Compiler is loading or already running");return;}busy=true;handler.removeCallbacks(watchdog);handler.postDelayed(watchdog,125000);port.postMessage(new WebMessage(request.toString()));}
     public void cancel(){if(closed||port==null)return;port.postMessage(new WebMessage("{\"cancel\":true}"));}
     public void close(){if(closed)return;closed=true;ready=false;handler.removeCallbacksAndMessages(null);if(port!=null)port.close();view.stopLoading();view.destroy();}
 }
