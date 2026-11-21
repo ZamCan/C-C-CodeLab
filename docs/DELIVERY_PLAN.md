@@ -316,3 +316,10 @@ platform 35 with build-tools 35.0.0, Gradle 8.9 wrapper. No physical device, emu
 - Verification: backend `npm test --prefix backend` passed 30/30; backend build and syntax checks passed; `verify_lessons.py` passed 20/20 examples; `verify_projects.py` passed all ten reference transcripts; `verify_toolchain.py` passed all four pinned artifact hashes; packaged compiler passed 14/14 host integration cases including C/C++, stdin, diagnostics, timeout, output and memory bounds.
 - Android verification remains blocked in this Termux environment by AAPT2 dependency resource-ID errors during `processDebugResources`; the existing APK is from an earlier build and is not fresh evidence. GitHub run `44801494484` also failed the Android job. No ADB device or emulator is connected, so Android WebView compiler execution, installation, OAuth, reminders and visual/accessibility checks remain unverified.
 - Cloudflare exam and credential issuance flags remain disabled. Practical coding grading, reviewed production question banks, Appwrite-to-Cloudflare identity exchange, issuer-key provisioning and end-to-end live issuance remain incomplete by design.
+
+## Release gate hardening — 2026-11-21
+
+- Added `tools/release_gate.py`, a fail-closed pre-release check. It refuses a release assessment when Cloudflare feature flags are enabled in source configuration without an explicit review, when a release keystore is absent or incomplete, or when physical-device evidence is absent. It never prints secret values.
+- Android `release` signing now reads `CODELAB_RELEASE_STORE_FILE`, `CODELAB_RELEASE_STORE_PASSWORD`, `CODELAB_RELEASE_KEY_ALIAS`, and `CODELAB_RELEASE_KEY_PASSWORD` from the process environment only. No keystore or credential is stored in Git. Debug builds remain unaffected.
+- Local gate result: **BLOCKED** with `release signing keystore is not configured` and `physical-device evidence is missing`.
+- These gates are safety controls; they do not constitute device, OAuth, Cloudflare deployment, or release-signing verification.

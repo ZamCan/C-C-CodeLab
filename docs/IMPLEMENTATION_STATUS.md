@@ -56,3 +56,9 @@ The current delivery ledger supersedes the initial inventory above: isolated pro
 4. Deploy Lambda/API Gateway with minimum table permissions, authenticated access, throttling, and operational logs without tokens.
 5. Validate two-device progress merge, conflict retries, unauthorized access rejection, cloud progress deletion, and offline recovery.
 6. Review exam/certificate security and compiler functionality before any production APK build.
+
+## November 21, 2026 release safety update
+
+- `tools/release_gate.py` now fails closed when source Cloudflare flags are enabled, release signing credentials are incomplete, or physical-device evidence is absent.
+- Android release signing consumes environment-only credentials (`CODELAB_RELEASE_*`); no private key is committed.
+- The gate was executed locally and correctly blocked the current repository because no release keystore or device evidence is available.

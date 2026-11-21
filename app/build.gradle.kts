@@ -1,3 +1,9 @@
+val releaseStoreFile = System.getenv("CODELAB_RELEASE_STORE_FILE")
+val releaseStorePassword = System.getenv("CODELAB_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("CODELAB_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("CODELAB_RELEASE_KEY_PASSWORD")
+val releaseSigningConfigured = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
+
 plugins { id("com.android.application") }
 android {
  namespace = "com.zamcan.codelab"
@@ -5,7 +11,22 @@ android {
  defaultConfig { applicationId = "com.zamcan.codelab"; minSdk = 26; targetSdk = 35; versionCode = 6; versionName = "0.5.1" }
      compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests { isIncludeAndroidResources = true } }
- buildTypes { release { isMinifyEnabled = false } }
+ signingConfigs {
+     if (releaseSigningConfigured) {
+         create("release") {
+             storeFile = file(releaseStoreFile!!)
+             storePassword = releaseStorePassword
+             keyAlias = releaseKeyAlias
+             keyPassword = releaseKeyPassword
+         }
+     }
+ }
+ buildTypes {
+     release {
+         isMinifyEnabled = false
+         if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
+     }
+ }
 }
 
 dependencies {
