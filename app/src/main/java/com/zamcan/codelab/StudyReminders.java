@@ -50,14 +50,15 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
 
     @Override public void onReceive(Context context, Intent intent) {
         SharedPreferences settings = context.getSharedPreferences("academy", Context.MODE_PRIVATE);
-        if (!settings.getBoolean(PREF, false)) return;
         String action = intent == null ? null : intent.getAction();
+        if (!settings.getBoolean(PREF, false)) return;
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             configure(context, true);
             return;
         }
         int currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         if (currentHour >= 22 || currentHour < 7) return; // Quiet hours: 22:00–06:59.
+        NotificationInbox.add(context,"Study reminder",resumeMessage(settings));
 
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
@@ -82,7 +83,6 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
                 .setContentIntent(open)
                 .build();
         manager.notify(NOTIFICATION_ID, notification);
-        NotificationInbox.add(context,"Study reminder",resumeMessage(settings));
     }
 
     /** Resume hint written by the lesson screen; never names another learner's content. */
