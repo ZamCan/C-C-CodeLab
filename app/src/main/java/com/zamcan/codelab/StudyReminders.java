@@ -74,7 +74,7 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
         PendingIntent open = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class).putExtra("open_inbox",true),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new Notification.Builder(context, CHANNEL)
-                .setSmallIcon(R.drawable.ic_codelab_brand)
+                .setSmallIcon(R.drawable.ic_codelab_notification)
                 .setContentTitle("CodeLab • keep learning")
                 .setContentText(resumeMessage(settings))
                 .setStyle(new Notification.BigTextStyle().bigText(resumeMessage(settings)))
