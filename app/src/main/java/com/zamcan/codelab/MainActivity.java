@@ -289,7 +289,7 @@ public final class MainActivity extends Activity {
         b.setPadding(dp(16),dp(12),dp(16),dp(12));
         GradientDrawable background;
         if(primary){
-            background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xff3f5cf6,0xff7a4ddb});
+            background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xff168e7a,0xff35c6a2});
             background.setCornerRadius(dp(16));
         } else {
             background=new GradientDrawable();
@@ -353,7 +353,7 @@ public final class MainActivity extends Activity {
         View line=new View(this);line.setBackgroundColor(light?0x141d3a6b:0x1a9ab4e8);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
     private void home() {
-        shell("home","", "Compile • Learn C/C++","C & C++ Programming Academy");
+        shell("home","", "Compile•Learn C/C++","C & C++ Programming Academy");
         artwork(content);
         googleProgressRow();
         destination("Compiler","Write, compile and run C or C++","▶",this::studio);
