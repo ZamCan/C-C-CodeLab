@@ -31,7 +31,7 @@ public final class NotificationInbox {
     }
     public static int unread(Context c){
         JSONArray data=items(c);int n=0;
-        for(int i=0;i<data.length();i++)if(!data.optJSONObject(i).optBoolean("read",false))n++;
+        for(int i=0;i<data.length();i++)if(data.optJSONObject(i)!=null&&!data.optJSONObject(i).optBoolean("read",false))n++;
         return n;
     }
 }
