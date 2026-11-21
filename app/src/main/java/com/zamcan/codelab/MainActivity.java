@@ -352,10 +352,34 @@ public final class MainActivity extends Activity {
         row.setFocusable(true);row.setContentDescription(name+". "+detail);row.setOnClickListener(v->open.run());parent.addView(row);
         View line=new View(this);line.setBackgroundColor(light?0x141d3a6b:0x1a9ab4e8);parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
+    /** Offline-first inbox. Cloud push delivery requires an authenticated target and provider. */
+    private void notificationInbox() {
+        shell("inbox","LEARNING","Notifications","Learning activity saved on this device.");
+        LinearLayout controls=panel(false);
+        action(controls,"Notification preferences",false,this::reminderSettings);
+        action(controls,"Mark all as read",false,()->{NotificationInbox.markRead(this);notificationInbox();});
+        org.json.JSONArray entries=NotificationInbox.items(this);
+        if(entries.length()==0){
+            LinearLayout empty=panel(false);
+            body(empty,"No notifications yet. Your study reminders and future course announcements will appear here.");
+        }
+        for(int i=0;i<entries.length();i++){
+            org.json.JSONObject event=entries.optJSONObject(i);
+            if(event==null)continue;
+            LinearLayout item=panel(false);
+            String heading=event.optString("title","Learning update");
+            title(item,(event.optBoolean("read",false)?"":"●  ")+heading,18);
+            body(item,event.optString("body",""));
+            long time=event.optLong("time",0);
+            if(time>0)body(item,android.text.format.DateFormat.getMediumDateFormat(this).format(new java.util.Date(time)));
+        }
+    }
+
     private void home() {
         shell("home","", "Compile•Learn C/C++","C & C++ Programming Academy");
         artwork(content);
         googleProgressRow();
+        row(content,"◉","Notifications"+(NotificationInbox.unread(this)>0?" ("+NotificationInbox.unread(this)+")":""),"Your learning updates and reminders",true,this::notificationInbox);
         destination("Compiler","Write, compile and run C or C++","▶",this::studio);
         destination("Learn C/C++","Guided lessons, practice and projects","◈",this::academy);
         row(content,"§","Academic references","Standards, trusted reading and attribution",true,this::academicReferences);
