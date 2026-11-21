@@ -82,6 +82,7 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
                 .setContentIntent(open)
                 .build();
         manager.notify(NOTIFICATION_ID, notification);
+        NotificationInbox.add(context,"Study reminder",resumeMessage(settings));
     }
 
     /** Resume hint written by the lesson screen; never names another learner's content. */
