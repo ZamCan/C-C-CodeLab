@@ -70,10 +70,10 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
                 context.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
 
-        PendingIntent open = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class),
+        PendingIntent open = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class).putExtra("open_inbox",true),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new Notification.Builder(context, CHANNEL)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_codelab_brand)
                 .setContentTitle("CodeLab • keep learning")
                 .setContentText(resumeMessage(settings))
                 .setStyle(new Notification.BigTextStyle().bigText(resumeMessage(settings)))
@@ -82,6 +82,7 @@ public final class StudyReminders extends android.content.BroadcastReceiver {
                 .setContentIntent(open)
                 .build();
         manager.notify(NOTIFICATION_ID, notification);
+        NotificationInbox.add(context,"Study reminder",resumeMessage(settings));
     }
 
     /** Resume hint written by the lesson screen; never names another learner's content. */
