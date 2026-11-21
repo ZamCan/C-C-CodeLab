@@ -306,3 +306,13 @@ platform 35 with build-tools 35.0.0, Gradle 8.9 wrapper. No physical device, emu
 - `verification/android-build.log`, `verification/android-lint-results.txt` and
   `verification/apk-sha256.txt` describe this artifact. Device, live OAuth/sync and push
   verification remain outstanding exactly as listed in the 0.5.0 section.
+
+
+## Audit checkpoint — 2026-11-21
+
+- Repository audit confirmed a native Java Android app (Gradle/AGP 8.6.1, API 26–35), bundled Clang 22/LLD WebAssembly compiler assets, SQLite offline progress, Appwrite account-scoped sync, optional consent-gated test banners, and a separately gated Cloudflare Worker/D1 certification service.
+- Reconciled current `main` with upstream through `47e6eea`; the local editor/branding repair is committed as `ee52683`.
+- Editor repair: fixed line-gutter sizing for scaled text, added active-line highlighting, and made closing-brace dedentation reliable. Google sign-in now uses a multicolour Google mark rather than a monochrome placeholder.
+- Verification: backend `npm test --prefix backend` passed 30/30; backend build and syntax checks passed; `verify_lessons.py` passed 20/20 examples; `verify_projects.py` passed all ten reference transcripts; `verify_toolchain.py` passed all four pinned artifact hashes; packaged compiler passed 14/14 host integration cases including C/C++, stdin, diagnostics, timeout, output and memory bounds.
+- Android verification remains blocked in this Termux environment by AAPT2 dependency resource-ID errors during `processDebugResources`; the existing APK is from an earlier build and is not fresh evidence. GitHub run `44801494484` also failed the Android job. No ADB device or emulator is connected, so Android WebView compiler execution, installation, OAuth, reminders and visual/accessibility checks remain unverified.
+- Cloudflare exam and credential issuance flags remain disabled. Practical coding grading, reviewed production question banks, Appwrite-to-Cloudflare identity exchange, issuer-key provisioning and end-to-end live issuance remain incomplete by design.
