@@ -386,17 +386,21 @@ public final class MainActivity extends Activity {
         row(content,"§","Academic references","Standards, trusted reading and attribution",true,this::academicReferences);
         row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
     }
-    /** In-app illustration only. Never exports or shares a sample as an issued credential. */
+    /** Non-exportable placeholder certificate: no valid learner or credential data. */
     private void sampleCertificate() {
-        shell("sample_certificate","CERTIFICATE PREVIEW","Sample certificate","Illustration only — not an academic credential");
-        LinearLayout panel=panel(false);
-        title(panel,"CERTIFICATE OF COMPLETION",22);
-        body(panel,"SAMPLE  •  NOT VALID  •  SAMPLE  •  NOT VALID");
-        title(panel,"Example Learner",24);
-        body(panel,"For a demonstration of learning C and C++ with CodeLab.");
-        body(panel,"SAMPLE CERTIFICATE — NOT ISSUED");
-        body(panel,"SAMPLE  •  VOID  •  SAMPLE  •  VOID");
-        body(panel,"No certificate ID, verification code, QR code, signature, download or share option is provided. Screenshots of this sample are not valid credentials.");
+        shell("sample_certificate","CERTIFICATE PREVIEW","Certificate design","Your future certificate layout");
+        LinearLayout preview=panel(false);
+        title(preview,"CERTIFICATE OF COMPLETION",22);
+        body(preview,"YOUR FULL NAME");
+        body(preview,"has successfully completed");
+        title(preview,"COURSE TITLE",20);
+        body(preview,"PASS MARK: XX%     RESULT: PASS");
+        body(preview,"COMPLETION DATE: DD / MM / YYYY");
+        body(preview,"CERTIFICATE ID: ISSUED AFTER VERIFICATION");
+        body(preview,"ISSUER: CODELAB C & C++");
+        title(preview,"PREVIEW  •  NOT VALID",20);
+        body(preview,"PREVIEW  •  NOT VALID  •  PREVIEW");
+        body(preview,"Layout demonstration only. No official signature, QR verification, certificate download, or share action is available.");
     }
     /** One of the two primary home destinations: a large, quiet, native surface. */
     private void destination(String heading,String subtitle,String glyph,Runnable open) {
