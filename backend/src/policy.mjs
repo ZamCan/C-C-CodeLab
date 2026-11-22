@@ -30,17 +30,30 @@ export function validateQuestion(question) {
 }
 export function auditQuestionBank(bank, slots) {
   if (!Array.isArray(bank) || !Array.isArray(slots)) throw new ApiError(503, 'invalid_question_bank');
-  const failures = [];
+  const failures = [], ids = new Set(), valid = [];
   for (const q of bank) {
-    try { validateQuestion(q); }
-    catch (error) { failures.push({id: q?.id ?? null, code: error.code ?? 'invalid_question'}); }
+    try {
+      if (!q || typeof q.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(q.id) || ids.has(q.id))
+        throw new ApiError(503, 'invalid_question_id');
+      ids.add(q.id);
+      validateQuestion(q);
+      valid.push(q);
+    } catch (error) {
+      failures.push({id:q?.id ?? null,code:error.code ?? 'invalid_question'});
+    }
   }
   const coverage = slots.map(slot => ({
-    style:slot.style, objective:slot.objective, difficulty:slot.difficulty,
-    required:slot.count,
-    available:bank.filter(q => q.style===slot.style && q.objective===slot.objective && q.difficulty===slot.difficulty).length
+    style:slot?.style, objective:slot?.objective, difficulty:slot?.difficulty,
+    required:slot?.count,
+    available:valid.filter(q => q.style===slot?.style && q.objective===slot?.objective && q.difficulty===slot?.difficulty).length
   }));
-  return {total:bank.length,invalid:failures,coverage,ready:failures.length===0 && coverage.every(c=>c.available>=c.required)};
+  const validBlueprint = slots.length>0 && slots.every(s=>s && automaticStyles.has(s.style) &&
+    typeof s.objective==='string' && s.objective.length>0 &&
+    ['easy','medium','hard'].includes(s.difficulty) && Number.isInteger(s.count) && s.count>0) &&
+    slots.reduce((n,s)=>n+s.count,0)===25 && new Set(slots.map(s=>s.style)).size===2;
+  return {total:bank.length,invalid:failures,coverage,
+    ready:validBlueprint && bank.length<=10000 && failures.length===0 &&
+      coverage.every(c=>c.available>=c.required)};
 }
 export function selectQuestions(bank, slots, exposed = new Set(), choose = randomIndex) {
   if (!Array.isArray(slots) || slots.length === 0 || slots.some(s => !s || !Number.isInteger(s.count) || s.count < 1) || slots.reduce((n, s) => n + s.count, 0) !== 25)
