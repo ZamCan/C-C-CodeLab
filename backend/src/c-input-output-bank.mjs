@@ -19,7 +19,7 @@ const variants = Array.from({length:150},(_,i)=>{
     id:`c17_io_${String(i+1).padStart(3,'0')}`,course_id:'c17',
     style:i%2===0?'output_prediction':'multiple_choice',
     objective:'c_input_output',difficulty:i<50?'easy':i<100?'medium':'hard',
-    prompt:`C17 program: #include <stdio.h>\\nint main(void) { int x, y; if (scanf("%d %d", &x, &y) != 2) return 1; printf("%d\\\\n", ${expression}); return 0; }\\nIf the input is "${a} ${b}", what integer is printed? (Integer division truncates toward zero.)`,
+    prompt:`C17 program: #include <stdio.h>\nint main(void) { int x, y; if (scanf("%d %d", &x, &y) != 2) return 1; printf("%d\\n", ${expression}); return 0; }\nIf the input is "${a} ${b}", what integer is printed? (Integer division truncates toward zero.)`,
     choices_json:JSON.stringify(rotated),correct_index:rotated.indexOf(correct),
     answer_explanation:`scanf reads x=${a} and y=${b}; the ${kind} expression evaluates to ${expected}.`,
     review_status:'draft'
