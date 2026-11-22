@@ -20,7 +20,7 @@ public final class BrandSplashActivity extends Activity {
     private final Runnable launch=()->{
         if(launched||isFinishing())return;
         launched=true;
-        startActivity(new Intent(this,MainActivity.class));
+        startActivity(new Intent(this,AccountChoiceActivity.class));
         overridePendingTransition(android.R.anim.fade_in,android.R.anim.fade_out);
         finish();
     };
