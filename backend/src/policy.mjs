@@ -55,6 +55,18 @@ export function auditQuestionBank(bank, slots) {
     ready:validBlueprint && bank.length<=10000 && failures.length===0 &&
       coverage.every(c=>c.available>=c.required)};
 }
+// Explicit cancellations count as abandoned attempts. Reopening a live attempt
+// remains a resume, not a cancellation. Never escalate merely for network loss.
+export function difficultyAfterCancellations(cancelledAttempts) {
+  if (!Number.isSafeInteger(cancelledAttempts) || cancelledAttempts < 0)
+    throw new ApiError(503, 'invalid_cancellation_count');
+  return cancelledAttempts >= 4 ? 'hard' : cancelledAttempts >= 2 ? 'medium' : 'easy';
+}
+export function prioritizeDifficulty(slots, cancelledAttempts) {
+  const priority=difficultyAfterCancellations(cancelledAttempts);
+  const order=priority==='hard'?['hard','medium','easy']:priority==='medium'?['medium','hard','easy']:['easy','medium','hard'];
+  return [...slots].sort((a,b)=>order.indexOf(a.difficulty)-order.indexOf(b.difficulty));
+}
 export function selectQuestions(bank, slots, exposed = new Set(), choose = randomIndex) {
   if (!Array.isArray(slots) || slots.length === 0 || slots.some(s => !s || !Number.isInteger(s.count) || s.count < 1) || slots.reduce((n, s) => n + s.count, 0) !== 25)
     throw new ApiError(503, 'blueprint_requires_25_questions');
