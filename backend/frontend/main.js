@@ -40,11 +40,13 @@ async function openAttempt(attempt){
  const intro=node('p',language==='sw'?'Majibu yanahifadhiwa moja kwa moja. Ukiondoka, muda unaendelea.':'Answers save automatically. Leaving does not pause the deadline.','quiet');
  head.append(progress,clock);shell.append(head,intro,palette,box,save);workspace.append(shell);
  const timer=setInterval(tick,1000);
+ const stopClock=()=>clearInterval(timer);
+ window.addEventListener('pagehide',stopClock,{once:true});
  function tick(){
    const remaining=Math.max(0,Math.ceil(seconds-(performance.now()-arrived)/1000));
    clock.textContent=Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0');
    clock.setAttribute('aria-label',remaining+' seconds remaining');
-   if(!remaining){clearInterval(timer);box.querySelectorAll('input,button').forEach(e=>e.disabled=true);notice(language==='sw'?'Muda wa tathmini umeisha.':'Assessment time has ended.');}
+   if(!remaining){stopClock();box.querySelectorAll('input,button').forEach(e=>e.disabled=true);notice(language==='sw'?'Muda wa tathmini umeisha.':'Assessment time has ended.');}
  }
  function render(){
    box.replaceChildren();palette.replaceChildren();
@@ -81,7 +83,7 @@ async function openAttempt(attempt){
      if(!confirm((warning?warning+'\\n':'')+(language==='sw'?'Wasilisha mtihani sasa?':'Submit this attempt now?')))return;
      busy=true;submitButton.disabled=true;
      try{await pending;if(failedSaves.size)throw Error('Some answers were not saved. Retry before submitting.');
-       const result=await api('/v1/exams/attempts/'+attempt.id+'/submit','POST',{});clearInterval(timer);await openAttempt(result);
+       const result=await api('/v1/exams/attempts/'+attempt.id+'/submit','POST',{});stopClock();await openAttempt(result);
      }catch(error){busy=false;submitButton.disabled=false;showError(error);}
    },index===attempt.questions.length-1);
    nav.append(submitButton);box.append(nav);tick();
