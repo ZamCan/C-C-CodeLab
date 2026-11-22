@@ -8,8 +8,20 @@ import worker from '../src/worker.mjs';
 import {newSession,now,decode} from '../src/security.mjs';
 import {verifyCredential} from '../src/credentials.mjs';
 
+// Test-only deterministic Turnstile response. Production code still verifies tokens
+// against Cloudflare and fails closed on missing/invalid challenges.
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (input, options) => {
+ if (String(input) === 'https://challenges.cloudflare.com/turnstile/v0/siteverify') {
+   const token = new URLSearchParams(options?.body).get('response');
+   return Response.json({success: token === 'fixture-valid-turnstile-token', hostname: 'academy.example'});
+ }
+ return originalFetch(input, options);
+};
+
+
 async function fixture(){
- const DB=database(),env={DB,PUBLIC_ORIGIN:'https://academy.example',AUTH_ENABLED:'true',EXAMS_ENABLED:'true',ISSUANCE_ENABLED:'true',ISSUER_KEY_ID:'https://academy.example/#keys/test',ASSETS:{async fetch(request){const path=new URL(request.url).pathname;try{return new Response(readFileSync(new URL('../public'+path,import.meta.url)));}catch{return new Response('',{status:404});}}}};
+ const DB=database(),env={DB,PUBLIC_ORIGIN:'https://academy.example',AUTH_ENABLED:'true',EXAMS_ENABLED:'true',ISSUANCE_ENABLED:'true',TURNSTILE_SITE_KEY:'fixture-site-key',TURNSTILE_SECRET_KEY:'fixture-secret-key',TURNSTILE_ALLOWED_HOSTNAME:'academy.example',ISSUER_KEY_ID:'https://academy.example/#keys/test',ASSETS:{async fetch(request){const path=new URL(request.url).pathname;try{return new Response(readFileSync(new URL('../public'+path,import.meta.url)));}catch{return new Response('',{status:404});}}}};
  const keys=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']),publicJwk=await crypto.subtle.exportKey('jwk',keys.publicKey);env.ISSUER_PRIVATE_JWK=JSON.stringify(await crypto.subtle.exportKey('jwk',keys.privateKey));
  DB.raw.prepare('INSERT INTO issuer_keys(id,public_jwk,status,created_at) VALUES(?,?,?,?)').run(env.ISSUER_KEY_ID,JSON.stringify(publicJwk),'active',now());
  for(const [id,role,verified] of [['student','student',1],['other','student',0],['admin','admin',1]])DB.raw.prepare('INSERT INTO learners(id,account_ref,created_at,display_name,role,identity_verified) VALUES(?,?,?,?,?,?)').run(id,id,now(),'Amina Juma Mkwawa',role,verified);
@@ -20,6 +32,9 @@ async function fixture(){
  for(let i=0;i<50;i++)DB.raw.prepare('INSERT INTO questions VALUES(?,?,?,?,?,?,?,?,?,?)').run('q'+i,'c',i<26?'multiple_choice':'true_false','syntax','easy','1','Synthetic test question '+i,JSON.stringify(['Correct test option','Incorrect test option']),0,1);
  const sessions={};for(const id of ['student','other','admin'])sessions[id]=await newSession(env,id);
  async function call(path,{user='student',method='GET',body,cookie=false,headers={}}={}){
+   if (path === '/v1/exams/attempts' && method === 'POST' && body && !Object.hasOwn(body, 'turnstile_token')) {
+     body = {...body, turnstile_token: 'fixture-valid-turnstile-token'};
+   }
    const session=sessions[user];const req=new Request(env.PUBLIC_ORIGIN+path,{method,headers:{...(session?(cookie?{Cookie:'__Host-codelab='+session.token}:{Authorization:'Bearer '+session.token}):{}),...(body?{'Content-Type':'application/json'}:{}),...headers},body:body?JSON.stringify(body):undefined});
    const response=await worker.fetch(req,env);const contentType=response.headers.get('Content-Type')||'';return {response,status:response.status,data:contentType.includes('json')?await response.json():null};
  }
