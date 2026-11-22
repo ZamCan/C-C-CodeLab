@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectQuestions,assertLive,grade,publicQuestion} from '../src/policy.mjs';
+import {selectQuestions,auditQuestionBank,assertLive,grade,publicQuestion} from '../src/policy.mjs';
 import worker from '../src/worker.mjs';
 const slots=[{style:'multiple_choice',objective:'loops',difficulty:'easy',count:13},{style:'true_false',objective:'types',difficulty:'medium',count:12}];
 const bank=slots.flatMap((s,g)=>Array.from({length:30},(_,i)=>({id:`q${g}_${i}`,style:s.style,objective:s.objective,difficulty:s.difficulty,prompt:'Server-only reviewed question',choices_json:s.style==='true_false'?'["True","False"]':'["A","B"]',correct_index:0})));
@@ -63,4 +63,25 @@ test('rejects ambiguous true-false options',()=>{
   const altered=bank.map(q=>({...q}));
   altered[30]={...altered[30],choices_json:'["Yes","No"]'};
   assert.throws(()=>selectQuestions(altered,slots,new Set(),()=>0),/invalid_true_false_choices/);
+});
+
+test('bank audit reports coverage without exposing answer keys',()=>{
+  const report=auditQuestionBank(bank,slots);
+  assert.equal(report.ready,true);
+  assert.equal(report.total,60);
+  assert.deepEqual(report.invalid,[]);
+  assert.ok(report.coverage.every(c=>c.available>=c.required));
+  assert.ok(!JSON.stringify(report).includes('correct_index'));
+});
+test('bank audit identifies malformed items even when they would not be selected',()=>{
+  const altered=bank.map(q=>({...q}));
+  altered[29].choices_json='["A","a"]';
+  const report=auditQuestionBank(altered,slots);
+  assert.equal(report.ready,false);
+  assert.deepEqual(report.invalid,[{id:'q0_29',code:'invalid_question'}]);
+});
+test('bank audit refuses incomplete blueprint coverage',()=>{
+  const report=auditQuestionBank(bank.slice(0,10),slots);
+  assert.equal(report.ready,false);
+  assert.ok(report.coverage.some(c=>c.available<c.required));
 });
