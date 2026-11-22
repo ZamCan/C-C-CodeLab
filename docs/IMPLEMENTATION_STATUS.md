@@ -75,3 +75,11 @@ The current delivery ledger supersedes the initial inventory above: isolated pro
 - Google sign-in is a real Appwrite OAuth entry point, not a fabricated login result. Live project/redirect verification and two-device sync remain outstanding. Guest progress is local and is not uploaded to an account.
 - Only opt-in Google test banners are configured; production AdMob units and placements are not present. No compiler output, device result, credential, or ad result is fabricated.
 - Validation status for this checkpoint must be recorded only after `testDebugUnitTest`, `lintDebug`, and `assembleDebug` complete. Physical-device verification is still absent, so animation, IME behaviour, accessibility, and compiler execution remain unverified on hardware.
+
+## November 22, 2026 verification update
+
+- Learner-facing copy now uses `Compiler`, `Learn C/C++`, `Guided practice`, and `Progress is saved on this device`; internal terms such as `offline-first` were removed from home and boot surfaces.
+- The guided lab catalogue now contains ten code labs across C and C++, plus the mathematics catalogue. The regression test now passes.
+- GitHub Android verification and packaged compiler workflows passed for commit `733974c`.
+- ADB still reports no connected device, so installation, runtime rendering, IME behaviour, and on-device compiler execution remain unverified.
+- No previous release keystore is present in the repository or local workspace. Release signing remains intentionally blocked until the owner supplies the keystore through a secure local path and its alias/passwords through environment variables.
