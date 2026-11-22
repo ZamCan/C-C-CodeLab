@@ -18,7 +18,7 @@ export async function verifyExamChallenge(token,env,ip='',fetcher=fetch) {
   if(!response.ok)throw new ApiError(503,'exam_challenge_unavailable');
   let result;
   try{result=await response.json();}catch{throw new ApiError(503,'exam_challenge_unavailable');}
-  if(result.success!==true || (result.hostname && env.TURNSTILE_ALLOWED_HOSTNAME &&
+  if(result.success!==true || (env.TURNSTILE_ALLOWED_HOSTNAME &&
       result.hostname!==env.TURNSTILE_ALLOWED_HOSTNAME))
     throw new ApiError(403,'exam_challenge_failed');
   return true;
