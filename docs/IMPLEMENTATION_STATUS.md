@@ -62,3 +62,16 @@ The current delivery ledger supersedes the initial inventory above: isolated pro
 - `tools/release_gate.py` now fails closed when source Cloudflare flags are enabled, release signing credentials are incomplete, or physical-device evidence is absent.
 - Android release signing consumes environment-only credentials (`CODELAB_RELEASE_*`); no private key is committed.
 - The gate was executed locally and correctly blocked the current repository because no release keystore or device evidence is available.
+
+## November 22, 2026 learner-experience overhaul
+
+- Midnight is the default appearance. Light remains an explicit per-device choice; no theme is forced after the learner selects one.
+- Home is a focused welcome surface with an original native brand emblem, a working Google sign-in entry point, and a clear guest-mode advisory. Account, notifications, reminders, appearance, sound, test-advertising, references, and build status now live in the top-right overflow menu.
+- The compiler opens an empty scratch buffer by default. Writing and running do not require creating or saving a project file. Scratch text is stored locally and can be saved as a project file later.
+- The editor has line numbers, current-line highlighting, syntax colouring, brace-aware indentation, horizontal scrolling, Cut/Copy/Paste, adjustable text size, and a file/project menu. Files, new files, project switching, rename, delete, export, and compiler self-test remain available.
+- Run builds the current file plus headers (or all project sources when selected), then automatically slides the editor aside and reveals diagnostics, stdout, stderr, exit status, runtime limits, and Run again. This is an in-app animation; no device animation or compiler execution has been verified here.
+- Course reading uses a native measured page layout with coloured headings, bold note typography, inline code emphasis, a persistent Contents action, usable Back/Next controls, and an Expand dialog for complete syntax-highlighted code examples.
+- Academy labs now include nine math-into-code examples, ten code labs, and a C/C++ history timeline covering Dennis Ritchie, Bell Labs, Unix, and the 1970s. Every lab opens in the scratch compiler.
+- Google sign-in is a real Appwrite OAuth entry point, not a fabricated login result. Live project/redirect verification and two-device sync remain outstanding. Guest progress is local and is not uploaded to an account.
+- Only opt-in Google test banners are configured; production AdMob units and placements are not present. No compiler output, device result, credential, or ad result is fabricated.
+- Validation status for this checkpoint must be recorded only after `testDebugUnitTest`, `lintDebug`, and `assembleDebug` complete. Physical-device verification is still absent, so animation, IME behaviour, accessibility, and compiler execution remain unverified on hardware.

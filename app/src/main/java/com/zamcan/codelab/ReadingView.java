@@ -1,5 +1,6 @@
 package com.zamcan.codelab;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -19,7 +20,8 @@ public final class ReadingView extends LinearLayout {
     private final LinearLayout segments;
     private final Button back, next;
     private final String source;
-    private final Runnable finish;
+    private final boolean code,light;
+    private final Runnable finish,close;
     private final Position position;
     private final List<Integer> starts=new ArrayList<>();
     private int offset, measuredWidth, measuredHeight;
@@ -28,7 +30,7 @@ public final class ReadingView extends LinearLayout {
     public ReadingView(Context context, boolean light, String title, String text,
             boolean code, int savedOffset, Position position, Runnable close,
             Runnable finish, Runnable extra, String extraLabel) {
-        super(context);this.source=text;this.offset=Math.max(0,Math.min(savedOffset,Math.max(0,text.length()-1)));
+        super(context);this.source=text;this.code=code;this.light=light;this.close=close;this.offset=Math.max(0,Math.min(savedOffset,Math.max(0,text.length()-1)));
         this.position=position;this.finish=finish;
         setOrientation(VERTICAL);setBackgroundColor(light?0xfffcfcff:0xff0b1025);
         setPadding(dp(20),dp(12),dp(20),dp(12));
@@ -36,18 +38,25 @@ public final class ReadingView extends LinearLayout {
         int ink=light?0xff202536:0xfff6f7ff;
         segments=new LinearLayout(context);addView(segments,new LayoutParams(-1,dp(4)));
         LinearLayout top=new LinearLayout(context);top.setGravity(Gravity.CENTER_VERTICAL);addView(top);
-        Button exit=button("Contents",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
+        Button exit=button("‹  Contents",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
         rail=new TextView(context);rail.setTextColor(light?0xff425ff5:0xff91b7ff);rail.setTextSize(14);rail.setGravity(Gravity.END);
         top.addView(rail,new LayoutParams(0,-2,1));
         heading=new TextView(context);heading.setText(title);heading.setTextColor(ink);heading.setTextSize(22);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(12),0,dp(12));addView(heading);
+        if(code){
+            LinearLayout codeBar=new LinearLayout(context);codeBar.setGravity(Gravity.CENTER_VERTICAL);codeBar.setPadding(dp(12),0,0,0);
+            TextView label=new TextView(context);label.setText("CODE EXAMPLE");label.setTextSize(11);label.setLetterSpacing(.12f);label.setTextColor(light?0xff087a68:0xff8ee7c8);codeBar.addView(label,new LayoutParams(0,-2,1));
+            Button expand=button("Expand",false,light);expand.setOnClickListener(v->showCode());codeBar.addView(expand,new LayoutParams(dp(104),dp(40)));addView(codeBar);
+        }
         body=new TextView(context);body.setTextColor(ink);body.setTextSize(16);body.setTextIsSelectable(true);body.setGravity(Gravity.TOP);body.setIncludeFontPadding(false);body.setLineSpacing(dp(4),1);
+        body.setPadding(dp(16),dp(14),dp(16),dp(14));
+        GradientDrawable paper=new GradientDrawable();paper.setCornerRadius(dp(18));paper.setColor(light?0xffffffff:0xff13203a);paper.setStroke(dp(1),light?0x1a1d3a6b:0x2e9ab4e8);body.setBackground(paper);
         if(code){body.setTypeface(Typeface.MONOSPACE);body.setTextDirection(TEXT_DIRECTION_LTR);}
         addView(body,new LayoutParams(-1,0,1));
         if(extra!=null){Button more=button(extraLabel,false,light);more.setOnClickListener(v->extra.run());addView(more,new LayoutParams(-1,dp(48)));}
         LinearLayout controls=new LinearLayout(context);controls.setPadding(0,dp(12),0,0);addView(controls);
         back=button("Back",false,light);next=button("Next",true,light);
         LayoutParams previousParams=new LayoutParams(0,dp(52),1);previousParams.setMarginEnd(dp(8));controls.addView(back,previousParams);controls.addView(next,new LayoutParams(0,dp(52),2));
-        back.setOnClickListener(v->{int page=current();if(page>0){offset=starts.get(page-1);showPage();}});
+        back.setOnClickListener(v->{int page=current();if(page>0){offset=starts.get(page-1);showPage();}else close.run();});
         next.setOnClickListener(v->{int page=current();if(page+1<starts.size()){offset=starts.get(page+1);showPage();}else finish.run();});
     }
     private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
@@ -59,14 +68,15 @@ public final class ReadingView extends LinearLayout {
     }
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom){
         super.onLayout(changed,left,top,right,bottom);
-        int width=body.getWidth(),height=body.getHeight();
+        int width=Math.max(1,body.getWidth()-body.getPaddingLeft()-body.getPaddingRight());
+        int height=Math.max(1,body.getHeight()-body.getPaddingTop()-body.getPaddingBottom());
         if(layingOut||width<=0||height<=0||(width==measuredWidth&&height==measuredHeight))return;
         layingOut=true;measuredWidth=width;measuredHeight=height;paginate(width,height);showPage();layingOut=false;
     }
     private void paginate(int width,int height){
         starts.clear();starts.add(0);int start=0;
         while(start<source.length()){
-            String remaining=source.substring(start);
+            CharSequence remaining=RichText.format(source.substring(start),light,code);
             StaticLayout layout=StaticLayout.Builder.obtain(remaining,0,remaining.length(),body.getPaint(),width)
                 .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).setLineSpacing(dp(4),1).build();
             if(layout.getHeight()<=height)break;
@@ -87,8 +97,14 @@ public final class ReadingView extends LinearLayout {
         if(starts.isEmpty())return;
         int page=current();offset=starts.get(page);int end=page+1<starts.size()?starts.get(page+1):source.length();
         segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<page?0xff29b982:i==page?0xff6670ed:(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?0xff36405b:0xffdce0ed);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
-        body.setText(source.substring(offset,end));rail.setText("Page "+(page+1)+" / "+starts.size());
-        back.setEnabled(page>0);back.setAlpha(page>0?1f:.4f);next.setText(page+1==starts.size()?"Finish":"Next");
+        body.setText(RichText.format(source.substring(offset,end),light,code));rail.setText("Page "+(page+1)+" / "+starts.size());
+        back.setText(page==0?"‹  Contents":"‹  Back");next.setText("Next");
         position.save(offset);body.announceForAccessibility("Page "+(page+1)+" of "+starts.size());
+    }
+    private void showCode(){
+        TextView view=new TextView(getContext());view.setText(RichText.format(source,light,true));view.setTextSize(14);view.setTypeface(Typeface.MONOSPACE);view.setTextIsSelectable(true);
+        view.setTextColor(light?0xff172440:0xfff6f7ff);view.setPadding(dp(16),dp(12),dp(16),dp(12));
+        ScrollView scroll=new ScrollView(getContext());scroll.addView(view);
+        new AlertDialog.Builder(getContext()).setTitle("Code example").setView(scroll).setPositiveButton("Close",null).show();
     }
 }
