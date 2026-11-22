@@ -27,12 +27,66 @@ async function dashboard(){reset();if(!user){heading(t('welcome'),t('passkey'));
  gridSection(t('attempts'),data.attempts,attempt=>{const c=node('article',undefined,'card');c.append(node('h3',attempt.course_id),node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')));if(attempt.status==='active')c.append(button(t('resume'),async()=>openAttempt(await api('/v1/exams/attempts/'+attempt.id)),true));if(attempt.passed)c.append(button(t('requestCertificate'),()=>nameForm(true,async names=>{await api('/v1/credentials/issue','POST',{attempt_id:attempt.id,official_names:names,name_confirmed:true});await dashboard();})));return c;},t('emptyAttempts'));
  if(['admin','examiner'].includes(user.role))workspace.append(button(t('admin'),admin));
 }
-async function openAttempt(attempt){reset();heading(t('courses'),attempt.course_id);if(attempt.status!=='active'){workspace.append(node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')),button(t('dashboard'),dashboard));return;}
- let index=0,pending=Promise.resolve(),failedSaves=new Set();const arrived=performance.now(),seconds=attempt.deadline_at-attempt.server_time;
- const clock=node('p','','timer'),box=node('article',undefined,'card question'),save=node('p','','quiet');workspace.append(clock,box,save);
- function tick(){const remaining=Math.max(0,Math.ceil(seconds-(performance.now()-arrived)/1000));clock.textContent=Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0');if(!remaining){clearInterval(timer);box.querySelectorAll('input,button').forEach(e=>e.disabled=true);notice(language==='sw'?'Muda wa tathmini umeisha.':'Assessment time has ended.');}}
- timer=setInterval(tick,1000);tick();
- function render(){box.replaceChildren();const q=attempt.questions[index];box.append(node('p',(index+1)+' / '+attempt.questions.length,'eyebrow'),node('h3',q.prompt));const choices=node('div',undefined,'choices');q.choices.forEach((choice,i)=>{const label=node('label'),radio=node('input');radio.type='radio';radio.name='answer';radio.checked=attempt.answers[q.id]===i;radio.addEventListener('change',()=>{attempt.answers[q.id]=i;save.textContent=t('saving');pending=pending.catch(()=>{}).then(()=>api('/v1/exams/attempts/'+attempt.id+'/answers/'+q.id,'PUT',{answer:i})).then(()=>{failedSaves.delete(q.id);save.textContent=t('saved');}).catch(error=>{failedSaves.add(q.id);save.textContent=t('error');showError(error);});});label.append(radio,node('span',choice));choices.append(label);});box.append(choices);const nav=node('div',undefined,'exam-nav');const back=button(t('back'),()=>{index--;render();});back.disabled=index===0;nav.append(back);if(index+1<attempt.questions.length)nav.append(button(t('next'),()=>{index++;render();},true));else nav.append(button(t('submit'),async()=>{await pending;if(failedSaves.size)throw Error('Unsaved answers');const result=await api('/v1/exams/attempts/'+attempt.id+'/submit','POST',{});await openAttempt(result);},true));box.append(nav);tick();}render();
+async function openAttempt(attempt){
+ reset();heading(t('courses'),attempt.course_id);
+ if(attempt.status!=='active'){
+   workspace.append(node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')),button(t('dashboard'),dashboard));return;
+ }
+ let index=0,pending=Promise.resolve(),failedSaves=new Set(),busy=false;
+ const arrived=performance.now(),seconds=attempt.deadline_at-attempt.server_time;
+ const shell=node('section',undefined,'exam-shell'),head=node('div',undefined,'exam-top'),
+       clock=node('p','','timer'),progress=node('p','','quiet'),box=node('article',undefined,'card question'),
+       save=node('p','','quiet'),palette=node('div',undefined,'exam-palette');
+ const intro=node('p',language==='sw'?'Majibu yanahifadhiwa moja kwa moja. Ukiondoka, muda unaendelea.':'Answers save automatically. Leaving does not pause the deadline.','quiet');
+ head.append(progress,clock);shell.append(head,intro,palette,box,save);workspace.append(shell);
+ const timer=setInterval(tick,1000);
+ function tick(){
+   const remaining=Math.max(0,Math.ceil(seconds-(performance.now()-arrived)/1000));
+   clock.textContent=Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0');
+   clock.setAttribute('aria-label',remaining+' seconds remaining');
+   if(!remaining){clearInterval(timer);box.querySelectorAll('input,button').forEach(e=>e.disabled=true);notice(language==='sw'?'Muda wa tathmini umeisha.':'Assessment time has ended.');}
+ }
+ function render(){
+   box.replaceChildren();palette.replaceChildren();
+   const answered=Object.keys(attempt.answers||{}).filter(k=>Number.isInteger(attempt.answers[k])).length;
+   progress.textContent=(language==='sw'?'Yaliyojibiwa ':'Answered ')+answered+' / '+attempt.questions.length;
+   attempt.questions.forEach((q,i)=>{
+     const label=(i+1)+(Number.isInteger(attempt.answers[q.id])?' ✓':'');
+     const jump=button(label,()=>{index=i;render();},i===index);
+     jump.setAttribute('aria-label','Question '+(i+1)+(Number.isInteger(attempt.answers[q.id])?', answered':''));
+     jump.setAttribute('aria-current',i===index?'step':'false');
+     palette.append(jump);
+   });
+   const q=attempt.questions[index];
+   box.append(node('p',(index+1)+' / '+attempt.questions.length+' · '+q.style.replaceAll('_',' '),'eyebrow'),node('h3',q.prompt));
+   const choices=node('div',undefined,'choices');
+   q.choices.forEach((choice,i)=>{
+     const label=node('label'),radio=node('input');radio.type='radio';radio.name='answer';radio.checked=attempt.answers[q.id]===i;
+     radio.addEventListener('change',()=>{
+       attempt.answers[q.id]=i;save.textContent=t('saving');
+       pending=pending.catch(()=>{}).then(()=>api('/v1/exams/attempts/'+attempt.id+'/answers/'+q.id,'PUT',{answer:i}))
+         .then(()=>{failedSaves.delete(q.id);save.textContent=t('saved');render();})
+         .catch(error=>{failedSaves.add(q.id);save.textContent=t('error');showError(error);});
+     });
+     label.append(radio,node('span',choice));choices.append(label);
+   });
+   box.append(choices);
+   const nav=node('div',undefined,'exam-nav');
+   const back=button(t('back'),()=>{index--;render();});back.disabled=index===0;nav.append(back);
+   if(index+1<attempt.questions.length)nav.append(button(t('next'),()=>{index++;render();},true));
+   const submitButton=button(t('submit'),async()=>{
+     if(busy)return;
+     const missing=attempt.questions.length-Object.keys(attempt.answers).filter(k=>Number.isInteger(attempt.answers[k])).length;
+     const warning=missing?(language==='sw'?missing+' maswali hayajajibiwa.':'You have '+missing+' unanswered questions.'):'';
+     if(!confirm((warning?warning+'\\n':'')+(language==='sw'?'Wasilisha mtihani sasa?':'Submit this attempt now?')))return;
+     busy=true;submitButton.disabled=true;
+     try{await pending;if(failedSaves.size)throw Error('Some answers were not saved. Retry before submitting.');
+       const result=await api('/v1/exams/attempts/'+attempt.id+'/submit','POST',{});clearInterval(timer);await openAttempt(result);
+     }catch(error){busy=false;submitButton.disabled=false;showError(error);}
+   },index===attempt.questions.length-1);
+   nav.append(submitButton);box.append(nav);tick();
+ }
+ tick();render();
 }
 async function verify(id=''){reset();heading(t('verify'));const form=node('form',undefined,'card'),label=node('label',t('credentialId')),input=node('input');input.value=id;input.required=true;input.maxLength=36;label.append(input);const go=node('button',t('check'),'primary');go.type='submit';const result=node('div');form.append(label,go,result);workspace.append(form);form.addEventListener('submit',async event=>{event.preventDefault();result.replaceChildren();try{const value=await api('/v1/credentials/'+encodeURIComponent(input.value.trim())+'/status');result.append(node('p',t(value.state),'verify-state '+value.state));if(value.course)result.append(node('p',value.course),node('p',value.issued_at));}catch(error){result.append(node('p',error.status===404?t('invalid'):t('unknown'),'verify-state invalid'));}});if(id)form.requestSubmit();
  const fileLabel=node('label',t('checkFile')),file=node('input');file.type='file';file.accept='.jwt,.json,application/vc+jwt';fileLabel.append(file);form.append(fileLabel);file.addEventListener('change',async()=>{try{if(!file.files[0]||file.files[0].size>32768)throw Error('Invalid file');const keys=await api('/.well-known/zamcan-issuer-keys.json'),token=(await file.files[0].text()).trim();const checked=await verifyCredential(token,async kid=>{const key=keys.keys.find(k=>k.kid===kid);return key?{status:key.status,jwk:key}:null;},location.origin);input.value=checked.payload.id.split('/').pop();result.replaceChildren(node('p',language==='sw'?'Saini imethibitishwa. Inahakiki hali…':'Signature verified. Checking current status…'));form.requestSubmit();}catch{result.replaceChildren(node('p',t('invalid'),'verify-state invalid'));}});
