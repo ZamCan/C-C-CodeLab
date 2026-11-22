@@ -382,8 +382,21 @@ public final class MainActivity extends Activity {
         row(content,"◉","Notifications"+(NotificationInbox.unread(this)>0?" ("+NotificationInbox.unread(this)+")":""),"Your learning updates and reminders",true,this::notificationInbox);
         destination("Compiler","Write, compile and run C or C++","▶",this::studio);
         destination("Learn C/C++","Guided lessons, practice and projects","◈",this::academy);
+        row(content,"▧","Sample certificate","Watermarked preview only • not a valid award",true,this::sampleCertificate);
         row(content,"§","Academic references","Standards, trusted reading and attribution",true,this::academicReferences);
         row(content,"⋮","Settings & about","Appearance, privacy and build status",true,()->new AlertDialog.Builder(this).setTitle("Settings").setItems(new String[]{"Appearance","Sound & motion","Test advertising","About"},(d,w)->{if(w==0)appearance();else if(w==1)feedbackSettings();else if(w==2)advertisingSettings();else status();}).show());
+    }
+    /** In-app illustration only. Never exports or shares a sample as an issued credential. */
+    private void sampleCertificate() {
+        shell("sample_certificate","CERTIFICATE PREVIEW","Sample certificate","Illustration only — not an academic credential");
+        LinearLayout panel=panel(false);
+        title(panel,"CERTIFICATE OF COMPLETION",22);
+        body(panel,"SAMPLE  •  NOT VALID  •  SAMPLE  •  NOT VALID");
+        title(panel,"Example Learner",24);
+        body(panel,"For a demonstration of learning C and C++ with CodeLab.");
+        body(panel,"SAMPLE CERTIFICATE — NOT ISSUED");
+        body(panel,"SAMPLE  •  VOID  •  SAMPLE  •  VOID");
+        body(panel,"No certificate ID, verification code, QR code, signature, download or share option is provided. Screenshots of this sample are not valid credentials.");
     }
     /** One of the two primary home destinations: a large, quiet, native surface. */
     private void destination(String heading,String subtitle,String glyph,Runnable open) {
