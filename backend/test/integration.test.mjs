@@ -29,7 +29,7 @@ async function fixture(){
  DB.raw.prepare('INSERT INTO eligibility VALUES(?,?,?,?)').run('student','c',now(),'reviewed-evidence');
  const slots=[{style:'multiple_choice',objective:'syntax',difficulty:'easy',count:13},{style:'true_false',objective:'syntax',difficulty:'easy',count:12}];
  DB.raw.prepare('INSERT INTO blueprints VALUES(?,?,?,?,?,?,?,?)').run('blueprint','c','1',JSON.stringify(slots),900,70,60,1);
- for(let i=0;i<50;i++)DB.raw.prepare('INSERT INTO questions VALUES(?,?,?,?,?,?,?,?,?,?)').run('q'+i,'c',i<26?'multiple_choice':'true_false','syntax','easy','1','Synthetic test question '+i,JSON.stringify(['Correct test option','Incorrect test option']),0,1);
+ for(let i=0;i<50;i++)DB.raw.prepare('INSERT INTO questions VALUES(?,?,?,?,?,?,?,?,?,?)').run('q'+i,'c',i<26?'multiple_choice':'true_false','syntax','easy','1','Synthetic test question '+i,JSON.stringify(i<26?['Correct test option','Incorrect test option']:['True','False']),0,1);
  const sessions={};for(const id of ['student','other','admin'])sessions[id]=await newSession(env,id);
  async function call(path,{user='student',method='GET',body,cookie=false,headers={}}={}){
    if (path === '/v1/exams/attempts' && method === 'POST' && body && !Object.hasOwn(body, 'turnstile_token')) {
