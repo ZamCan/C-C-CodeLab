@@ -26,8 +26,7 @@ export function selectQuestions(bank, slots, exposed = new Set(), choose = rando
       if (seen.has(question.id)) throw new ApiError(503, 'duplicate_question_id');
       if (!/^[A-Za-z0-9_-]{1,100}$/.test(question.id)) throw new ApiError(503, 'invalid_question_id');
       // Reject malformed or ambiguous production items before an attempt is created.
-      if (question.course_id == null || typeof question.course_id !== 'string' ||
-          typeof question.prompt !== 'string' || question.prompt.trim().length < 12 ||
+      if (typeof question.prompt !== 'string' || question.prompt.trim().length < 12 ||
           question.prompt.length > 8000 || question.prompt !== question.prompt.trim())
         throw new ApiError(503, 'invalid_question_prompt');
       let choices;
