@@ -1,7 +1,7 @@
 import {ApiError} from './policy.mjs';
 // Cloudflare Turnstile: verify every new examination start at the Worker.
 // Tokens are single-use; never trust a client-provided verification flag.
-export async function verifyExamChallenge(token,env,ip='',fetcher=fetch) {
+export async function verifyExamChallenge(token,env,ip='',fetcher=globalThis.fetch) {
   if(!env.TURNSTILE_SECRET_KEY || !env.TURNSTILE_SITE_KEY)
     throw new ApiError(503,'exam_challenge_not_configured');
   if(typeof token!=='string' || token.length<10 || token.length>2048)
