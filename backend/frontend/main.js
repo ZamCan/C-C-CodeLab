@@ -22,17 +22,73 @@ async function authenticate(register){const buttons=$('auth-form').querySelector
 function heading(title,description){const h=node('div',undefined,'section-heading'),block=node('div');block.append(node('h2',title));if(description)block.append(node('p',description));h.append(block);workspace.append(h);return h;}
 function gridSection(title,items,render,empty){workspace.append(node('h2',title));const grid=node('div',undefined,'grid');if(!items.length)grid.append(node('p',empty,'empty'));for(const item of items)grid.append(render(item));workspace.append(grid);}
 async function dashboard(){reset();if(!user){heading(t('welcome'),t('passkey'));workspace.append(button(t('signin'),signIn,true));return;}heading(user.name,user.identity_verified?user.id:t('pendingIdentity'));const data=await api('/v1/dashboard');
- gridSection(t('courses'),data.courses,course=>{const c=node('article',undefined,'card');c.append(node('span',course.eligible?t('eligible'):t('pending'),'badge'),node('h3',language==='sw'?course.title_sw:course.title_en),node('p',course.version));const b=button(t('begin'),()=>nameForm(false,async names=>openAttempt(await api('/v1/exams/attempts','POST',{course_id:course.id,official_names:names,name_attested:true}))),true);b.disabled=!course.eligible||!course.duration_seconds||!data.exams_enabled;c.append(b);return c;},t('emptyCourses'));
+ gridSection(t('courses'),data.courses,course=>{const c=node('article',undefined,'card');c.append(node('span',course.eligible?t('eligible'):t('pending'),'badge'),node('h3',language==='sw'?course.title_sw:course.title_en),node('p',course.version));const b=button(t('begin'),()=>nameForm(false,async (names,turnstile_token)=>openAttempt(await api('/v1/exams/attempts','POST',{course_id:course.id,official_names:names,name_attested:true,turnstile_token}))),true);b.disabled=!course.eligible||!course.duration_seconds||!data.exams_enabled;c.append(b);return c;},t('emptyCourses'));
  gridSection(t('certificates'),data.certificates,cert=>{const c=node('article',undefined,'card');c.append(node('span',t(cert.status),'badge '+cert.status),node('h3',cert.course_id),node('p',cert.id));for(const [label,suffix] of [['download','pdf'],['signed','download']])c.append(button(t(label),()=>{location.href='/v1/credentials/'+encodeURIComponent(cert.id)+'/'+suffix;}));c.append(button(t('verify'),()=>verify(cert.id)));return c;},t('emptyCertificates'));
  gridSection(t('attempts'),data.attempts,attempt=>{const c=node('article',undefined,'card');c.append(node('h3',attempt.course_id),node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')));if(attempt.status==='active')c.append(button(t('resume'),async()=>openAttempt(await api('/v1/exams/attempts/'+attempt.id)),true));if(attempt.passed)c.append(button(t('requestCertificate'),()=>nameForm(true,async names=>{await api('/v1/credentials/issue','POST',{attempt_id:attempt.id,official_names:names,name_confirmed:true});await dashboard();})));return c;},t('emptyAttempts'));
  if(['admin','examiner'].includes(user.role))workspace.append(button(t('admin'),admin));
 }
-async function openAttempt(attempt){reset();heading(t('courses'),attempt.course_id);if(attempt.status!=='active'){workspace.append(node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')),button(t('dashboard'),dashboard));return;}
- let index=0,pending=Promise.resolve(),failedSaves=new Set();const arrived=performance.now(),seconds=attempt.deadline_at-attempt.server_time;
- const clock=node('p','','timer'),box=node('article',undefined,'card question'),save=node('p','','quiet');workspace.append(clock,box,save);
- function tick(){const remaining=Math.max(0,Math.ceil(seconds-(performance.now()-arrived)/1000));clock.textContent=Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0');if(!remaining){clearInterval(timer);box.querySelectorAll('input,button').forEach(e=>e.disabled=true);notice(language==='sw'?'Muda wa tathmini umeisha.':'Assessment time has ended.');}}
- timer=setInterval(tick,1000);tick();
- function render(){box.replaceChildren();const q=attempt.questions[index];box.append(node('p',(index+1)+' / '+attempt.questions.length,'eyebrow'),node('h3',q.prompt));const choices=node('div',undefined,'choices');q.choices.forEach((choice,i)=>{const label=node('label'),radio=node('input');radio.type='radio';radio.name='answer';radio.checked=attempt.answers[q.id]===i;radio.addEventListener('change',()=>{attempt.answers[q.id]=i;save.textContent=t('saving');pending=pending.catch(()=>{}).then(()=>api('/v1/exams/attempts/'+attempt.id+'/answers/'+q.id,'PUT',{answer:i})).then(()=>{failedSaves.delete(q.id);save.textContent=t('saved');}).catch(error=>{failedSaves.add(q.id);save.textContent=t('error');showError(error);});});label.append(radio,node('span',choice));choices.append(label);});box.append(choices);const nav=node('div',undefined,'exam-nav');const back=button(t('back'),()=>{index--;render();});back.disabled=index===0;nav.append(back);if(index+1<attempt.questions.length)nav.append(button(t('next'),()=>{index++;render();},true));else nav.append(button(t('submit'),async()=>{await pending;if(failedSaves.size)throw Error('Unsaved answers');const result=await api('/v1/exams/attempts/'+attempt.id+'/submit','POST',{});await openAttempt(result);},true));box.append(nav);tick();}render();
+async function openAttempt(attempt){
+ reset();heading(t('courses'),attempt.course_id);
+ if(attempt.status!=='active'){
+   workspace.append(node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')),button(t('dashboard'),dashboard));return;
+ }
+ let index=0,pending=Promise.resolve(),failedSaves=new Set(),busy=false;
+ const arrived=performance.now(),seconds=attempt.deadline_at-attempt.server_time;
+ const shell=node('section',undefined,'exam-shell'),head=node('div',undefined,'exam-top'),
+       clock=node('p','','timer'),progress=node('p','','quiet'),box=node('article',undefined,'card question'),
+       save=node('p','','quiet'),palette=node('div',undefined,'exam-palette');
+ const intro=node('p',language==='sw'?'Majibu yanahifadhiwa moja kwa moja. Ukiondoka, muda unaendelea.':'Answers save automatically. Leaving does not pause the deadline.','quiet');
+ head.append(progress,clock);shell.append(head,intro,palette,box,save);workspace.append(shell);
+ const timer=setInterval(tick,1000);
+ const stopClock=()=>clearInterval(timer);
+ window.addEventListener('pagehide',stopClock,{once:true});
+ function tick(){
+   const remaining=Math.max(0,Math.ceil(seconds-(performance.now()-arrived)/1000));
+   clock.textContent=Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0');
+   clock.setAttribute('aria-label',remaining+' seconds remaining');
+   if(!remaining){stopClock();box.querySelectorAll('input,button').forEach(e=>e.disabled=true);notice(language==='sw'?'Muda wa tathmini umeisha.':'Assessment time has ended.');}
+ }
+ function render(){
+   box.replaceChildren();palette.replaceChildren();
+   const answered=Object.keys(attempt.answers||{}).filter(k=>Number.isInteger(attempt.answers[k])).length;
+   progress.textContent=(language==='sw'?'Yaliyojibiwa ':'Answered ')+answered+' / '+attempt.questions.length;
+   attempt.questions.forEach((q,i)=>{
+     const label=(i+1)+(Number.isInteger(attempt.answers[q.id])?' ✓':'');
+     const jump=button(label,()=>{index=i;render();},i===index);
+     jump.setAttribute('aria-label','Question '+(i+1)+(Number.isInteger(attempt.answers[q.id])?', answered':''));
+     jump.setAttribute('aria-current',i===index?'step':'false');
+     palette.append(jump);
+   });
+   const q=attempt.questions[index];
+   box.append(node('p',(index+1)+' / '+attempt.questions.length+' · '+q.style.replaceAll('_',' '),'eyebrow'),node('h3',q.prompt));
+   const choices=node('div',undefined,'choices');
+   q.choices.forEach((choice,i)=>{
+     const label=node('label'),radio=node('input');radio.type='radio';radio.name='answer';radio.checked=attempt.answers[q.id]===i;
+     radio.addEventListener('change',()=>{
+       attempt.answers[q.id]=i;save.textContent=t('saving');
+       pending=pending.catch(()=>{}).then(()=>api('/v1/exams/attempts/'+attempt.id+'/answers/'+q.id,'PUT',{answer:i}))
+         .then(()=>{failedSaves.delete(q.id);save.textContent=t('saved');render();})
+         .catch(error=>{failedSaves.add(q.id);save.textContent=t('error');showError(error);});
+     });
+     label.append(radio,node('span',choice));choices.append(label);
+   });
+   box.append(choices);
+   const nav=node('div',undefined,'exam-nav');
+   const back=button(t('back'),()=>{index--;render();});back.disabled=index===0;nav.append(back);
+   if(index+1<attempt.questions.length)nav.append(button(t('next'),()=>{index++;render();},true));
+   const submitButton=button(t('submit'),async()=>{
+     if(busy)return;
+     const missing=attempt.questions.length-Object.keys(attempt.answers).filter(k=>Number.isInteger(attempt.answers[k])).length;
+     const warning=missing?(language==='sw'?missing+' maswali hayajajibiwa.':'You have '+missing+' unanswered questions.'):'';
+     if(!confirm((warning?warning+'\\n':'')+(language==='sw'?'Wasilisha mtihani sasa?':'Submit this attempt now?')))return;
+     busy=true;submitButton.disabled=true;
+     try{await pending;if(failedSaves.size)throw Error('Some answers were not saved. Retry before submitting.');
+       const result=await api('/v1/exams/attempts/'+attempt.id+'/submit','POST',{});stopClock();await openAttempt(result);
+     }catch(error){busy=false;submitButton.disabled=false;showError(error);}
+   },index===attempt.questions.length-1);
+   nav.append(submitButton);box.append(nav);tick();
+ }
+ tick();render();
 }
 async function verify(id=''){reset();heading(t('verify'));const form=node('form',undefined,'card'),label=node('label',t('credentialId')),input=node('input');input.value=id;input.required=true;input.maxLength=36;label.append(input);const go=node('button',t('check'),'primary');go.type='submit';const result=node('div');form.append(label,go,result);workspace.append(form);form.addEventListener('submit',async event=>{event.preventDefault();result.replaceChildren();try{const value=await api('/v1/credentials/'+encodeURIComponent(input.value.trim())+'/status');result.append(node('p',t(value.state),'verify-state '+value.state));if(value.course)result.append(node('p',value.course),node('p',value.issued_at));}catch(error){result.append(node('p',error.status===404?t('invalid'):t('unknown'),'verify-state invalid'));}});if(id)form.requestSubmit();
  const fileLabel=node('label',t('checkFile')),file=node('input');file.type='file';file.accept='.jwt,.json,application/vc+jwt';fileLabel.append(file);form.append(fileLabel);file.addEventListener('change',async()=>{try{if(!file.files[0]||file.files[0].size>32768)throw Error('Invalid file');const keys=await api('/.well-known/zamcan-issuer-keys.json'),token=(await file.files[0].text()).trim();const checked=await verifyCredential(token,async kid=>{const key=keys.keys.find(k=>k.kid===kid);return key?{status:key.status,jwk:key}:null;},location.origin);input.value=checked.payload.id.split('/').pop();result.replaceChildren(node('p',language==='sw'?'Saini imethibitishwa. Inahakiki hali…':'Signature verified. Checking current status…'));form.requestSubmit();}catch{result.replaceChildren(node('p',t('invalid'),'verify-state invalid'));}});
@@ -48,5 +104,30 @@ function nameForm(confirm,proceed){
  for(const labelText of (language==='sw'?['Jina la kwanza','Jina la pili','Jina la tatu']:['First name','Second name','Third name'])){const label=node('label',labelText),input=node('input');input.required=true;input.maxLength=60;input.autocomplete='off';label.append(input);form.append(label);inputs.push(input);}
  const label=node('label'),check=node('input');check.type='checkbox';check.required=true;label.append(check,node('span',language==='sw'?'Ninathibitisha majina haya ni sahihi.':'I confirm these official names are correct.'));form.append(label);
  if(confirm)form.append(node('p',language==='sw'?'Majina haya yatachapishwa kwenye cheti chako.':'These names will be printed on your certificate. Corrections require an identity review.'));
- const submit=node('button',confirm?t('requestCertificate'):t('begin'),'primary');submit.type='submit';form.append(submit,button(t('back'),dashboard));form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{await proceed(inputs.map(i=>i.value.trim()));}catch(error){showError(error);}finally{submit.disabled=false;}};workspace.append(form);
+ let challengeToken='',challengeWidget=null,challengeReady=confirm;
+ if(!confirm){
+   const challenge=node('div',undefined,'exam-challenge');
+   challenge.append(node('p',language==='sw'?'Thibitisha kuwa wewe si roboti kabla ya kuanza.':'Complete the security check before the exam starts.','quiet'));
+   form.append(challenge);
+   (async()=>{
+     try{
+       const config=await api('/v1/exams/challenge-config');
+       if(!config.ready||!config.sitekey)throw Error('Exam security check is not configured.');
+       if(!window.turnstile){
+         await new Promise((resolve,reject)=>{
+           const script=document.createElement('script');
+           script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+           script.async=true;script.defer=true;script.onload=resolve;script.onerror=reject;document.head.append(script);
+         });
+       }
+       challengeWidget=window.turnstile.render(challenge,{
+         sitekey:config.sitekey,theme:'auto',
+         callback:token=>{challengeToken=token;challengeReady=true;},
+         'expired-callback':()=>{challengeToken='';challengeReady=false;},
+         'error-callback':()=>{challengeToken='';challengeReady=false;}
+       });
+     }catch(error){challenge.append(node('p',error.message||'Security check unavailable.','quiet'));}
+   })();
+ }
+ const submit=node('button',confirm?t('requestCertificate'):t('begin'),'primary');submit.type='submit';form.append(submit,button(t('back'),dashboard));form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{if(!challengeReady)throw Error('Complete the security check first.');await proceed(inputs.map(i=>i.value.trim()),challengeToken);}catch(error){showError(error);if(!confirm&&challengeWidget!==null&&window.turnstile){challengeToken='';challengeReady=false;window.turnstile.reset(challengeWidget);}}finally{submit.disabled=false;}};workspace.append(form);
 }

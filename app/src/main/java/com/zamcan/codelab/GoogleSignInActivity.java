@@ -1,6 +1,7 @@
 package com.zamcan.codelab;
 
 import android.os.Bundle;
+import android.content.Intent;
 import android.widget.Toast;
 import androidx.activity.ComponentActivity;
 import io.appwrite.coroutines.CoroutineCallback;
@@ -15,8 +16,12 @@ public final class GoogleSignInActivity extends ComponentActivity {
             this, OAuthProvider.GOOGLE, null, null, null,
             new CoroutineCallback<>((result,error)->{
                 runOnUiThread(()->{
-                    if(error!=null)
+                    if(error!=null){
                         Toast.makeText(this,"Google sign-in failed: "+error.getMessage(),Toast.LENGTH_LONG).show();
+                    }else{
+                        getSharedPreferences(AccountChoiceActivity.PREF,MODE_PRIVATE).edit().putBoolean(AccountChoiceActivity.CHOICE,true).apply();
+                        startActivity(new Intent(this,MainActivity.class));
+                    }
                     finish();
                 });
             })

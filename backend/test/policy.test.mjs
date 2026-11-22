@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectQuestions,assertLive,grade,publicQuestion} from '../src/policy.mjs';
+import {selectQuestions,auditQuestionBank,difficultyAfterCancellations,prioritizeDifficulty,assertLive,grade,publicQuestion} from '../src/policy.mjs';
 import worker from '../src/worker.mjs';
 const slots=[{style:'multiple_choice',objective:'loops',difficulty:'easy',count:13},{style:'true_false',objective:'types',difficulty:'medium',count:12}];
-const bank=slots.flatMap((s,g)=>Array.from({length:30},(_,i)=>({id:`q${g}_${i}`,style:s.style,objective:s.objective,difficulty:s.difficulty,prompt:'Server-only reviewed question',choices_json:'["A","B"]',correct_index:0})));
+const bank=slots.flatMap((s,g)=>Array.from({length:30},(_,i)=>({id:`q${g}_${i}`,style:s.style,objective:s.objective,difficulty:s.difficulty,prompt:'Server-only reviewed question',choices_json:s.style==='true_false'?'["True","False"]':'["A","B"]',correct_index:0})));
 test('selects 25 unique fresh questions with the required coverage',()=>{const selected=selectQuestions(bank,slots,new Set(['q0_0']),()=>0);assert.equal(selected.length,25);assert.equal(new Set(selected.map(q=>q.id)).size,25);assert.ok(!selected.some(q=>q.id==='q0_0'));assert.equal(selected.filter(q=>q.style==='multiple_choice').length,13);});
 test('fails closed when freshness cannot be met',()=>assert.throws(()=>selectQuestions(bank.slice(0,10),slots),/insufficient_fresh_questions/));
 test('never sends answer keys to the learner',()=>{const question=publicQuestion(bank[0]);assert.deepEqual(Object.keys(question).sort(),['choices','id','prompt','style']);});
@@ -47,4 +47,51 @@ test('question bank rejects duplicate identifiers even when different styles are
 test('question bank rejects unsafe identifiers',()=>{
   const malformed=[...bank,{...bank[0],id:'../../secret'}];
   assert.throws(()=>selectQuestions(malformed,slots),/invalid_question_bank/);
+});
+
+test('rejects duplicate normalized choices before exam selection',()=>{
+  const altered=bank.map(q=>({...q}));
+  altered[0]={...altered[0],choices_json:'["Correct","correct"]'};
+  assert.throws(()=>selectQuestions(altered,slots,new Set(),()=>0),/invalid_question/);
+});
+test('rejects malformed choice JSON without leaking an internal parser error',()=>{
+  const altered=bank.map(q=>({...q}));
+  altered[0]={...altered[0],choices_json:'not json'};
+  assert.throws(()=>selectQuestions(altered,slots,new Set(),()=>0),/invalid_question_choices/);
+});
+test('rejects ambiguous true-false options',()=>{
+  const altered=bank.map(q=>({...q}));
+  altered[30]={...altered[30],choices_json:'["Yes","No"]'};
+  assert.throws(()=>selectQuestions(altered,slots,new Set(),()=>0),/invalid_true_false_choices/);
+});
+
+test('bank audit reports coverage without exposing answer keys',()=>{
+  const report=auditQuestionBank(bank,slots);
+  assert.equal(report.ready,true);
+  assert.equal(report.total,60);
+  assert.deepEqual(report.invalid,[]);
+  assert.ok(report.coverage.every(c=>c.available>=c.required));
+  assert.ok(!JSON.stringify(report).includes('correct_index'));
+});
+test('bank audit identifies malformed items even when they would not be selected',()=>{
+  const altered=bank.map(q=>({...q}));
+  altered[29].choices_json='["A","a"]';
+  const report=auditQuestionBank(altered,slots);
+  assert.equal(report.ready,false);
+  assert.deepEqual(report.invalid,[{id:'q0_29',code:'invalid_question'}]);
+});
+test('bank audit refuses incomplete blueprint coverage',()=>{
+  const report=auditQuestionBank(bank.slice(0,10),slots);
+  assert.equal(report.ready,false);
+  assert.ok(report.coverage.some(c=>c.available<c.required));
+});
+
+test('only explicit cancellations escalate difficulty priority',()=>{
+  assert.equal(difficultyAfterCancellations(0),'easy');
+  assert.equal(difficultyAfterCancellations(1),'easy');
+  assert.equal(difficultyAfterCancellations(2),'medium');
+  assert.equal(difficultyAfterCancellations(4),'hard');
+  assert.throws(()=>difficultyAfterCancellations(-1),/invalid_cancellation_count/);
+  const sample=[{difficulty:'easy'},{difficulty:'hard'},{difficulty:'medium'}];
+  assert.deepEqual(prioritizeDifficulty(sample,4).map(s=>s.difficulty),['hard','medium','easy']);
 });

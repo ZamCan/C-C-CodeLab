@@ -474,7 +474,24 @@ public final class MainActivity extends Activity {
             action(start,"Begin guided introduction",true,this::programmingIntroduction);
         }
         row(content,"◉","Notifications"+(NotificationInbox.unread(this)>0?" ("+NotificationInbox.unread(this)+")":""),"Your learning updates and reminders",true,this::notificationInbox);
+row(content,"▧","Sample certificate","Watermarked preview only • not a valid award",true,this::sampleCertificate);
         row(content,"§","Academic references","Standards, trusted reading and attribution",true,this::academicReferences);
+    }
+    /** Non-exportable placeholder certificate: no valid learner or credential data. */
+    private void sampleCertificate() {
+        shell("sample_certificate","CERTIFICATE PREVIEW","Certificate design","Your future certificate layout");
+        LinearLayout preview=panel(false);
+        title(preview,"CERTIFICATE OF COMPLETION",22);
+        body(preview,"YOUR FULL NAME");
+        body(preview,"has successfully completed");
+        title(preview,"COURSE TITLE",20);
+        body(preview,"PASS MARK: XX%     RESULT: PASS");
+        body(preview,"COMPLETION DATE: DD / MM / YYYY");
+        body(preview,"CERTIFICATE ID: ISSUED AFTER VERIFICATION");
+        body(preview,"ISSUER: CODELAB C & C++");
+        title(preview,"PREVIEW  •  NOT VALID",20);
+        body(preview,"PREVIEW  •  NOT VALID  •  PREVIEW");
+        body(preview,"Layout demonstration only. No official signature, QR verification, certificate download, or share action is available.");
     }
     /** One of the two primary home destinations: a large, quiet, native surface. */
     private void destination(String heading,String subtitle,String glyph,Runnable open) {
