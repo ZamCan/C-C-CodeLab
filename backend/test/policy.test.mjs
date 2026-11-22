@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectQuestions,auditQuestionBank,assertLive,grade,publicQuestion} from '../src/policy.mjs';
+import {selectQuestions,auditQuestionBank,difficultyAfterCancellations,prioritizeDifficulty,assertLive,grade,publicQuestion} from '../src/policy.mjs';
 import worker from '../src/worker.mjs';
 const slots=[{style:'multiple_choice',objective:'loops',difficulty:'easy',count:13},{style:'true_false',objective:'types',difficulty:'medium',count:12}];
 const bank=slots.flatMap((s,g)=>Array.from({length:30},(_,i)=>({id:`q${g}_${i}`,style:s.style,objective:s.objective,difficulty:s.difficulty,prompt:'Server-only reviewed question',choices_json:s.style==='true_false'?'["True","False"]':'["A","B"]',correct_index:0})));
@@ -84,4 +84,14 @@ test('bank audit refuses incomplete blueprint coverage',()=>{
   const report=auditQuestionBank(bank.slice(0,10),slots);
   assert.equal(report.ready,false);
   assert.ok(report.coverage.some(c=>c.available<c.required));
+});
+
+test('only explicit cancellations escalate difficulty priority',()=>{
+  assert.equal(difficultyAfterCancellations(0),'easy');
+  assert.equal(difficultyAfterCancellations(1),'easy');
+  assert.equal(difficultyAfterCancellations(2),'medium');
+  assert.equal(difficultyAfterCancellations(4),'hard');
+  assert.throws(()=>difficultyAfterCancellations(-1),/invalid_cancellation_count/);
+  const sample=[{difficulty:'easy'},{difficulty:'hard'},{difficulty:'medium'}];
+  assert.deepEqual(prioritizeDifficulty(sample,4).map(s=>s.difficulty),['hard','medium','easy']);
 });
