@@ -1,4 +1,5 @@
 import {officialName} from './exam-identity.mjs';
+import {verifyExamChallenge} from './turnstile.mjs';
 import {authRoute} from './auth.mjs';
 import {credentialRoute} from './credentials.mjs';
 import {dashboardRoute} from './dashboard.mjs';
@@ -40,6 +41,7 @@ async function createAttempt(request,env,learner) {
   await env.DB.prepare("UPDATE attempts SET status='expired',finalized_at=? WHERE learner_id=? AND course_id=? AND status='active' AND deadline_at<=?").bind(time,learner,input.course_id,time).run();
   const active=await env.DB.prepare("SELECT * FROM attempts WHERE learner_id=? AND course_id=? AND status='active'").bind(learner,input.course_id).first();
   if(active)return resume(env,active);
+  await verifyExamChallenge(input.turnstile_token,env,request.headers.get('CF-Connecting-IP')||'');
   const name=officialName(input.official_names);
   if(input.name_attested!==true)throw new ApiError(400,'official_name_attestation_required');
   const identity=await env.DB.prepare('SELECT display_name,identity_verified FROM learners WHERE id=?').bind(learner).first();
@@ -83,6 +85,7 @@ async function submit(env,learner,id) {
 async function route(request,env) {
     try {
       const path=new URL(request.url).pathname;
+      if(path==='/v1/exams/challenge-config'&&request.method==='GET')return json({sitekey:env.TURNSTILE_SITE_KEY||null,ready:!!(env.TURNSTILE_SITE_KEY&&env.TURNSTILE_SECRET_KEY)});
       if(path==='/health'&&request.method==='GET')return json({service:'zamcan-certification',exams_enabled:env.EXAMS_ENABLED==='true',credential_issuance:env.ISSUANCE_ENABLED==='true',authentication:env.AUTH_ENABLED==='true'});
       if(!path.startsWith('/v1/')&&!path.startsWith('/.well-known/')){
         if(!env.ASSETS)throw new ApiError(503,'dashboard_not_built');
