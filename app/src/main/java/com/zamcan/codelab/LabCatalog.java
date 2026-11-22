@@ -93,6 +93,22 @@ public final class LabCatalog {
                 "    return static_cast<double>(sum) / values.size();", "}", "", "int main() {",
                 "    std::vector<int> marks{72, 84, 91};", "    std::cout << \"Average: \" << average(marks) << '\\n';",
                 "    return 0;", "}"));
+        labs.add(new Lab("File-safe parsing", "Read a line, validate its length, and process input without trusting its size.", false,
+                "#include <stdio.h>", "#include <string.h>", "", "int main(void) {", "    char line[64];",
+                "    if (!fgets(line, sizeof line, stdin)) return 1;", "    line[strcspn(line, \"\\n\")] = '\\0';",
+                "    printf(\"Received %zu characters\\n\", strlen(line));", "    return 0;", "}"));
+        labs.add(new Lab("C++ map lookup", "Associate a course code with a title and handle a missing key explicitly.", true,
+                "#include <iostream>", "#include <map>", "#include <string>", "", "int main() {",
+                "    std::map<std::string, int> credits{{\"C\", 4}, {\"CPP\", 5}};",
+                "    auto found = credits.find(\"CPP\");", "    if (found != credits.end()) std::cout << found->second << '\\n';",
+                "    return 0;", "}"));
+        labs.add(new Lab("Binary search", "Maintain a sorted range and shrink the interval after every comparison.", false,
+                "#include <stdio.h>", "", "int main(void) {", "    int values[] = {2, 4, 8, 16, 32};", "    int low = 0, high = 4, target = 16, found = -1;",
+                "    while (low <= high) {", "        int middle = low + (high - low) / 2;", "        if (values[middle] == target) { found = middle; break; }",
+                "        if (values[middle] < target) low = middle + 1; else high = middle - 1;", "    }", "    printf(\"Index: %d\\n\", found);", "    return 0;", "}"));
+        labs.add(new Lab("C++ exception boundary", "Use a narrow try block for conversion and report invalid input clearly.", true,
+                "#include <iostream>", "#include <string>", "", "int main() {", "    try {", "        int value = std::stoi(\"42\");", "        std::cout << value << '\\n';",
+                "    } catch (const std::exception& error) {", "        std::cerr << error.what() << '\\n';", "        return 1;", "    }", "    return 0;", "}"));
         return Collections.unmodifiableList(labs);
     }
 }
