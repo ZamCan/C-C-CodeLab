@@ -22,7 +22,7 @@ async function authenticate(register){const buttons=$('auth-form').querySelector
 function heading(title,description){const h=node('div',undefined,'section-heading'),block=node('div');block.append(node('h2',title));if(description)block.append(node('p',description));h.append(block);workspace.append(h);return h;}
 function gridSection(title,items,render,empty){workspace.append(node('h2',title));const grid=node('div',undefined,'grid');if(!items.length)grid.append(node('p',empty,'empty'));for(const item of items)grid.append(render(item));workspace.append(grid);}
 async function dashboard(){reset();if(!user){heading(t('welcome'),t('passkey'));workspace.append(button(t('signin'),signIn,true));return;}heading(user.name,user.identity_verified?user.id:t('pendingIdentity'));const data=await api('/v1/dashboard');
- gridSection(t('courses'),data.courses,course=>{const c=node('article',undefined,'card');c.append(node('span',course.eligible?t('eligible'):t('pending'),'badge'),node('h3',language==='sw'?course.title_sw:course.title_en),node('p',course.version));const b=button(t('begin'),()=>nameForm(false,async names=>openAttempt(await api('/v1/exams/attempts','POST',{course_id:course.id,official_names:names,name_attested:true}))),true);b.disabled=!course.eligible||!course.duration_seconds||!data.exams_enabled;c.append(b);return c;},t('emptyCourses'));
+ gridSection(t('courses'),data.courses,course=>{const c=node('article',undefined,'card');c.append(node('span',course.eligible?t('eligible'):t('pending'),'badge'),node('h3',language==='sw'?course.title_sw:course.title_en),node('p',course.version));const b=button(t('begin'),()=>nameForm(false,async (names,turnstile_token)=>openAttempt(await api('/v1/exams/attempts','POST',{course_id:course.id,official_names:names,name_attested:true,turnstile_token}))),true);b.disabled=!course.eligible||!course.duration_seconds||!data.exams_enabled;c.append(b);return c;},t('emptyCourses'));
  gridSection(t('certificates'),data.certificates,cert=>{const c=node('article',undefined,'card');c.append(node('span',t(cert.status),'badge '+cert.status),node('h3',cert.course_id),node('p',cert.id));for(const [label,suffix] of [['download','pdf'],['signed','download']])c.append(button(t(label),()=>{location.href='/v1/credentials/'+encodeURIComponent(cert.id)+'/'+suffix;}));c.append(button(t('verify'),()=>verify(cert.id)));return c;},t('emptyCertificates'));
  gridSection(t('attempts'),data.attempts,attempt=>{const c=node('article',undefined,'card');c.append(node('h3',attempt.course_id),node('p',attempt.status+(attempt.score!==null?' · '+attempt.score+'%':'')));if(attempt.status==='active')c.append(button(t('resume'),async()=>openAttempt(await api('/v1/exams/attempts/'+attempt.id)),true));if(attempt.passed)c.append(button(t('requestCertificate'),()=>nameForm(true,async names=>{await api('/v1/credentials/issue','POST',{attempt_id:attempt.id,official_names:names,name_confirmed:true});await dashboard();})));return c;},t('emptyAttempts'));
  if(['admin','examiner'].includes(user.role))workspace.append(button(t('admin'),admin));
@@ -102,5 +102,30 @@ function nameForm(confirm,proceed){
  for(const labelText of (language==='sw'?['Jina la kwanza','Jina la pili','Jina la tatu']:['First name','Second name','Third name'])){const label=node('label',labelText),input=node('input');input.required=true;input.maxLength=60;input.autocomplete='off';label.append(input);form.append(label);inputs.push(input);}
  const label=node('label'),check=node('input');check.type='checkbox';check.required=true;label.append(check,node('span',language==='sw'?'Ninathibitisha majina haya ni sahihi.':'I confirm these official names are correct.'));form.append(label);
  if(confirm)form.append(node('p',language==='sw'?'Majina haya yatachapishwa kwenye cheti chako.':'These names will be printed on your certificate. Corrections require an identity review.'));
- const submit=node('button',confirm?t('requestCertificate'):t('begin'),'primary');submit.type='submit';form.append(submit,button(t('back'),dashboard));form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{await proceed(inputs.map(i=>i.value.trim()));}catch(error){showError(error);}finally{submit.disabled=false;}};workspace.append(form);
+ let challengeToken='',challengeWidget=null,challengeReady=confirm;
+ if(!confirm){
+   const challenge=node('div',undefined,'exam-challenge');
+   challenge.append(node('p',language==='sw'?'Thibitisha kuwa wewe si roboti kabla ya kuanza.':'Complete the security check before the exam starts.','quiet'));
+   form.append(challenge);
+   (async()=>{
+     try{
+       const config=await api('/v1/exams/challenge-config');
+       if(!config.ready||!config.sitekey)throw Error('Exam security check is not configured.');
+       if(!window.turnstile){
+         await new Promise((resolve,reject)=>{
+           const script=document.createElement('script');
+           script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+           script.async=true;script.defer=true;script.onload=resolve;script.onerror=reject;document.head.append(script);
+         });
+       }
+       challengeWidget=window.turnstile.render(challenge,{
+         sitekey:config.sitekey,theme:'auto',
+         callback:token=>{challengeToken=token;challengeReady=true;},
+         'expired-callback':()=>{challengeToken='';challengeReady=false;},
+         'error-callback':()=>{challengeToken='';challengeReady=false;}
+       });
+     }catch(error){challenge.append(node('p',error.message||'Security check unavailable.','quiet'));}
+   })();
+ }
+ const submit=node('button',confirm?t('requestCertificate'):t('begin'),'primary');submit.type='submit';form.append(submit,button(t('back'),dashboard));form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{if(!challengeReady)throw Error('Complete the security check first.');await proceed(inputs.map(i=>i.value.trim()),challengeToken);}catch(error){showError(error);if(!confirm&&challengeWidget!==null&&window.turnstile){challengeToken='';challengeReady=false;window.turnstile.reset(challengeWidget);}}finally{submit.disabled=false;}};workspace.append(form);
 }
