@@ -26,9 +26,13 @@ public final class AccountChoiceActivity extends Activity {
         title.setText("How would you like to learn?");title.setTextSize(27);title.setTextColor(Color.WHITE);
         root.addView(title);
         TextView info=new TextView(this);
-        info.setText("Google account: your completed learning progress is synchronized securely when online and can be restored on another device after sign-in.\n\nGuest: progress stays on this device only. It cannot be restored on another device and may be lost if app data is cleared, the app is removed, or the device is lost.");
+        info.setText("Google: Sync progress across devices.\nGuest: Save progress on this device only.");
         info.setTextSize(16);info.setTextColor(0xffd4e3f6);info.setPadding(0,24,0,24);
         root.addView(info);
+        TextView details=new TextView(this);
+        details.setText("More about progress and recovery  ▾");details.setTextColor(0xff7ee7f5);details.setTextSize(15);
+        root.addView(details);
+        details.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Where your progress is saved").setMessage("Google: completed learning progress syncs when online, and can be restored after signing in on another device. Unsynced progress may not yet be recoverable.\n\nGuest: progress remains only on this device. It cannot be restored on another device, and may be lost after uninstalling, clearing data, or losing the device. You can choose to copy guest progress to your account later.").setPositiveButton("Got it",null).show());
         Button google=new Button(this);google.setText("Continue with Google");
         root.addView(google,new LinearLayout.LayoutParams(-1,-2));
         google.setOnClickListener(v->startActivity(new Intent(this,GoogleSignInActivity.class)));
