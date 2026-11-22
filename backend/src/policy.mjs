@@ -25,9 +25,23 @@ export function selectQuestions(bank, slots, exposed = new Set(), choose = rando
       const [question] = available.splice(choose(available.length), 1);
       if (seen.has(question.id)) throw new ApiError(503, 'duplicate_question_id');
       if (!/^[A-Za-z0-9_-]{1,100}$/.test(question.id)) throw new ApiError(503, 'invalid_question_id');
-      const choices = JSON.parse(question.choices_json);
-      if (!Array.isArray(choices) || choices.length < 2 || choices.length > 8 || choices.some(c => typeof c !== 'string') || !Number.isInteger(question.correct_index) || question.correct_index < 0 || question.correct_index >= choices.length)
+      // Reject malformed or ambiguous production items before an attempt is created.
+      if (question.course_id == null || typeof question.course_id !== 'string' ||
+          typeof question.prompt !== 'string' || question.prompt.trim().length < 12 ||
+          question.prompt.length > 8000 || question.prompt !== question.prompt.trim())
+        throw new ApiError(503, 'invalid_question_prompt');
+      let choices;
+      try { choices = JSON.parse(question.choices_json); }
+      catch { throw new ApiError(503, 'invalid_question_choices'); }
+      if (!Array.isArray(choices) || choices.length < 2 || choices.length > 8 ||
+          choices.some(c => typeof c !== 'string' || c.trim().length === 0 || c.length > 2000 || c !== c.trim()) ||
+          new Set(choices.map(c => c.normalize('NFC').toLocaleLowerCase('en-US'))).size !== choices.length ||
+          !Number.isInteger(question.correct_index) || question.correct_index < 0 || question.correct_index >= choices.length)
         throw new ApiError(503, 'invalid_question');
+      if (question.style === 'true_false' &&
+          (choices.length !== 2 || new Set(choices.map(c => c.toLowerCase())).size !== 2 ||
+           !choices.some(c => c.toLowerCase() === 'true') || !choices.some(c => c.toLowerCase() === 'false')))
+        throw new ApiError(503, 'invalid_true_false_choices');
       seen.add(question.id); selected.push(question);
     }
   }
