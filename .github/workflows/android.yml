@@ -84,7 +84,8 @@ jobs:
           disable-animations: true
           script: |
             adb shell svc wifi disable
-            adb shell svc data disable
+            adb shell cmd connectivity airplane-mode enable
+            test "$(adb shell settings get global airplane_mode_on | tr -d '\r')" = 1
             bash gradlew --console=plain connectedDebugAndroidTest
             adb pull /sdcard/Pictures/CodeLabTest ui-smoke
       - name: Upload device test results

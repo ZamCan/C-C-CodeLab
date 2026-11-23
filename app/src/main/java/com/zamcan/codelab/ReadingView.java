@@ -78,7 +78,7 @@ public final class ReadingView extends LinearLayout {
         addView(viewport,new LayoutParams(-1,0,1));
         body=new TextView(context);body.setTextSize(17);body.setTextColor(ink());body.setTextIsSelectable(true);
         body.setIncludeFontPadding(false);body.setLineSpacing(dp(4),1f);
-        body.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_SIMPLE);
+        body.setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE);
         body.setHyphenationFrequency(android.text.Layout.HYPHENATION_FREQUENCY_NONE);
         body.setPadding(0,dp(6),0,dp(6));viewport.addView(body,new FrameLayout.LayoutParams(-1,-1));
         picture=new ImageView(context);picture.setVisibility(GONE);
@@ -169,7 +169,7 @@ public final class ReadingView extends LinearLayout {
         CharSequence text=styled(source.substring(start,end),snippet);
         StaticLayout layout=StaticLayout.Builder.obtain(text,0,text.length(),body.getPaint(),width)
             .setIncludePad(false).setLineSpacing(dp(4),1f).setAlignment(Layout.Alignment.ALIGN_NORMAL)
-            .setBreakStrategy(Layout.BREAK_STRATEGY_SIMPLE).build();
+            .setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE).build();
         int first=0;
         while(first<layout.getLineCount()){
             int last=first;
