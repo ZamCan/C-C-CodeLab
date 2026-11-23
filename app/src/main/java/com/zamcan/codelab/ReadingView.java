@@ -13,7 +13,7 @@ import android.widget.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Measured native reading pages. Text never shrinks to fit, and no ScrollView is used. */
+/** Native reader for authored sections and measured text pages. */
 public final class ReadingView extends LinearLayout {
     public interface Position { void save(int offset); }
     private final TextView body, rail, heading;
@@ -24,15 +24,17 @@ public final class ReadingView extends LinearLayout {
     private final Runnable finish,close;
     private final Position position;
     private final List<Integer> starts=new ArrayList<>();
-    private final TextView sceneLabel;
+    private final ScrollView sectionScroll;
+    private final LinearLayout sectionContent;
+    private final int illustration;
     private int offset, measuredWidth, measuredHeight;
     private boolean layingOut;
 
     public ReadingView(Context context, boolean light, String title, String text,
             boolean code, int savedOffset, Position position, Runnable close,
-            Runnable finish, Runnable extra, String extraLabel) {
+            Runnable finish, Runnable extra, String extraLabel, int illustration) {
         super(context);this.source=text;this.code=code;this.light=light;this.close=close;this.offset=Math.max(0,Math.min(savedOffset,Math.max(0,text.length()-1)));
-        this.position=position;this.finish=finish;
+        this.illustration=illustration;this.position=position;this.finish=finish;
         setOrientation(VERTICAL);setBackgroundColor(light?0xfffcfcff:0xff0b1025);
         setPadding(dp(20),dp(12),dp(20),dp(12));
         setOnApplyWindowInsetsListener((view,insets)->{setPadding(dp(20)+insets.getSystemWindowInsetLeft(),dp(12)+insets.getSystemWindowInsetTop(),dp(20)+insets.getSystemWindowInsetRight(),dp(12)+insets.getSystemWindowInsetBottom());return insets;});
@@ -42,7 +44,6 @@ public final class ReadingView extends LinearLayout {
         Button exit=button("‹  Contents",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
         rail=new TextView(context);rail.setTextColor(light?0xff425ff5:0xff91b7ff);rail.setTextSize(14);rail.setGravity(Gravity.END);
         top.addView(rail,new LayoutParams(0,-2,1));
-        sceneLabel=new TextView(context);sceneLabel.setText("CODELAB  /  LEARNING STUDIO");sceneLabel.setTextSize(11);sceneLabel.setLetterSpacing(.15f);sceneLabel.setTextColor(light?0xff167a79:0xff77ddd3);sceneLabel.setPadding(0,dp(12),0,0);addView(sceneLabel);
         heading=new TextView(context);heading.setText(title);heading.setTextColor(ink);heading.setTextSize(22);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(12),0,dp(12));addView(heading);
         if(code){
             LinearLayout codeBar=new LinearLayout(context);codeBar.setGravity(Gravity.CENTER_VERTICAL);codeBar.setPadding(dp(12),0,0,0);
@@ -53,13 +54,26 @@ public final class ReadingView extends LinearLayout {
         body.setPadding(dp(20),dp(22),dp(20),dp(22));
         GradientDrawable paper=new GradientDrawable();paper.setCornerRadius(dp(18));paper.setColor(light?0xffffffff:0xff13203a);paper.setStroke(dp(1),light?0x1a1d3a6b:0x2e9ab4e8);body.setBackground(paper);
         if(code){body.setTypeface(Typeface.MONOSPACE);body.setTextDirection(TEXT_DIRECTION_LTR);}
-        addView(body,new LayoutParams(-1,0,1));
+        if(text.indexOf('\f')>=0){
+            sectionScroll=new ScrollView(context);
+            sectionContent=new LinearLayout(context);
+            sectionContent.setOrientation(VERTICAL);
+            sectionScroll.addView(sectionContent);
+            addView(sectionScroll,new LayoutParams(-1,0,1));
+            starts.add(0);
+            for(int i=0;i<text.length()-1;i++)if(text.charAt(i)=='\f')starts.add(i+1);
+        }else{
+            sectionScroll=null;
+            sectionContent=null;
+            addView(body,new LayoutParams(-1,0,1));
+        }
         if(extra!=null){Button more=button(extraLabel,false,light);more.setOnClickListener(v->extra.run());addView(more,new LayoutParams(-1,dp(48)));}
         LinearLayout controls=new LinearLayout(context);controls.setPadding(0,dp(12),0,0);addView(controls);
         back=button("Back",false,light);next=button("Next",true,light);
         LayoutParams previousParams=new LayoutParams(0,dp(52),1);previousParams.setMarginEnd(dp(8));controls.addView(back,previousParams);controls.addView(next,new LayoutParams(0,dp(52),2));
         back.setOnClickListener(v->{int page=current();if(page>0){offset=starts.get(page-1);showPage();}else close.run();});
         next.setOnClickListener(v->{int page=current();if(page+1<starts.size()){offset=starts.get(page+1);showPage();}else finish.run();});
+        if(sectionScroll!=null)showPage();
     }
     private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
     private Button button(String title,boolean primary,boolean light){
@@ -70,6 +84,7 @@ public final class ReadingView extends LinearLayout {
     }
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom){
         super.onLayout(changed,left,top,right,bottom);
+        if(sectionScroll!=null)return;
         int width=Math.max(1,body.getWidth()-body.getPaddingLeft()-body.getPaddingRight());
         int height=Math.max(1,body.getHeight()-body.getPaddingTop()-body.getPaddingBottom());
         if(layingOut||width<=0||height<=0||(width==measuredWidth&&height==measuredHeight))return;
@@ -98,11 +113,52 @@ public final class ReadingView extends LinearLayout {
     private void showPage(){
         if(starts.isEmpty())return;
         int page=current();offset=starts.get(page);int end=page+1<starts.size()?starts.get(page+1):source.length();
-        segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<page?0xff29b982:i==page?0xff6670ed:(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?0xff36405b:0xffdce0ed);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
-        body.setText(RichText.format(source.substring(offset,end),light,code));rail.setText("Scene "+(page+1)+" / "+starts.size());
-        sceneLabel.setText(code?"CODELAB  /  SOURCE WALKTHROUGH":"CODELAB  /  STORY & DISCOVERY");
-        back.setText(page==0?"‹  Contents":"‹  Back");next.setText(page+1<starts.size()?"Continue ›":"Finish ✓");
+        segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<page?0xff29b982:i==page?0xff6670ed:light?0xffdce0ed:0xff36405b);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
+        String section=source.substring(offset,end);
+        if(sectionScroll==null)body.setText(RichText.format(section,light,code));
+        else renderSection(section.trim(),page);
+        rail.setText((page+1)+" / "+starts.size());
+        back.setVisibility(page==0?View.GONE:View.VISIBLE);next.setText(page+1<starts.size()?"Continue ›":"Finish ✓");
         position.save(offset);body.announceForAccessibility("Scene "+(page+1)+" of "+starts.size());
+    }
+    private void renderSection(String section,int page){
+        sectionContent.removeAllViews();
+        String[] paragraphs=section.split("\\n\\s*\\n");
+        for(int i=0;i<paragraphs.length;i++){
+            String paragraph=paragraphs[i];
+            int codeStart=paragraph.indexOf("\n    ");
+            if(codeStart>=0 && !paragraph.startsWith("    ")){
+                addParagraph(paragraph.substring(0,codeStart),false,false);
+                paragraph=paragraph.substring(codeStart+1);
+            }
+            boolean snippet=paragraph.startsWith("    ");
+            addParagraph(snippet?paragraph.replaceAll("(?m)^    ",""):paragraph,i==0,snippet);
+            if(i==0 && page==0 && illustration!=0){
+                ImageView picture=new ImageView(getContext());
+                picture.setImageResource(illustration);
+                picture.setAdjustViewBounds(true);
+                picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                picture.setContentDescription("Illustration of Dennis Ritchie and Bjarne Stroustrup, with functions on the C side and classes on the C++ side.");
+                sectionContent.addView(picture,new LayoutParams(-1,-2));
+            }
+        }
+        sectionScroll.scrollTo(0,0);
+    }
+    private void addParagraph(String value,boolean title,boolean snippet){
+        TextView part=new TextView(getContext());
+        part.setTextColor(light?0xff202536:0xfff6f7ff);
+        part.setTextSize(title?22:snippet?15:17);
+        part.setTextIsSelectable(true);
+        part.setLineSpacing(dp(3),1f);
+        part.setPadding(snippet?dp(12):0,dp(8),snippet?dp(12):0,dp(8));
+        if(title)part.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        if(snippet){
+            part.setTypeface(Typeface.MONOSPACE);
+            part.setTextDirection(TEXT_DIRECTION_LTR);
+            part.setBackgroundColor(light?0xffedf2f7:0xff172739);
+            part.setText(RichText.format(value,light,true));
+        }else part.setText(value);
+        sectionContent.addView(part,new LayoutParams(-1,-2));
     }
     private void showCode(){
         TextView view=new TextView(getContext());view.setText(RichText.format(source,light,true));view.setTextSize(14);view.setTypeface(Typeface.MONOSPACE);view.setTextIsSelectable(true);

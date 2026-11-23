@@ -1,56 +1,41 @@
-INTRODUCING C AND C++ — HISTORY, PURPOSE, AND DIFFERENCES
+Why did C grow up alongside Unix?
 
-C
-C is a general-purpose programming language strongly associated with procedural programming, systems software, and efficient implementation. Dennis Ritchie developed C at Bell Labs during the early 1970s, influenced by B and BCPL; C became important in Unix development. C has standardized language versions and is widely used in operating systems, embedded software, libraries, and infrastructure.
+Imagine moving an operating system to a computer with a different processor. Assembly instructions written for the first machine may have to be rewritten for the second.
 
-C++
-C++ is a general-purpose, multi-paradigm programming language developed by Bjarne Stroustrup. Work on 'C with Classes' began in 1979; the language was named C++ in 1983. It supports procedural, object-oriented and generic programming, alongside abstractions for resource management and large systems.
+At Bell Labs in the early 1970s, Dennis Ritchie developed C while working on Unix. C let the team express much of the system in a language that a compiler could translate for each machine. Hardware-specific parts still needed special care.
 
-RELATIONSHIP
-C++ grew out of C, and the languages share much syntax, but they have different rules, standard libraries and compilation modes. Not every valid C program is valid C++, and not every C++ feature exists in C.
+Look at the illustration. The function symbol on the C side stands for a way to divide a large job into named pieces. What changes when each piece must also manage its own data?
+Why add classes?
 
-FIRST C PROGRAM
-#include <stdio.h>
+In 1979 Bjarne Stroustrup began working on C with Classes. He wanted to organize complex programs using ideas from Simula while keeping the efficiency he valued in C. The name C++ followed in 1983.
 
-int main(void) {
-    printf("Hello, C!\n");
-    return 0;
-}
+Think of a bank account. In C, a structure can hold the balance and a separate function can update it. In C++, a class can keep the balance private and give callers a deposit operation. Both designs can solve the same problem. The class gives the author a language rule for controlling access.
 
-FIRST C++ PROGRAM
-#include <iostream>
+C and C++ now have separate standards and libraries. Shared syntax helps you read both, but each source file needs the appropriate language mode.
+Make C speak
 
-int main() {
-    std::cout << "Hello, C++!\n";
-    return 0;
-}
+Before you read the next paragraph, predict exactly what appears on screen.
 
-CODE ANATOMY
-# introduces a preprocessing directive.
-include asks the preprocessor to include a header's declarations.
-<stdio.h> is the C standard I/O header.
-<iostream> provides C++ stream declarations.
-int names the return type of main.
-main names the program entry function.
-(void) explicitly specifies no parameters in C.
-() specifies no parameters in C++.
-{ and } delimit the function body.
-printf calls a formatted output function.
-std::cout refers to the standard output stream.
-<< inserts data into that stream.
-"..." is a string literal.
-\n represents a newline character.
-; ends a statement.
-return 0; reports successful termination; reaching the end of main also returns zero in standard C and C++.
+    #include <stdio.h>
+    int main(void) {
+        printf("Hello, C!\n");
+        return 0;
+    }
 
-WHY PLACEMENT MATTERS
-A preprocessor directive begins with # outside the function in these examples; a statement such as printf belongs inside a function body. A header is included to make declarations available. Parentheses after main are part of the function declarator. Braces determine the body and scope. Indentation improves readability but does not replace braces.
+The program prints Hello, C! and moves to a new line. The header declares printf. The parentheses in main(void) tell a C17 compiler that main takes no arguments. The braces surround the statements that run. Returning zero reports success.
+Say it again in C++
 
-THE NEXT STEP
-Choose a C or C++ pathway. Learn each token, type, statement and control structure; predict behavior, write code, examine genuine diagnostics and solve independent problems.
+    #include <iostream>
+    int main() {
+        std::cout << "Hello, C++!\n";
+        return 0;
+    }
 
-References for further reading:
-Dennis Ritchie, The Development of the C Language (Bell Labs historical paper).
-Bjarne Stroustrup, A History of C++ and The C++ Programming Language.
-Kernighan and Ritchie, The C Programming Language.
-Relevant ISO C and ISO C++ standards.
+Here the header provides the standard output stream. In std::cout, std names the namespace and :: selects cout from it. The << operator sends the string to the stream. As in C, the semicolon ends the statement.
+
+Try changing only the greeting in each program. Predict which characters will change and whether the next output will begin on a new line.
+
+Further reading
+
+Dennis Ritchie, The Development of the C Language.
+Bjarne Stroustrup, A History of C++: 1979–1991.

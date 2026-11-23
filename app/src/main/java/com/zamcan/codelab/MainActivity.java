@@ -908,7 +908,8 @@ public final class MainActivity extends Activity {
         handler.removeCallbacks(autosave);editor=null;dirty=false;screen="story";readingBack=this::academy;
         preferences.edit().putString("reading_key",key).apply();
         setContentView(new ReadingView(this,light,heading,text,code,preferences.getInt(key+":offset",0),
-            offset->preferences.edit().putInt(key+":offset",offset).apply(),readingBack,finish,extra,extraLabel));
+            offset->preferences.edit().putInt(key+":offset",offset).apply(),()->readingBack.run(),finish,extra,extraLabel,
+            ("intro:history".equals(key)||"history:standalone".equals(key))?R.drawable.language_history:0));
     }
     private void foundation(int index) {
         String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode"};

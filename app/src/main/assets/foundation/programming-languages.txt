@@ -1,10 +1,10 @@
-PREDICT THE RESULT
+Predict the balance
 
 You deposit 1,000 shillings. After one year the bank adds 10% interest. Which balance should the screen show: 100, 1,010 or 1,100?
 
 Work it out first. Ten percent of 1,000 is 100. Add that interest to the original balance to get 1,100. Those two steps are an algorithm.
 
-FROM AN IDEA TO A C STATEMENT
+From an idea to a C statement
 
 In pseudocode you could write:
     SET balance TO balance + balance × 0.10
@@ -13,15 +13,15 @@ In C, start with a value and update it:
     double balance = 1000.0;
     balance = balance + balance * 0.10;
 
-Read the second line from right to left. The calculation uses the old balance. The assignment stores the result back in balance. The semicolon ends the statement.
+Evaluate the expression to the right of the equals sign first. The calculation uses the old balance. The assignment stores the result back in balance. The semicolon ends the statement.
 
-FOLLOW THE PROGRAM
+Follow the program
 
 Source → compile → link → run
 
 Suppose you put those statements inside main and print the balance with printf. The compiler translates the source. The linker connects the compiled program to the library code it needs. When you run it, the program calculates and prints the balance.
 
-TRY A CHANGE
+Change one operation
 
 Predict the result if you replace the update with:
     balance = balance * 0.10;
