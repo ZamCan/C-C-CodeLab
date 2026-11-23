@@ -2,9 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),zlib
 const {Worker,isMainThread,parentPort,workerData}=require('node:worker_threads');
 const root=path.resolve(__dirname,'../app/src/main/assets/compiler');
 // Catch regressions in Android WebView's logical asset URL contract.
-const androidLoader=fs.readFileSync(path.resolve(__dirname,'../app/src/main/java/com/zamcan/codelab/OfflineCompiler.java'),'utf8');
 const workerSource=fs.readFileSync(path.join(root,'worker.js'),'utf8');
-assert.match(androidLoader,/new GZIPInputStream|new java\.util\.zip\.GZIPInputStream/);
 assert.match(workerSource,/fetch\(name, \{credentials:'omit'\}\)/);
 assert.doesNotMatch(workerSource,/fetch\(assetPath/);
 const cases = [

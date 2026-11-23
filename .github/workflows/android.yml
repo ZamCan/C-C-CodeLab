@@ -33,6 +33,8 @@ jobs:
           # still fail this step because the retry uses the same tasks.
           echo 'Retrying once with refreshed dependency metadata' | tee -a android-build.log
           bash gradlew --no-daemon --refresh-dependencies --stacktrace --console=plain testDebugUnitTest assembleDebug 2>&1 | tee -a android-build.log
+      - name: Verify installed compiler asset names and bytes
+        run: python3 tools/verify_toolchain.py --apk app/build/outputs/apk/debug/app-debug.apk
       - name: Android lint
         if: success()
         run: |
