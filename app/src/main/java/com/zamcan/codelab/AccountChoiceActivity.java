@@ -23,7 +23,7 @@ public final class AccountChoiceActivity extends Activity {
             startActivity(new Intent(this,MainActivity.class));finish();return;
         }
         LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);root.setGravity(Gravity.CENTER);
+        root.setOrientation(LinearLayout.VERTICAL);root.setGravity(Gravity.CENTER_VERTICAL);
         root.setPadding(28,32,28,32);root.setBackgroundColor(0xff10151d);
         TextView title=new TextView(this);
         title.setText("How would you like to learn?");title.setTextSize(27);title.setTextColor(Color.WHITE);
@@ -45,14 +45,10 @@ public final class AccountChoiceActivity extends Activity {
         google.setOnClickListener(v->startActivity(new Intent(this,GoogleSignInActivity.class)));
         Button guest=new Button(this);guest.setText("Continue as Guest");
         guest.setAllCaps(false);guest.setTextColor(Color.WHITE);guest.setBackground(tint(0xff28394b,18));root.addView(guest,new LinearLayout.LayoutParams(-1,60));
-        guest.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Offline guest progress")
-            .setMessage("Guest progress is stored only on this device. It cannot be recovered after data loss or opened on another device. Continue?")
-            .setNegativeButton("Go back",null)
-            .setPositiveButton("Continue as Guest",(d,w)->{
+        guest.setOnClickListener(v->{
                 getSharedPreferences(PREF,MODE_PRIVATE).edit().putBoolean(CHOICE,true).apply();
                 startActivity(new Intent(this,MainActivity.class));finish();
-            }).show());
+            });
         setContentView(root);
     }
 }
