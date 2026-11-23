@@ -24,6 +24,7 @@ public final class ReadingView extends LinearLayout {
     private final Runnable finish,close;
     private final Position position;
     private final List<Integer> starts=new ArrayList<>();
+    private final TextView sceneLabel;
     private int offset, measuredWidth, measuredHeight;
     private boolean layingOut;
 
@@ -41,6 +42,7 @@ public final class ReadingView extends LinearLayout {
         Button exit=button("‹  Contents",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
         rail=new TextView(context);rail.setTextColor(light?0xff425ff5:0xff91b7ff);rail.setTextSize(14);rail.setGravity(Gravity.END);
         top.addView(rail,new LayoutParams(0,-2,1));
+        sceneLabel=new TextView(context);sceneLabel.setText("CODELAB  /  LEARNING STUDIO");sceneLabel.setTextSize(11);sceneLabel.setLetterSpacing(.15f);sceneLabel.setTextColor(light?0xff167a79:0xff77ddd3);sceneLabel.setPadding(0,dp(12),0,0);addView(sceneLabel);
         heading=new TextView(context);heading.setText(title);heading.setTextColor(ink);heading.setTextSize(22);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(12),0,dp(12));addView(heading);
         if(code){
             LinearLayout codeBar=new LinearLayout(context);codeBar.setGravity(Gravity.CENTER_VERTICAL);codeBar.setPadding(dp(12),0,0,0);
@@ -48,7 +50,7 @@ public final class ReadingView extends LinearLayout {
             Button expand=button("Expand",false,light);expand.setOnClickListener(v->showCode());codeBar.addView(expand,new LayoutParams(dp(104),dp(40)));addView(codeBar);
         }
         body=new TextView(context);body.setTextColor(ink);body.setTextSize(16);body.setTextIsSelectable(true);body.setGravity(Gravity.TOP);body.setIncludeFontPadding(false);body.setLineSpacing(dp(4),1);
-        body.setPadding(dp(16),dp(14),dp(16),dp(14));
+        body.setPadding(dp(20),dp(22),dp(20),dp(22));
         GradientDrawable paper=new GradientDrawable();paper.setCornerRadius(dp(18));paper.setColor(light?0xffffffff:0xff13203a);paper.setStroke(dp(1),light?0x1a1d3a6b:0x2e9ab4e8);body.setBackground(paper);
         if(code){body.setTypeface(Typeface.MONOSPACE);body.setTextDirection(TEXT_DIRECTION_LTR);}
         addView(body,new LayoutParams(-1,0,1));
@@ -97,9 +99,10 @@ public final class ReadingView extends LinearLayout {
         if(starts.isEmpty())return;
         int page=current();offset=starts.get(page);int end=page+1<starts.size()?starts.get(page+1):source.length();
         segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<page?0xff29b982:i==page?0xff6670ed:(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?0xff36405b:0xffdce0ed);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
-        body.setText(RichText.format(source.substring(offset,end),light,code));rail.setText("Page "+(page+1)+" / "+starts.size());
-        back.setText(page==0?"‹  Contents":"‹  Back");next.setText("Next");
-        position.save(offset);body.announceForAccessibility("Page "+(page+1)+" of "+starts.size());
+        body.setText(RichText.format(source.substring(offset,end),light,code));rail.setText("Scene "+(page+1)+" / "+starts.size());
+        sceneLabel.setText(code?"CODELAB  /  SOURCE WALKTHROUGH":"CODELAB  /  STORY & DISCOVERY");
+        back.setText(page==0?"‹  Contents":"‹  Back");next.setText(page+1<starts.size()?"Continue ›":"Finish ✓");
+        position.save(offset);body.announceForAccessibility("Scene "+(page+1)+" of "+starts.size());
     }
     private void showCode(){
         TextView view=new TextView(getContext());view.setText(RichText.format(source,light,true));view.setTextSize(14);view.setTypeface(Typeface.MONOSPACE);view.setTextIsSelectable(true);
