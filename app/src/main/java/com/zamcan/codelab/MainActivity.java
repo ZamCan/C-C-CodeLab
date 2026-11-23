@@ -616,10 +616,18 @@ public final class MainActivity extends Activity {
         }
     }
     private void status() {
-        shell("status","ABOUT THIS BUILD","Honest by design.","Development build 0.5.1");
-        LinearLayout p=panel(false); title(p,"Your learning space",22); body(p,"Lessons, practice, saved progress, source editing, multiple files, and source export are ready without an account. Export important source files before uninstalling.");
-        LinearLayout s=panel(false); title(s,"Release gates still open",22); body(s,"An offline Clang/LLD WebAssembly compiler is bundled. Device execution, performance and compatibility remain under verification. See Runtime details in Compiler for supported features.\n\nOnline certificate exams, signed credentials, public verification, and production AdMob are not integrated. Practice completion is not certification.\n\nThe bundled compiler runs offline. Network permissions and Google test-ad SDK scaffolding are present for upcoming online features; optional consent-gated test banners are available from Settings; production ads remain disabled.");
-        action(content,"Back home",true,this::home);
+        String version;
+        try {
+            version=getPackageManager().getPackageInfo(getPackageName(),0).versionName;
+        } catch(android.content.pm.PackageManager.NameNotFoundException unavailable){
+            version="";
+        }
+        shell("status","","CodeLab C & C++",version.isEmpty()?"":"Version "+version);
+        body(content,"Study C and C++ and run programs on this device.");
+        row(content,"›","Compiler diagnostics","Test the installed compiler",true,
+            ()->startActivity(new Intent(this,CompilerDiagnosticsActivity.class)));
+        row(content,"›","Academic references","Books and language standards",true,this::academicReferences);
+
     }
     private void studio() {
         openScratchWith(preferences.getString("scratch_source",""),preferences.getString("scratch_file","main.c"));
@@ -707,10 +715,11 @@ public final class MainActivity extends Activity {
 
         stack.addView(bottomNav("editor"),new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
+        setCompilerState("Checking the offline runtime…",false);
         runButton.setOnClickListener(v->runCurrent());
         compiler=new OfflineCompiler(this,event->{
             String type=event.optString("type");
-            if(type.equals("ready"))setCompilerState("Ready · compiler available",true);
+            if(type.equals("ready"))setCompilerState("Ready to build",true);
             else if(type.equals("phase"))setCompilerState(event.optString("phase")+"…",false);
             else if(type.equals("output")){String stream=event.optString("stream");TextView target=stream.equals("stdout")?stdoutView:stream.equals("stderr")?stderrView:diagnosticsView;if(target!=null&&target.length()<70000)target.append(event.optString("text"));}
             else if(type.equals("result"))setCompilerState(event.isNull("trap")?"Exit status: "+event.optString("exitCode"):"Runtime error: "+event.optString("trap"),compiler!=null&&compiler.isReady());
@@ -791,6 +800,10 @@ public final class MainActivity extends Activity {
     }
     private void showOutput(boolean show) {
         if(workspace==null||editorPane==null||outputPane==null||show==outputVisible)return;
+        if(show){
+            android.view.inputmethod.InputMethodManager keyboard=getSystemService(android.view.inputmethod.InputMethodManager.class);
+            if(keyboard!=null)keyboard.hideSoftInputFromWindow(editor.getWindowToken(),0);
+        }
         outputVisible=show;int width=workspace.getWidth();
         if(width<=0){editorPane.setVisibility(show?View.GONE:View.VISIBLE);outputPane.setVisibility(show?View.VISIBLE:View.GONE);return;}
         if(show){

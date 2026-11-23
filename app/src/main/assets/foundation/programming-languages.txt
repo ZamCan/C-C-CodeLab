@@ -1,25 +1,29 @@
-FROM ALGORITHMS TO PROGRAMMING LANGUAGES
+PREDICT THE RESULT
 
-A programming language is a formal language for expressing computations as programs, with rules for syntax (which constructions are valid) and semantics (what valid constructions mean).
+You deposit 1,000 shillings. After one year the bank adds 10% interest. Which balance should the screen show: 100, 1,010 or 1,100?
 
-Algorithm: the logic of a solution.
-Pseudocode: a human-readable way to express that logic.
-Source code: instructions written according to a particular programming language's grammar and meaning.
-Compiler: a tool that translates source code into another representation, commonly machine/object code.
-Linker: combines compiled units and required libraries into a linked program.
-Execution: the computer runs the program, interacting with its environment as permitted.
+Work it out first. Ten percent of 1,000 is 100. Add that interest to the original balance to get 1,100. Those two steps are an algorithm.
 
-C and C++ are commonly compiled languages. A typical workflow is:
-write source → preprocess/compile → link → run → inspect output and errors.
-Actual implementations can use multiple compilation stages and intermediate representations.
+FROM AN IDEA TO A C STATEMENT
 
-IMPORTANT: Syntax is not the same as algorithm correctness. A compiler can accept a program that computes the wrong result. Equally, a correct algorithm may be expressed in invalid source code.
+In pseudocode you could write:
+    SET balance TO balance + balance × 0.10
 
-Consider the statement:
-    amount = amount * 1.10;
-The semicolon is part of C/C++ syntax. The multiplication and assignment express a step in our compound-interest algorithm.
+In C, start with a value and update it:
+    double balance = 1000.0;
+    balance = balance + balance * 0.10;
 
-CHECKPOINT:
-Why can't the pseudocode keyword OUTPUT automatically be compiled as C? Because OUTPUT is not a built-in C statement; C requires appropriate language constructs and library calls.
+Read the second line from right to left. The calculation uses the old balance. The assignment stores the result back in balance. The semicolon ends the statement.
 
-Continue to the formal history and definition of C and C++.
+FOLLOW THE PROGRAM
+
+Source → compile → link → run
+
+Suppose you put those statements inside main and print the balance with printf. The compiler translates the source. The linker connects the compiled program to the library code it needs. When you run it, the program calculates and prints the balance.
+
+TRY A CHANGE
+
+Predict the result if you replace the update with:
+    balance = balance * 0.10;
+
+Both statements are valid C. This one stores only the interest, so the balance becomes 100. A useful test checks the output against the 1,100 you calculated before writing the code.

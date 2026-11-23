@@ -42,6 +42,11 @@ public final class CompilerDiagnosticsActivity extends Activity {
             String type=event.optString("type");
             if(type.equals("ready")){next();return;}
             if(type.equals("output")){String stream=event.optString("stream"),text=event.optString("text");if(stream.equals("stdout"))stdout+=text;else if(stream.equals("stderr"))stderr+=text;else diagnostics+=text;return;}
+            if(type.equals("failure") && started==0){
+                log("Compiler startup failed: "+event.optString("message"));
+                finishReport();
+                return;
+            }
             if(type.equals("result")||type.equals("failure")){
                 if(index>=cases.length)return;
                 String[] test=cases[index];String expect=test[6];
