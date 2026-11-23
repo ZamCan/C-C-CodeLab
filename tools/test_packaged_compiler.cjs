@@ -1,6 +1,12 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),zlib=require('node:zlib'),assert=require('node:assert/strict');
 const {Worker,isMainThread,parentPort,workerData}=require('node:worker_threads');
 const root=path.resolve(__dirname,'../app/src/main/assets/compiler');
+// Catch regressions in Android WebView's logical asset URL contract.
+const androidLoader=fs.readFileSync(path.resolve(__dirname,'../app/src/main/java/com/zamcan/codelab/OfflineCompiler.java'),'utf8');
+const workerSource=fs.readFileSync(path.join(root,'worker.js'),'utf8');
+assert.match(androidLoader,/new GZIPInputStream|new java\\.util\\.zip\\.GZIPInputStream/);
+assert.match(workerSource,/fetch\\(name, \\{credentials:'omit'\\}\\)/);
+assert.doesNotMatch(workerSource,/fetch\\(assetPath/);
 const cases = [
   {name:'C11 standard headers, math and stdin',language:'c',stdin:'9\n',files:{'main.c':'#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <math.h>\nint main(void){double x; if(scanf("%lf",&x)!=1)return 2; char b[8];strcpy(b,"value");printf("%s %.0f %d\\n",b,sqrt(x),atoi("42"));return 0;}'},expected:'value 3 42\n'},
   {name:'C++17 containers, strings, templates and algorithms',language:'c++',files:{'main.cpp':'#include <iostream>\n#include <vector>\n#include <string>\n#include <map>\n#include <algorithm>\n#include <numeric>\ntemplate<class T>T twice(T x){return x+x;} int main(){std::vector<int> v{3,1,2};std::sort(v.begin(),v.end());std::map<std::string,int> m{{"sum",std::accumulate(v.begin(),v.end(),0)}};std::cout<<v.front()<<" "<<m["sum"]<<" "<<twice(4)<<"\\n";}'},expected:'1 6 8\n'},
