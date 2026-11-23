@@ -4,17 +4,12 @@ self.onmessage = async event => {
   try {
     await compileProject(event.data, async name => {
       if (!['clang22-noeh','lld22-noeh','sysroot22.tar','memfs','empty.tar'].includes(name)) throw Error('Unknown asset');
-      const compressed = ['clang22-noeh','lld22-noeh','sysroot22.tar','memfs'].includes(name);
-      const assetPath = compressed ? name + '.gz' : name;
-      const response = await fetch(assetPath, {credentials:'omit'});
+      // Android's local WebView interceptor serves the *decompressed* bytes
+      // at the logical asset name. Requesting ".gz" bypasses its allowlist
+      // and produces HTTP 403 ("asset unavailable: memfs").
+      const response = await fetch(name, {credentials:'omit'});
       if (!response.ok) throw Error('Offline compiler asset unavailable: ' + name);
-      let buffer;
-      if (compressed) {
-        if (typeof DecompressionStream === 'undefined') throw Error('Gzip decompression is unavailable on this WebView');
-        buffer = await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
-      } else {
-        buffer = await response.arrayBuffer();
-      }
+      const buffer = await response.arrayBuffer();
       if (hashes[name]) {
         const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer)),b=>b.toString(16).padStart(2,'0')).join('');
         if(digest!==hashes[name])throw Error('Compiler integrity check failed: '+name);
