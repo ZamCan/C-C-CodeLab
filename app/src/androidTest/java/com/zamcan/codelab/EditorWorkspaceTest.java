@@ -46,7 +46,13 @@ public final class EditorWorkspaceTest {
             });
 
             device.waitForIdleSync();
-            device.sendStringSync("pri");
+            scenario.onActivity(activity -> {
+                CodeEditor editor = (CodeEditor)find(activity.findViewById(android.R.id.content), view -> view instanceof CodeEditor);
+                android.view.inputmethod.InputConnection keyboard = editor.onCreateInputConnection(new android.view.inputmethod.EditorInfo());
+                assertNotNull(keyboard);
+                assertTrue(keyboard.commitText("pri", 1));
+                assertEquals("pri", editor.getText().toString());
+            });
             Predicate<View> printf = view -> view instanceof Button
                     && "Insert printf".contentEquals(String.valueOf(view.getContentDescription()));
             awaitVisible(scenario, printf);

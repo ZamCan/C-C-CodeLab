@@ -40,7 +40,7 @@ public final class OfflineCompiler {
                 if(!"https".equals(uri.getScheme())||!"compiler.codelab.invalid".equals(uri.getHost())||uri.getPort()!=-1||uri.getQuery()!=null||uri.getFragment()!=null||uri.getUserInfo()!=null||!"GET".equals(request.getMethod())||path==null||!path.matches("/[A-Za-z0-9_.-]+"))return denied();
                 String name=path.substring(1);
                 if(!java.util.Arrays.asList("index.html","controller.js","worker.js","shared.js","engine.js","clang22-noeh","lld22-noeh","sysroot22.tar","memfs","empty.tar").contains(name))return denied();
-                try{return new WebResourceResponse(name.endsWith(".html")?"text/html":name.endsWith(".js")?"application/javascript":"application/octet-stream","UTF-8",200,"OK",Collections.singletonMap("Cache-Control","no-store"),openAsset(context,name));}
+                try{return new WebResourceResponse(name.endsWith(".html")?"text/html":name.endsWith(".js")?"application/javascript":"application/octet-stream","UTF-8",200,"OK",Collections.singletonMap("Cache-Control","no-store"),context.getAssets().open("compiler/"+name));}
                 catch(IOException error){return denied();}
             }
             @Override public void onPageFinished(WebView v,String url){
@@ -64,10 +64,6 @@ public final class OfflineCompiler {
         });
         handler.postDelayed(watchdog,30000);
         view.loadUrl(ORIGIN+"/index.html");
-    }
-    private static java.io.InputStream openAsset(Context context,String name) throws IOException {
-        if(java.util.Arrays.asList("clang22-noeh","lld22-noeh","sysroot22.tar","memfs").contains(name))return new java.util.zip.GZIPInputStream(context.getAssets().open("compiler/"+name+".gz"));
-        return context.getAssets().open("compiler/"+name);
     }
     private static WebResourceResponse denied(){return new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.emptyMap(),new ByteArrayInputStream(new byte[0]));}
     private void emit(String type,String message){try{listener.onEvent(new JSONObject().put("type",type).put("message",message));}catch(Exception ignored){}}
