@@ -1,4 +1,4 @@
-<resources><style name="AppTheme" parent="android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">false</item><item name="android:colorAccent">#7EE7F5</item><item name="android:windowBackground">#203D62</item></style><style name="AppThemeLight" parent="android:style/Theme.Material.Light.NoActionBar">
+<resources><style name="AppTheme" parent="android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">false</item><item name="android:colorAccent">#C5ADFF</item><item name="android:windowBackground">#100B19</item></style><style name="AppThemeLight" parent="android:style/Theme.Material.Light.NoActionBar">
 <item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">true</item>
-<item name="android:colorAccent">#126BB7</item><item name="android:windowBackground">#FCFDFF</item>
+<item name="android:colorAccent">#694AA2</item><item name="android:windowBackground">#FCFDFF</item>
 </style></resources>

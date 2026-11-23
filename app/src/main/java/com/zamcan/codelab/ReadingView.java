@@ -2,7 +2,6 @@ package com.zamcan.codelab;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.Layout;
@@ -11,159 +10,219 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
 import java.util.ArrayList;
-import java.util.List;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.TypefaceSpan;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/** Native reader for authored sections and measured text pages. */
+/** One idea per step. Long paragraphs and source listings also break at measured lines. */
 public final class ReadingView extends LinearLayout {
     public interface Position { void save(int offset); }
-    private final TextView body, rail, heading;
-    private final LinearLayout segments;
-    private final Button back, next;
+    public interface Responses {
+        boolean answered(int offset);
+        void record(int offset,String response);
+    }
+    private static final Pattern BREAK = Pattern.compile("\\n[ \\t]*\\n+|\\f+");
+    private final ArrayList<Page> pages=new ArrayList<>();
+    private final TextView body,rail;
+    private final Button back,next,skip;
+    private final ProgressBar meter;
+    private final ImageView picture;
     private final String source;
-    private final boolean code,light;
-    private final Runnable finish,close;
-    private final Position position;
-    private final List<Integer> starts=new ArrayList<>();
-    private final ScrollView sectionScroll;
-    private final LinearLayout sectionContent;
+    private final boolean code,light,challenge;
     private final int illustration;
-    private int offset, measuredWidth, measuredHeight;
-    private boolean layingOut;
+    private final Position position;
+    private final Responses responses;
+    private final Runnable finish;
+    private int current,offset,width,height;
 
-    public ReadingView(Context context, boolean light, String title, String text,
-            boolean code, int savedOffset, Position position, Runnable close,
-            Runnable finish, Runnable extra, String extraLabel, int illustration) {
-        super(context);this.source=text;this.code=code;this.light=light;this.close=close;this.offset=Math.max(0,Math.min(savedOffset,Math.max(0,text.length()-1)));
-        this.illustration=illustration;this.position=position;this.finish=finish;
-        setOrientation(VERTICAL);setBackgroundColor(light?0xfffcfcff:0xff0b1025);
-        setPadding(dp(20),dp(12),dp(20),dp(12));
-        setOnApplyWindowInsetsListener((view,insets)->{setPadding(dp(20)+insets.getSystemWindowInsetLeft(),dp(12)+insets.getSystemWindowInsetTop(),dp(20)+insets.getSystemWindowInsetRight(),dp(12)+insets.getSystemWindowInsetBottom());return insets;});
-        int ink=light?0xff202536:0xfff6f7ff;
-        segments=new LinearLayout(context);addView(segments,new LayoutParams(-1,dp(4)));
-        LinearLayout top=new LinearLayout(context);top.setGravity(Gravity.CENTER_VERTICAL);addView(top);
-        Button exit=button("‹  Contents",false,light);exit.setOnClickListener(v->close.run());top.addView(exit,new LayoutParams(-2,dp(48)));
-        rail=new TextView(context);rail.setTextColor(light?0xff425ff5:0xff91b7ff);rail.setTextSize(14);rail.setGravity(Gravity.END);
-        top.addView(rail,new LayoutParams(0,-2,1));
-        heading=new TextView(context);heading.setText(title);heading.setTextColor(ink);heading.setTextSize(22);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(12),0,dp(12));addView(heading);
-        if(code){
-            LinearLayout codeBar=new LinearLayout(context);codeBar.setGravity(Gravity.CENTER_VERTICAL);codeBar.setPadding(dp(12),0,0,0);
-            TextView label=new TextView(context);label.setText("CODE EXAMPLE");label.setTextSize(11);label.setLetterSpacing(.12f);label.setTextColor(light?0xff087a68:0xff8ee7c8);codeBar.addView(label,new LayoutParams(0,-2,1));
-            Button expand=button("Expand",false,light);expand.setOnClickListener(v->showCode());codeBar.addView(expand,new LayoutParams(dp(104),dp(40)));addView(codeBar);
-        }
-        body=new TextView(context);body.setTextColor(ink);body.setTextSize(16);body.setTextIsSelectable(true);body.setGravity(Gravity.TOP);body.setIncludeFontPadding(false);body.setLineSpacing(dp(4),1);
-        body.setPadding(dp(20),dp(22),dp(20),dp(22));
-        GradientDrawable paper=new GradientDrawable();paper.setCornerRadius(dp(18));paper.setColor(light?0xffffffff:0xff13203a);paper.setStroke(dp(1),light?0x1a1d3a6b:0x2e9ab4e8);body.setBackground(paper);
-        if(code){body.setTypeface(Typeface.MONOSPACE);body.setTextDirection(TEXT_DIRECTION_LTR);}
-        if(text.indexOf('\f')>=0){
-            sectionScroll=new ScrollView(context);
-            sectionContent=new LinearLayout(context);
-            sectionContent.setOrientation(VERTICAL);
-            sectionScroll.addView(sectionContent);
-            addView(sectionScroll,new LayoutParams(-1,0,1));
-            starts.add(0);
-            for(int i=0;i<text.length()-1;i++)if(text.charAt(i)=='\f')starts.add(i+1);
-        }else{
-            sectionScroll=null;
-            sectionContent=null;
-            addView(body,new LayoutParams(-1,0,1));
-        }
-        if(extra!=null){Button more=button(extraLabel,false,light);more.setOnClickListener(v->extra.run());addView(more,new LayoutParams(-1,dp(48)));}
-        LinearLayout controls=new LinearLayout(context);controls.setPadding(0,dp(12),0,0);addView(controls);
-        back=button("Back",false,light);next=button("Next",true,light);
-        LayoutParams previousParams=new LayoutParams(0,dp(52),1);previousParams.setMarginEnd(dp(8));controls.addView(back,previousParams);controls.addView(next,new LayoutParams(0,dp(52),2));
-        back.setOnClickListener(v->{int page=current();if(page>0){offset=starts.get(page-1);showPage();}else close.run();});
-        next.setOnClickListener(v->{int page=current();if(page+1<starts.size()){offset=starts.get(page+1);showPage();}else finish.run();});
-        if(sectionScroll!=null)showPage();
-    }
-    private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
-    private Button button(String title,boolean primary,boolean light){
-        Button button=new Button(getContext());button.setText(title);button.setTextSize(16);button.setAllCaps(false);
-        button.setTextColor(primary?Color.WHITE:light?0xff425ff5:0xff91b7ff);
-        GradientDrawable shape=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,primary?new int[]{0xff425ff5,0xff7851db}:new int[]{Color.TRANSPARENT,Color.TRANSPARENT});shape.setCornerRadius(dp(16));
-        button.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x337851db),shape,null));return button;
-    }
-    @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom){
-        super.onLayout(changed,left,top,right,bottom);
-        if(sectionScroll!=null)return;
-        int width=Math.max(1,body.getWidth()-body.getPaddingLeft()-body.getPaddingRight());
-        int height=Math.max(1,body.getHeight()-body.getPaddingTop()-body.getPaddingBottom());
-        if(layingOut||width<=0||height<=0||(width==measuredWidth&&height==measuredHeight))return;
-        layingOut=true;measuredWidth=width;measuredHeight=height;paginate(width,height);showPage();layingOut=false;
-    }
-    private void paginate(int width,int height){
-        starts.clear();starts.add(0);int start=0;
-        while(start<source.length()){
-            CharSequence remaining=RichText.format(source.substring(start),light,code);
-            StaticLayout layout=StaticLayout.Builder.obtain(remaining,0,remaining.length(),body.getPaint(),width)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).setLineSpacing(dp(4),1).build();
-            if(layout.getHeight()<=height)break;
-            int line=0;while(line+1<layout.getLineCount()&&layout.getLineBottom(line+1)<=height)line++;
-            int end=start+layout.getLineEnd(line);
-            if(end<=start)end=Math.min(source.length(),start+1);
-            // Prefer complete authored paragraphs, then sentence boundaries, then measured lines.
-            int paragraph=source.lastIndexOf("\n\n",end-1);
-            int sentence=source.lastIndexOf(". ",end-1);
-            int preferred=paragraph>start?paragraph+2:sentence>start?sentence+2:end;
-            if(preferred-start>=(end-start)/3)end=preferred;
-            if(end>=source.length())break;
-            starts.add(end);start=end;
+    private static final class Page {
+        final int start,end,question;
+        final boolean snippet;
+        Page(int start,int end,int question,boolean snippet){
+            this.start=start;this.end=end;this.question=question;this.snippet=snippet;
         }
     }
-    private int current(){int page=0;while(page+1<starts.size()&&starts.get(page+1)<=offset)page++;return page;}
-    private void showPage(){
-        if(starts.isEmpty())return;
-        int page=current();offset=starts.get(page);int end=page+1<starts.size()?starts.get(page+1):source.length();
-        segments.removeAllViews();for(int i=0;i<starts.size();i++){View segment=new View(getContext());GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(2));bg.setColor(i<page?0xff29b982:i==page?0xff6670ed:light?0xffdce0ed:0xff36405b);segment.setBackground(bg);LayoutParams lp=new LayoutParams(0,-1,1);lp.setMargins(dp(1),0,dp(1),0);segments.addView(segment,lp);}
-        String section=source.substring(offset,end);
-        if(sectionScroll==null)body.setText(RichText.format(section,light,code));
-        else renderSection(section.trim(),page);
-        rail.setText((page+1)+" / "+starts.size());
-        back.setVisibility(page==0?View.GONE:View.VISIBLE);next.setText(page+1<starts.size()?"Continue ›":"Finish ✓");
-        position.save(offset);body.announceForAccessibility("Scene "+(page+1)+" of "+starts.size());
+
+    public ReadingView(Context context, boolean light, String title, String text, boolean code,
+            int savedOffset, Position position, Runnable close, Runnable finish, Runnable extra,
+            String extraLabel, int illustration, boolean challenge, Responses responses) {
+        super(context);
+        this.source=text;this.code=code;this.light=light;this.offset=savedOffset;
+        this.position=position;this.finish=finish;this.illustration=illustration;
+        this.challenge=challenge;this.responses=responses;
+        setOrientation(VERTICAL);
+        setBackgroundColor(light?0xfffaf9ff:0xff100b1a);
+        setPadding(dp(18),dp(6),dp(18),dp(6));
+        setOnApplyWindowInsetsListener((v,i)->{setPadding(dp(18)+i.getSystemWindowInsetLeft(),
+            dp(6)+i.getSystemWindowInsetTop(),dp(18)+i.getSystemWindowInsetRight(),
+            dp(6)+i.getSystemWindowInsetBottom());return i;});
+
+        LinearLayout bar=new LinearLayout(context);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        addView(bar);
+        Button contents=button("Contents",false);contents.setOnClickListener(v->close.run());
+        bar.addView(contents);
+        rail=new TextView(context);rail.setGravity(Gravity.CENTER);rail.setTextColor(ink());
+        bar.addView(rail,new LayoutParams(0,-2,1));
+        skip=button("Skip reading",false);skip.setOnClickListener(v->skipReading());bar.addView(skip);
+        meter=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);
+        meter.setProgressTintList(android.content.res.ColorStateList.valueOf(light?0xff6953ad:0xffbaa7ff));
+        addView(meter,new LayoutParams(-1,dp(4)));
+        TextView heading=new TextView(context);heading.setText(title);heading.setTextSize(22);
+        heading.setTextColor(ink());heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        heading.setPadding(0,dp(10),0,dp(8));addView(heading);
+
+        FrameLayout viewport=new FrameLayout(context);
+        addView(viewport,new LayoutParams(-1,0,1));
+        body=new TextView(context);body.setTextSize(17);body.setTextColor(ink());body.setTextIsSelectable(true);
+        body.setIncludeFontPadding(false);body.setLineSpacing(dp(4),1f);
+        body.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_SIMPLE);
+        body.setHyphenationFrequency(android.text.Layout.HYPHENATION_FREQUENCY_NONE);
+        body.setPadding(0,dp(6),0,dp(6));viewport.addView(body,new FrameLayout.LayoutParams(-1,-1));
+        picture=new ImageView(context);picture.setVisibility(GONE);
+        if(illustration!=0){
+            picture.setImageResource(illustration);
+            picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            picture.setContentDescription("Dennis Ritchie and Bjarne Stroustrup with C functions and C++ classes.");
+            viewport.addView(picture,new FrameLayout.LayoutParams(-1,-1));
+        }
+        LinearLayout controls=new LinearLayout(context);controls.setGravity(Gravity.CENTER_VERTICAL);
+        addView(controls);
+        back=button("Back",false);back.setOnClickListener(v->{if(current>0)show(current-1);});
+        controls.addView(back,new LayoutParams(0,-2,1));
+        if(extra!=null){
+            Button more=button(extraLabel,false);more.setOnClickListener(v->extra.run());
+            controls.addView(more,new LayoutParams(0,-2,1));
+        }
+        next=button("Next",true);next.setOnClickListener(v->advance());
+        controls.addView(next,new LayoutParams(0,-2,2));
     }
-    private void renderSection(String section,int page){
-        sectionContent.removeAllViews();
-        String[] paragraphs=section.split("\\n\\s*\\n");
-        for(int i=0;i<paragraphs.length;i++){
-            String paragraph=paragraphs[i];
-            int codeStart=paragraph.indexOf("\n    ");
-            if(codeStart>=0 && !paragraph.startsWith("    ")){
-                addParagraph(paragraph.substring(0,codeStart),false,false);
-                paragraph=paragraph.substring(codeStart+1);
+    private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
+    private int ink(){return light?0xff211a32:0xfff7f2ff;}
+    private Button button(String title,boolean primary){
+        Button b=new Button(getContext());b.setText(title);b.setAllCaps(false);b.setMinHeight(dp(48));
+        b.setMinWidth(0);b.setPadding(dp(8),0,dp(8),0);b.setTextColor(primary?0xff201400:ink());
+        GradientDrawable bg=new GradientDrawable();bg.setColor(primary?0xffffbc38:0x00000000);bg.setCornerRadius(dp(12));
+        b.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x308371ab),bg,null));
+        return b;
+    }
+
+    @Override protected void onLayout(boolean changed,int l,int t,int r,int b){
+        super.onLayout(changed,l,t,r,b);
+        int w=body.getWidth()-body.getPaddingLeft()-body.getPaddingRight();
+        int h=body.getHeight()-body.getPaddingTop()-body.getPaddingBottom();
+        if(w<=0||h<=0||(w==width&&h==height))return;
+        width=w;height=h;pages.clear();
+        if(illustration!=0)pages.add(new Page(-1,-1,-1,false));
+        if(code)addBlock(0,source.length());
+        else{
+            Matcher breaks=BREAK.matcher(source);
+            int start=0;
+            while(breaks.find()){
+                String block=source.substring(start,breaks.start()).trim();
+                boolean title=!block.contains("\n")&&block.length()<65
+                    &&!source.startsWith("    ",start)&&!block.matches("(?s).*?[?.!;}]$");
+                boolean predictionWithCode=source.startsWith("    ",breaks.end())
+                    &&ReadingPause.required(block,false,false);
+                if((title||predictionWithCode)&&breaks.end()<source.length()
+                        &&breaks.group().indexOf('\f')<0)continue;
+                addBlock(start,breaks.start());start=breaks.end();
             }
-            boolean snippet=paragraph.startsWith("    ");
-            addParagraph(snippet?paragraph.replaceAll("(?m)^    ",""):paragraph,i==0,snippet);
-            if(i==0 && page==0 && illustration!=0){
-                ImageView picture=new ImageView(getContext());
-                picture.setImageResource(illustration);
-                picture.setAdjustViewBounds(true);
-                picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                picture.setContentDescription("Illustration of Dennis Ritchie and Bjarne Stroustrup, with functions on the C side and classes on the C++ side.");
-                sectionContent.addView(picture,new LayoutParams(-1,-2));
-            }
+            addBlock(start,source.length());
         }
-        sectionScroll.scrollTo(0,0);
+        if(pages.isEmpty())pages.add(new Page(0,0,-1,false));
+        int saved=0;
+        while(saved+1<pages.size()&&pages.get(saved+1).start<=offset)saved++;
+        for(int i=0;i<saved;i++)if(pending(pages.get(i))){saved=i;break;}
+        show(saved);
     }
-    private void addParagraph(String value,boolean title,boolean snippet){
-        TextView part=new TextView(getContext());
-        part.setTextColor(light?0xff202536:0xfff6f7ff);
-        part.setTextSize(title?22:snippet?15:17);
-        part.setTextIsSelectable(true);
-        part.setLineSpacing(dp(3),1f);
-        part.setPadding(snippet?dp(12):0,dp(8),snippet?dp(12):0,dp(8));
-        if(title)part.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        if(snippet){
-            part.setTypeface(Typeface.MONOSPACE);
-            part.setTextDirection(TEXT_DIRECTION_LTR);
-            part.setBackgroundColor(light?0xffedf2f7:0xff172739);
-            part.setText(RichText.format(value,light,true));
-        }else part.setText(value);
-        sectionContent.addView(part,new LayoutParams(-1,-2));
+    private void addBlock(int start,int end){
+        if(start>=end)return;
+        String raw=source.substring(start,end);
+        if(raw.trim().isEmpty())return;
+        boolean snippet=code||raw.startsWith("    ")||raw.trim().startsWith("#include");
+        boolean question=ReadingPause.required(raw,snippet,challenge);
+        // Show the author's answer only after the learner has recorded a prediction.
+        int boundary=raw.indexOf("? ");
+        if(question&&boundary>=0&&!challenge&&!raw.contains("\n    ")){
+            fit(start,start+boundary+1,start,snippet);
+            fit(start+boundary+2,end,-1,snippet);
+        }else fit(start,end,question?start:-1,snippet);
     }
-    private void showCode(){
-        TextView view=new TextView(getContext());view.setText(RichText.format(source,light,true));view.setTextSize(14);view.setTypeface(Typeface.MONOSPACE);view.setTextIsSelectable(true);
-        view.setTextColor(light?0xff172440:0xfff6f7ff);view.setPadding(dp(16),dp(12),dp(16),dp(12));
-        ScrollView scroll=new ScrollView(getContext());scroll.addView(view);
-        new AlertDialog.Builder(getContext()).setTitle("Code example").setView(scroll).setPositiveButton("Close",null).show();
+    private CharSequence styled(String value,boolean snippet){
+        if(snippet)return RichText.format(value,light,true);
+        SpannableStringBuilder result=new SpannableStringBuilder();
+        for(String line:value.split("(?<=\\n)",-1)){
+            int start=result.length();
+            if(line.startsWith("    ")){
+                result.append(RichText.format(line,light,true));
+                result.setSpan(new TypefaceSpan("monospace"),start,result.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }else result.append(line);
+        }
+        return result;
     }
+    private void fit(int start,int end,int question,boolean snippet){
+        if(start>=end)return;
+        body.setTypeface(snippet?Typeface.MONOSPACE:Typeface.DEFAULT);
+        CharSequence text=styled(source.substring(start,end),snippet);
+        StaticLayout layout=StaticLayout.Builder.obtain(text,0,text.length(),body.getPaint(),width)
+            .setIncludePad(false).setLineSpacing(dp(4),1f).setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setBreakStrategy(Layout.BREAK_STRATEGY_SIMPLE).build();
+        int first=0;
+        while(first<layout.getLineCount()){
+            int last=first;
+            while(last+1<layout.getLineCount()&&
+                (!snippet||last-first<8)&&layout.getLineBottom(last+1)-layout.getLineTop(first)<=height)last++;
+            int a=start+layout.getLineStart(first),b=start+layout.getLineEnd(last);
+            if(b>a)pages.add(new Page(a,b,b==end?question:-1,snippet));
+            first=last+1;
+        }
+    }
+    private boolean pending(Page p){return p.question>=0&&!responses.answered(p.question);}
+    private void show(int index){
+        current=index;Page p=pages.get(index);offset=p.start;position.save(offset);
+        boolean art=illustration!=0&&index==0;
+        body.setVisibility(art?INVISIBLE:VISIBLE);picture.setVisibility(art?VISIBLE:GONE);
+        body.setTypeface(p.snippet?Typeface.MONOSPACE:Typeface.DEFAULT);
+        if(!art)body.setText(styled(source.substring(p.start,p.end),p.snippet));
+
+        rail.setText((index+1)+" / "+pages.size());
+        meter.setMax(pages.size());meter.setProgress(index+1);
+        back.setEnabled(index>0);back.setAlpha(index>0?1f:.35f);
+        boolean inQuestion=false;
+        for(int i=index;i<pages.size();i++)if(pending(pages.get(i))){
+            inQuestion=p.start>=pages.get(i).question;
+            break;
+        }
+        skip.setVisibility(inQuestion||index+1==pages.size()?INVISIBLE:VISIBLE);
+        next.setText(pending(p)?"Respond":index+1==pages.size()?"Continue":"Next");
+    }
+    private void skipReading(){
+        for(int i=current;i<pages.size();i++)if(pending(pages.get(i))){
+            int j=i;
+            while(j>current&&pages.get(j-1).start>=pages.get(i).question)j--;
+            show(j);return;
+        }
+        finish.run();
+    }
+    private void advance(){
+        if(pages.isEmpty())return;
+        Page p=pages.get(current);
+        if(!pending(p)){nextPage();return;}
+        EditText input=new EditText(getContext());
+        input.setHint("Your prediction or reasoning");
+        input.setMinLines(2);input.setMaxLines(4);
+        input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
+        AlertDialog dialog=new AlertDialog.Builder(getContext()).setTitle("Think it through")
+            .setView(input).setPositiveButton("Save response",null).setNegativeButton("Back",null).create();
+        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{
+            String value=input.getText().toString().trim();
+            if(value.isEmpty()){input.setError("Enter your response first");return;}
+            responses.record(p.question,value);dialog.dismiss();nextPage();
+        }));
+        dialog.show();
+    }
+    private void nextPage(){if(current+1<pages.size())show(current+1);else finish.run();}
 }

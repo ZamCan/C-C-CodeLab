@@ -23,7 +23,7 @@ public final class MainActivity extends Activity {
         super.attachBaseContext(base.createConfigurationContext(config));
     }
 
-    private int INK=0xfff9fbff, MUTED=0xffd4e3f6, MINT=0xff7ee7f5, LILAC=0xffd5b7ff;
+    private int INK=0xfff5f0fa, MUTED=0xffc0b6cf, MINT=0xffc7afff, LILAC=0xffd8c6ff;
     private boolean light;
     private LinearLayout content;
     private ProjectStore store;
@@ -43,7 +43,7 @@ public final class MainActivity extends Activity {
     private int activeLesson, activeStage;
     private Runnable readingBack, quizBack;
     private String screen="home", filename="main.c", exportSource="";
-    private EditText editor;
+    private CodeEditor editor;
     private TextView saveStatus;
     private OfflineCompiler compiler;
     private CodeLabAds ads;
@@ -60,8 +60,9 @@ public final class MainActivity extends Activity {
     private final Runnable autosave=() -> saveSource(false);
 
     @Override public void onCreate(Bundle state) {
-        light=getSharedPreferences("academy",MODE_PRIVATE).getBoolean("light_theme",false);
-        if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff52617a;MINT=0xff126bb7;LILAC=0xff7250b5;}
+        light=AppAppearance.isLight(this);
+        if(light) {setTheme(R.style.AppThemeLight);INK=0xff172440;MUTED=0xff52617a;MINT=0xff664591;LILAC=0xff7250b5;}
+        MINT=AppAppearance.color(AppAppearance.choice(getSharedPreferences("academy",MODE_PRIVATE)),light);
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0);
         preferences=getSharedPreferences("academy", MODE_PRIVATE);
@@ -78,6 +79,7 @@ public final class MainActivity extends Activity {
         }
         else if(state!=null && ("lesson".equals(state.getString("screen"))||"story".equals(state.getString("screen"))) && preferences.getString("reading_key","").startsWith(courseKey()+":")) lesson(state.getInt("lesson"),state.getInt("stage"));
         else if(state!=null && "appearance".equals(state.getString("screen"))) appearance();
+        else if(state!=null && "settings".equals(state.getString("screen"))) settingsScreen();
         else home();
     }
     /**
@@ -267,8 +269,8 @@ public final class MainActivity extends Activity {
         else if("story".equals(screen) && readingBack!=null)readingBack.run();
         else if("quiz".equals(screen) && quizBack!=null)quizBack.run();
         else if("lesson".equals(screen)) { if(activeStage>0) lesson(activeLesson,activeStage-1); else courseMap(); }
-        else if("course".equals(screen))pathways();
-        else if("pathways".equals(screen))academy();
+        else if("course".equals(screen))academy();
+        else if(java.util.Arrays.asList("appearance","status","inbox","sample_certificate","references").contains(screen))settingsScreen();
         else if("labs".equals(screen)||"history".equals(screen)||"achievements".equals(screen)||"projects".equals(screen))academy();
         else if("guide".equals(screen))projects();
         else if(leaveEditor()) home();
@@ -282,8 +284,8 @@ public final class MainActivity extends Activity {
     private GradientDrawable glass(boolean accent) {
         GradientDrawable d=new GradientDrawable();
         d.setCornerRadius(dp(14));
-        d.setColor(light?(accent?0xfff6f9ff:0xffffffff):(accent?0xff1d2b38:0xff19232d));
-        d.setStroke(dp(1),light?(accent?0x332f5fe8:0x1a1d3a6b):(accent?0x4d8fb6ff:0x2e9ab4e8));
+        d.setColor(light?(accent?0xfff6f9ff:0xffffffff):(accent?0xff281e39:0xff1b1427));
+        d.setStroke(dp(1),light?(accent?0x332f5fe8:0x1a1d3a6b):(accent?0x547a6595:0x4168547c));
         return d;
     }
     private TextView label(String text,int size,int color) {
@@ -301,16 +303,17 @@ public final class MainActivity extends Activity {
     private void action(LinearLayout parent,String text,boolean primary,Runnable run) {
         Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextSize(16);
         b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); b.setLetterSpacing(0.01f);
-        b.setTextColor(primary?Color.WHITE:INK); b.setMinHeight(dp(52));
+        b.setTextColor(primary?(light && settings().contains("appearance_accent")?Color.WHITE:0xff221327):INK); b.setMinHeight(dp(52));
         b.setPadding(dp(16),dp(12),dp(16),dp(12));
         GradientDrawable background;
         if(primary){
-            background=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xff168e7a,0xff35c6a2});
+            background=new GradientDrawable();
+            background.setColor(settings().contains("appearance_accent")?MINT:0xffffbd39);
             background.setCornerRadius(dp(16));
         } else {
             background=new GradientDrawable();
             background.setCornerRadius(dp(16));
-            background.setColor(light?0xffffffff:0xff223351);
+            background.setColor(light?0xffffffff:0xff291f39);
             background.setStroke(dp(1),light?0x33223a6b:0x4d9ab4e8);
         }
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(primary?0x40ffffff:0x33758cdb),background,null));
@@ -320,7 +323,7 @@ public final class MainActivity extends Activity {
     }
     private void shell(String name,String eyebrow,String heading,String subtitle) {
         handler.removeCallbacks(autosave); editor=null; dirty=false; screen=name;
-        FrameLayout root=new FrameLayout(this); root.setBackgroundColor(light?0xfffafafa:0xff10151d);
+        FrameLayout root=new FrameLayout(this); root.setBackgroundColor(light?0xfffffbff:0xff100b19);
         LinearLayout stack=new LinearLayout(this); stack.setOrientation(LinearLayout.VERTICAL); root.addView(stack,new FrameLayout.LayoutParams(-1,-1));
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         stack.addView(topBar(name),new LinearLayout.LayoutParams(-1,dp(58)));
@@ -339,8 +342,10 @@ public final class MainActivity extends Activity {
             Button back=compactButton("‹",this::onBackPressed);back.setTextSize(28);back.setContentDescription("Back");
             bar.addView(back,new LinearLayout.LayoutParams(dp(46),dp(46)));
         } else {
-            TextView mark=label("</>",17,MINT);mark.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);mark.setGravity(Gravity.CENTER);
-            mark.setBackground(iconBadge());bar.addView(mark,new LinearLayout.LayoutParams(dp(40),dp(40)));
+            ImageView mark=new ImageView(this);
+            mark.setImageResource(R.drawable.ic_codelab_brand);
+            mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            bar.addView(mark,new LinearLayout.LayoutParams(dp(44),dp(44)));
         }
         String barTitle=headingFor(name);
         TextView heading=label(barTitle,17,INK);heading.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
@@ -354,17 +359,18 @@ public final class MainActivity extends Activity {
     private String headingFor(String name){
         if("home".equals(name))return "CodeLab C & C++";
         if("editor".equals(name))return "Compiler";
-        if("academy".equals(name))return "Learn C/C++";
+        if("academy".equals(name))return "My courses";
         if("story".equals(name))return "Reading";
         if("quiz".equals(name))return "Checkpoint";
         if("labs".equals(name))return "Labs";
         if("history".equals(name))return "History";
-        if("course".equals(name))return "Course";
+        if("course".equals(name))return "Course outline";
         if("pathways".equals(name))return "Courses";
         if("projects".equals(name))return "Projects";
         if("guide".equals(name))return "Project lab";
         if("achievements".equals(name))return "Achievements";
         if("references".equals(name))return "References";
+        if("settings".equals(name))return "Settings";
         if("appearance".equals(name))return "Appearance";
         if("status".equals(name))return "About";
         if("inbox".equals(name))return "Notifications";
@@ -372,32 +378,67 @@ public final class MainActivity extends Activity {
     }
     private void showOverflow(View anchor) {
         if(editor!=null && !leaveEditor())return;
-        String[] items={"Learning account","Notifications","Study reminders","Theme & appearance","Sound & motion","Test advertising","Academic references","About this build","Certificate preview"};
-        new AlertDialog.Builder(this).setTitle("CodeLab").setItems(items,(dialog,item)->{
-            if(item==0)progressSettings();
-            else if(item==1)notificationInbox();
-            else if(item==2)reminderSettings();
-            else if(item==3)appearance();
-            else if(item==4)feedbackSettings();
-            else if(item==5)advertisingSettings();
-            else if(item==6)academicReferences();
-            else if(item==7)status();
-            else if(item==8)sampleCertificate();
-        }).show();
+        settingsScreen();
     }
+
+    private void settingsScreen() {
+        shell("settings","","","");
+        section("ACCOUNT");
+        setting("Learning account",this::progressSettings);
+        section("PREFERENCES");
+        setting("Appearance",this::appearance);
+        setting("Sound & motion",this::feedbackSettings);
+        setting("Study reminders",this::reminderSettings);
+        setting("Notifications",this::notificationInbox);
+        section("ABOUT");
+        setting("About CodeLab",this::status);
+        setting("Academic references",this::academicReferences);
+        setting("Certificate preview",this::sampleCertificate);
+        setting("Test advertising",this::advertisingSettings);
+    }
+
+    private void setting(String text,Runnable open) {
+        Button link=new Button(this,null,android.R.attr.borderlessButtonStyle);
+        link.setAllCaps(false);
+        link.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
+        link.setPadding(dp(12),0,dp(12),0);
+        link.setText(text);
+        link.setTextSize(16);
+        link.setTextColor(INK);
+        link.setMinHeight(dp(48));
+        link.setOnClickListener(v->open.run());
+        content.addView(link,new LinearLayout.LayoutParams(-1,-2));
+    }
+
     /** Persistent bottom navigation shared by every reading and workspace surface. */
     private View bottomNav(String name) {
-        LinearLayout nav=new LinearLayout(this); nav.setPadding(dp(16),0,dp(16),dp(12)); nav.setBackground(glass(false));
-        String[] tabs={"Home","Compiler","Learn C/C++"};
+        LinearLayout nav=new LinearLayout(this);
+        nav.setPadding(dp(8),dp(4),dp(8),dp(4));
+        nav.setBackgroundColor(light?0xfff7f1fc:0xff1a1225);
+        String[] tabs={"Home","Compiler","Courses"};
+        int[] icons={R.drawable.ic_nav_home,R.drawable.ic_nav_code,R.drawable.ic_nav_courses};
         int selected="home".equals(name)?0:("studio".equals(name)||"editor".equals(name)?1:
             java.util.Arrays.asList("academy","story","quiz","labs","history","course","pathways","projects","guide","achievements","lesson").contains(name)?2:-1);
-        for(int i=0;i<tabs.length;i++) {
-            final int destination=i;Button b=new Button(this);b.setText(tabs[i]);b.setAllCaps(false);b.setTextSize(14);
-            b.setTextColor(i==selected?MINT:MUTED);b.setMinHeight(dp(56));b.setSelected(i==selected);
-            GradientDrawable surface=new GradientDrawable();surface.setCornerRadius(dp(16));surface.setColor(i==selected?(light?0xffe4ecfa:0xff202d50):Color.TRANSPARENT);
-            b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22758cdb),surface,null));
-            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,-2,1);params.setMargins(dp(3),dp(6),dp(3),0);nav.addView(b,params);
-            b.setOnClickListener(v->{if(leaveEditor()){if(destination==0)home();else if(destination==1)studio();else academy();}});
+        for(int i=0;i<tabs.length;i++){
+            final int destination=i;
+            TextView tab=label(tabs[i],12,i==selected?INK:MUTED);
+            tab.setGravity(Gravity.CENTER);
+            tab.setFocusable(true);
+            tab.setSelected(i==selected);
+            tab.setPadding(dp(4),dp(5),dp(4),dp(5));
+            tab.setCompoundDrawablePadding(dp(2));
+            Drawable icon=getDrawable(icons[i]).mutate();
+            icon.setTint(i==selected?MINT:MUTED);
+            tab.setCompoundDrawablesWithIntrinsicBounds(null,icon,null,null);
+            GradientDrawable surface=new GradientDrawable();
+            surface.setCornerRadius(dp(16));
+            surface.setColor(i==selected?(light?0xffe9def8:0xff38294e):Color.TRANSPARENT);
+            tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x338a6ca8),surface,null));
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,-2,1);
+            params.setMargins(dp(3),0,dp(3),0);
+            tab.setMinHeight(dp(48));
+            nav.addView(tab,params);
+            tab.setOnClickListener(v->{if(leaveEditor()){if(destination==0)home();else if(destination==1)studio();else academy();}});
         }
         return nav;
     }
@@ -502,27 +543,27 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(14);content.addView(tile,params);
     }
     private GradientDrawable iconBadge() {
-        GradientDrawable badge=new GradientDrawable();badge.setShape(GradientDrawable.OVAL);
-        badge.setColor(light?0xffeaf1ff:0xff2c3f6a);
+        GradientDrawable badge=new GradientDrawable();badge.setCornerRadius(dp(12));
+        badge.setColor(light?0xffeee5ff:0xff35264d);
         badge.setStroke(dp(1),light?0x332f5fe8:0x4d8fb6ff);
         return badge;
     }
     /** Educational references, not sponsorships or claims of textbook reproduction. */
     private void academicReferences() {
-        shell("references","ABOUT THE LEARNING MATERIAL","Academic references","Official standards and independent reading");
-        LinearLayout intro=panel(false);
-        title(intro,"How CodeLab uses references",20);
-        body(intro,"Lessons and examples are written for CodeLab. These links are independent resources for checking language rules and reading further. Listing a publisher or project does not mean it endorses or sponsors this app.");
-        reference("ISO C language (WG14)","Official working group for the C language standard.","https://www.open-std.org/jtc1/sc22/wg14/");
-        reference("ISO C++ language (WG21)","Official C++ standards committee and public papers.","https://isocpp.org/std/the-standard");
-        reference("cppreference","Independent reference for C and C++ library and language features.","https://en.cppreference.com/w/");
-        reference("The C Programming Language","Brian W. Kernighan and Dennis M. Ritchie; classic C textbook. Obtain from an authorized source.","https://www.pearson.com/");
-        reference("Programming: Principles and Practice Using C++","Bjarne Stroustrup; textbook for learning programming with C++. Obtain from an authorized source.","https://www.stroustrup.com/programming.html");
-        reference("Learn C++","Free online C++ learning resource; independent of CodeLab.","https://www.learncpp.com/");
-        LinearLayout technology=panel(false);
-        title(technology,"Technology acknowledgements",20);
-        body(technology,"Appwrite: Google sign-in and account-scoped progress sync are implemented in this build; live verification against the configured project is still pending. Cloudflare: the certification Worker integration is not enabled and certificate issuance remains disabled pending verification. Neither organization is a sponsor or endorser of CodeLab.");
-        action(content,"Back home",false,this::home);
+        academicReferences(false);
+    }
+    private void academicReferences(boolean books) {
+        shell("references","",books?"Books and tutorials":"Language references","");
+        if(books){
+            reference("The C Programming Language","Brian Kernighan and Dennis Ritchie","https://www.pearson.com/");
+            reference("Programming: Principles and Practice Using C++","Bjarne Stroustrup","https://www.stroustrup.com/programming.html");
+            reference("Learn C++","Online C++ tutorials","https://www.learncpp.com/");
+        }else{
+            reference("C standard","ISO working group WG14","https://www.open-std.org/jtc1/sc22/wg14/");
+            reference("C++ standard","ISO working group WG21","https://isocpp.org/std/the-standard");
+            reference("cppreference","Language and library reference","https://en.cppreference.com/w/");
+        }
+        action(content,books?"Language references":"Books and tutorials",false,()->academicReferences(!books));
     }
     private void reference(String name,String detail,String url) {
         row(content,"↗",name,detail,true,()->{
@@ -596,20 +637,45 @@ public final class MainActivity extends Activity {
             }).setPositiveButton("Done",null).show();
     }
     private void appearance() {
-        shell("appearance","","Appearance","");
+        shell("appearance","","","");
+        section("COLOUR SCHEME");
+        LinearLayout swatches=new LinearLayout(this);
+        content.addView(swatches);
+        int selected=AppAppearance.choice(settings());
+        for(int i=0;i<AppAppearance.COLORS.length;i++){
+            final int choice=i;
+            GradientDrawable dot=new GradientDrawable();
+            dot.setShape(GradientDrawable.OVAL);
+            dot.setColor(AppAppearance.color(i,light));
+            Button swatch=new Button(this);
+            swatch.setText(i==selected?"✓":"");
+            swatch.setTextColor(light?Color.WHITE:0xff211226);
+            swatch.setPadding(0,0,0,0);
+            swatch.setBackground(new android.graphics.drawable.InsetDrawable(dot,dp(5)));
+            swatch.setSelected(i==selected);
+            swatch.setContentDescription(AppAppearance.COLORS[i]);
+            swatch.setOnClickListener(v->{
+                if(choice!=selected){
+                    settings().edit().putInt("appearance_accent",choice).apply();
+                    recreate();
+                }
+            });
+            swatches.addView(swatch,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        }
+        body(content,AppAppearance.COLORS[selected]);
+        section("BRIGHTNESS");
         RadioGroup themes=new RadioGroup(this);
         content.addView(themes);
-        for(String name:new String[]{"Dark","Light"}){
+        for(String name:AppAppearance.MODES){
             RadioButton option=new RadioButton(this);
             option.setText(name);
             option.setTextColor(INK);
-            option.setMinHeight(dp(52));
-            boolean useLight="Light".equals(name);
+            option.setMinHeight(dp(48));
             themes.addView(option);
-            option.setChecked(light==useLight);
+            option.setChecked(name.equals(AppAppearance.mode(settings())));
             option.setOnClickListener(v->{
-                if(light!=useLight){
-                    settings().edit().putBoolean("light_theme",useLight).apply();
+                if(!name.equals(AppAppearance.mode(settings()))){
+                    settings().edit().putString("appearance_mode",name).apply();
                     recreate();
                 }
             });
@@ -623,7 +689,7 @@ public final class MainActivity extends Activity {
             version="";
         }
         shell("status","","CodeLab C & C++",version.isEmpty()?"":"Version "+version);
-        body(content,"Study C and C++ and run programs on this device.");
+        body(content,"An offline C and C++ academy by ZamCan Academy.");
         row(content,"›","Compiler diagnostics","Test the installed compiler",true,
             ()->startActivity(new Intent(this,CompilerDiagnosticsActivity.class)));
         row(content,"›","Academic references","Books and language standards",true,this::academicReferences);
@@ -651,7 +717,7 @@ public final class MainActivity extends Activity {
     /** A dedicated editor surface. The scratch buffer is complete without a file or save step. */
     private void openCompilerScreen(String source) {
         handler.removeCallbacks(autosave);editor=null;dirty=false;screen="editor";outputVisible=false;
-        FrameLayout root=new FrameLayout(this);root.setBackgroundColor(light?0xfffafafa:0xff10151d);
+        FrameLayout root=new FrameLayout(this);root.setBackgroundColor(light?0xfffffbff:0xff100b19);
         LinearLayout stack=new LinearLayout(this);stack.setOrientation(LinearLayout.VERTICAL);root.addView(stack,new FrameLayout.LayoutParams(-1,-1));
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         stack.addView(topBar("editor"),new LinearLayout.LayoutParams(-1,dp(58)));
@@ -664,7 +730,7 @@ public final class MainActivity extends Activity {
         final Button[] languageRef=new Button[1];
         languageRef[0]=compactButton(filename.endsWith(".cpp")||filename.endsWith(".hpp")?"C++17":"C17",()->{
             if(!scratch){message("Language follows the file","Create or open a .c or .cpp file to choose the language. The scratch buffer can switch freely.");return;}
-            filename=filename.endsWith(".cpp")?"main.c":"main.cpp";scratchFile=filename;fileName.setText(filename);languageRef[0].setText(filename.endsWith(".cpp")?"C++17":"C17");
+            filename=filename.endsWith(".cpp")?"main.c":"main.cpp";scratchFile=filename;editor.setSourceName(filename);fileName.setText(filename);languageRef[0].setText(filename.endsWith(".cpp")?"C++17":"C17");
             preferences.edit().putString("scratch_file",filename).apply();
         });fileRow.addView(languageRef[0],new LinearLayout.LayoutParams(dp(76),dp(38)));editorPane.addView(fileRow);
         LinearLayout meta=new LinearLayout(this);meta.setGravity(Gravity.CENTER_VERTICAL);
@@ -674,16 +740,29 @@ public final class MainActivity extends Activity {
 
         HorizontalScrollView tools=new HorizontalScrollView(this);tools.setHorizontalScrollBarEnabled(false);
         LinearLayout toolRow=new LinearLayout(this);toolRow.setPadding(0,dp(4),0,dp(4));tools.addView(toolRow);
-        toolRow.addView(compactButton("Cut",()->editSelection("Cut")),new LinearLayout.LayoutParams(-2,dp(40)));
-        toolRow.addView(compactButton("Copy",()->editSelection("Copy")),new LinearLayout.LayoutParams(-2,dp(40)));
-        toolRow.addView(compactButton("Paste",()->editSelection("Paste")),new LinearLayout.LayoutParams(-2,dp(40)));
-        toolRow.addView(compactButton(scratch?"Save as":"Save",()->{if(scratch)saveScratchAsFile();else saveSource(true);}),new LinearLayout.LayoutParams(-2,dp(40)));
-        toolRow.addView(compactButton("Text size",this::textSizeDialog),new LinearLayout.LayoutParams(-2,dp(40)));
+        for(String symbol:new String[]{"{","}","(",")",";","#","[","]","<",">","=","&","*","\"","'","\\",":"}){
+            addEditorKey(toolRow,symbol,"Insert "+symbol,()->editor.insertKeyText(symbol));
+        }
+        addEditorKey(toolRow,"Tab","Indent four spaces",()->editor.insertKeyText("    "));
+        addEditorKey(toolRow,"←","Cursor left",()->editor.moveCaret(KeyEvent.KEYCODE_DPAD_LEFT));
+        addEditorKey(toolRow,"→","Cursor right",()->editor.moveCaret(KeyEvent.KEYCODE_DPAD_RIGHT));
+        addEditorKey(toolRow,"↑","Cursor up",()->editor.moveCaret(KeyEvent.KEYCODE_DPAD_UP));
+        addEditorKey(toolRow,"↓","Cursor down",()->editor.moveCaret(KeyEvent.KEYCODE_DPAD_DOWN));
+        addEditorKey(toolRow,"End","End of line",()->editor.moveCaret(KeyEvent.KEYCODE_MOVE_END));
+        addEditorKey(toolRow,"Undo","Undo edit",()->editor.onTextContextMenuItem(android.R.id.undo));
+        addEditorKey(toolRow,"Redo","Redo edit",()->editor.onTextContextMenuItem(android.R.id.redo));
+        for(String operation:new String[]{"Cut","Copy","Paste"}){
+            addEditorKey(toolRow,operation,operation,()->editSelection(operation));
+        }
+        addEditorKey(toolRow,scratch?"Save as":"Save","Save source",()->{if(scratch)saveScratchAsFile();else saveSource(true);});
+        addEditorKey(toolRow,"Text size","Editor text size",this::textSizeDialog);
         editorPane.addView(tools);
 
         LinearLayout editorCard=new LinearLayout(this);editorCard.setOrientation(LinearLayout.VERTICAL);editorCard.setPadding(dp(2),dp(2),dp(2),dp(2));
         GradientDrawable editorBackground=new GradientDrawable();editorBackground.setColor(light?0xfff7f9ff:0xff0d172b);editorBackground.setCornerRadius(dp(16));editorBackground.setStroke(dp(1),light?0x225b78a8:0x336f9cdd);editorCard.setBackground(editorBackground);
         editor=new CodeEditor(this,light);editor.setTextColor(INK);editor.setTextSize(preferences.getInt("font",15));editor.setTypeface(Typeface.MONOSPACE);editor.setGravity(Gravity.TOP|Gravity.START);editor.setPadding(dp(56),dp(12),dp(10),dp(12));editor.setBackgroundColor(Color.TRANSPARENT);editor.setMinLines(6);editor.setHorizontallyScrolling(true);editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ProjectStore.MAX_BYTES)});editor.setContentDescription("Source code editor for "+filename);editor.setHint("Start typing C or C++…");editor.setHintTextColor(light?0x667080a0:0x66a9bdd8);editor.setText(source);editor.setLineSpacing(dp(2),1f);
+        editor.setSourceName(filename);
+        editorPane.addView(editor.assistanceBar());
         editorCard.addView(editor,new LinearLayout.LayoutParams(-1,0,1));editorPane.addView(editorCard,new LinearLayout.LayoutParams(-1,0,1));
         highlight(editor.getText());
         editor.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){}public void afterTextChanged(Editable s){if(highlighting)return;dirty=true;saveStatus.setText(scratch?"Scratch · saving locally":getString(R.string.saving));handler.removeCallbacks(autosave);handler.postDelayed(autosave,700);highlight(s);}});
@@ -725,6 +804,15 @@ public final class MainActivity extends Activity {
             else if(type.equals("result"))setCompilerState(event.isNull("trap")?"Exit status: "+event.optString("exitCode"):"Runtime error: "+event.optString("trap"),compiler!=null&&compiler.isReady());
             else if(type.equals("failure")||type.equals("cancelled"))setCompilerState(type.equals("cancelled")?"Cancelled":event.optString("message"),compiler!=null&&compiler.isReady());
         });
+    }
+    private void addEditorKey(LinearLayout row,String label,String description,Runnable action) {
+        Button key=compactButton(label,action);
+        key.setMinWidth(dp(48));
+        key.setMinimumWidth(dp(48));
+        key.setTypeface(Typeface.MONOSPACE);
+        key.setContentDescription(description);
+        key.setTooltipText(description);
+        row.addView(key,new LinearLayout.LayoutParams(-2,dp(48)));
     }
     private Button compactButton(String text,Runnable action) {
         Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setTextColor(light?0xff0e6e62:0xffb9f4e8);b.setMinHeight(dp(40));b.setPadding(dp(10),0,dp(10),0);
@@ -845,7 +933,7 @@ public final class MainActivity extends Activity {
         if("Paste".equals(operation)){
             if(clip.hasPrimaryClip()&&clip.getPrimaryClip()!=null&&clip.getPrimaryClip().getItemCount()>0){
                 CharSequence pasted=clip.getPrimaryClip().getItemAt(0).coerceToText(this);
-                if(pasted!=null){value.replace(a,b,pasted);editor.setSelection(a+pasted.length());}
+                if(pasted!=null)editor.insertKeyText(pasted.toString());
             }
         }else if(b>a){
             clip.setPrimaryClip(ClipData.newPlainText("CodeLab source",value.subSequence(a,b)));
@@ -907,16 +995,24 @@ public final class MainActivity extends Activity {
     private void readStory(String key,String heading,String text,boolean code,Runnable finish,Runnable extra,String extraLabel) {
         handler.removeCallbacks(autosave);editor=null;dirty=false;screen="story";readingBack=this::academy;
         preferences.edit().putString("reading_key",key).apply();
-        setContentView(new ReadingView(this,light,heading,text,code,preferences.getInt(key+":offset",0),
-            offset->preferences.edit().putInt(key+":offset",offset).apply(),()->readingBack.run(),finish,extra,extraLabel,
-            ("intro:history".equals(key)||"history:standalone".equals(key))?R.drawable.language_history:0));
+        String responseKey=key+":reflection:"+Integer.toHexString(text.hashCode())+":";
+        boolean challenge=key.endsWith(":stage:2");
+        setContentView(new ReadingView(this,light,heading,text,code,preferences.getInt(key+":offset",-1),
+            offset->preferences.edit().putInt(key+":offset",offset).apply(),()->readingBack.run(),()->{
+                if(challenge)preferences.edit().putBoolean(responseKey+"done",true).apply();
+                finish.run();
+            },extra,extraLabel,("intro:history".equals(key)||"history:standalone".equals(key))?R.drawable.language_history:0,
+            challenge,new ReadingView.Responses(){
+                @Override public boolean answered(int offset){return preferences.contains(responseKey+offset);}
+                @Override public void record(int offset,String value){preferences.edit().putString(responseKey+offset,value).apply();}
+            }));
     }
     private void foundation(int index) {
         String[] titles={"What is an algorithm?","Algorithms and computers","Representing an algorithm","Decision tables","Pseudocode"};
         String[] files={"algorithm","computer","representations","decision-table","pseudocode"};
         if(index<0||index>=titles.length){programmingIntroduction();return;}
         preferences.edit().putInt("foundation_index",index).apply();
-        try{readStory("foundation:"+index,titles[index],asset("foundation/"+files[index]+".txt"),false,()->foundation(index+1),this::programmingIntroduction,"Skip");}catch(IOException e){error(e);}
+        try{readStory("foundation:"+index,titles[index],asset("foundation/"+files[index]+".txt"),false,()->foundation(index+1),null,"");}catch(IOException e){error(e);}
     }
     private void programmingIntroduction() {
         try{readStory("intro:languages","Programming languages",asset("foundation/programming-languages.txt"),false,this::languageHistory,null,"");}catch(IOException e){error(e);}
@@ -989,51 +1085,168 @@ public final class MainActivity extends Activity {
     private String courseKey(){return cpp?"cpp-foundation":"c-foundation";}
     private String lessonKey(int index){return courseKey()+":"+index;}
     private void academy() {
-        shell("academy","","Learn C/C++","Courses and practice");
+        shell("academy","","","");
         boolean introduced=preferences.getBoolean("intro_checkpoint_v1",false);
-        LinearLayout next=panel(true);next.addView(label(introduced?"YOUR PATH":"START HERE",11,MINT));
-        title(next,introduced?(cpp?"C++ foundations":"C foundations"):"C/C++ introduction",24);
-        body(next,introduced?completed()+" of "+Curriculum.lessons(cpp).length+" preview checkpoints complete":"Explore how programs work, meet C and C++, then check your understanding.");
-        action(next,introduced?"Resume pathway":"Start introduction",true,()->{if(introduced)lesson(preferences.getInt(courseKey()+":resume",0));else programmingIntroduction();});
-        section("THE JOURNEY");LinearLayout journey=panel(false);
-        row(journey,"01","Think like a programmer","Optional · algorithms and problem solving",true,()->foundation(0));
-        row(journey,"02","Meet C and C++",introduced?"Checkpoint passed · review anytime":"Required · languages, history and toolchain",true,this::programmingIntroduction);
-        row(journey,"03","Choose your pathway","C or C++ · preview lessons and checkpoints",introduced,()->{if(introduced)pathways();else message("Start with the introduction","Complete the introduction checkpoint to begin either pathway.");});
-        row(journey,"04","Build guided projects","Five projects · unlock through course practice",introduced,()->{if(introduced)projects();else message("Your project journey","The projects follow the course. Start with the introduction.");});
-        section("LABS & PRACTICE");
-        row(content,"ƒ","Math into code","Nine worked problems you can open and run",true,this::mathLab);
-        row(content,"{}","Code labs","Ten small programs with teaching notes",true,this::codeLabs);
-        row(content,"1972","C/C++ history","Dennis Ritchie, Bell Labs and the Unix years",true,this::historyTimeline);
-        row(content,"✓","Progress & achievements","Your completed practice checks",true,this::achievements);
+        action(content,introduced?"Review the introduction":"Start the introduction",true,this::programmingIntroduction);
+        section("YOUR COURSES");
+        courseTile(false);
+        courseTile(true);
+        action(content,"Search courses & labs",false,this::searchCatalog);
+        action(content,"Practice & resources",false,this::practiceMenu);
     }
-    private void pathways() {
-        shell("pathways","COURSES","Choose your language","Both pathways remain available. Your progress is saved separately.");
-        for(boolean language:new boolean[]{false,true}) {
-            LinearLayout p=panel(language);p.addView(label(language?"C++ / ABSTRACTION & STRUCTURE":"C / PROGRAMMING FOUNDATIONS",14,language?LILAC:MINT));
-            title(p,language?"Build with modern C++":"Understand the foundations of C",24);
-            body(p,language?"Values, functions, containers and objects. Learn how C++ expresses reusable programs.":"Types, decisions, functions and memory. Learn how source code describes precise operations.");
-            action(p,"Open",true,()->{cpp=language;preferences.edit().putBoolean("cpp",cpp).apply();courseMap();});
+
+    private void searchCatalog() {
+        LinearLayout layout=new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(16),0,dp(16),0);
+        EditText query=new EditText(this);
+        query.setSingleLine(true);
+        query.setHint("Course, topic or language");
+        layout.addView(query);
+        ListView results=new ListView(this);
+        TextView empty=label("No matching courses or labs",15,MUTED);
+        layout.addView(empty);
+        layout.addView(results,new LinearLayout.LayoutParams(-1,dp(252)));
+        results.setEmptyView(empty);
+        Map<String,Runnable> catalog=new LinkedHashMap<>();
+        for(boolean language:new boolean[]{false,true}){
+            String title=language?"C++ foundations":"C foundations";
+            catalog.put(title,()->{
+                cpp=language;
+                preferences.edit().putBoolean("cpp",cpp).apply();
+                courseMap();
+            });
         }
-        body(content,"Preview scope: ten introductory lessons per language. The complete sixteen-module pathways are still being developed.");
-        action(content,"Back to journey",false,this::academy);
+        List<LabCatalog.Lab> labs=new ArrayList<>(LabCatalog.math());
+        labs.addAll(LabCatalog.code());
+        for(LabCatalog.Lab lab:labs){
+            String title=lab.title+(lab.cpp?" · C++ lab":" · C lab");
+            catalog.put(title,()->showLabs(lab.title,Collections.singletonList(lab),0));
+        }
+        ArrayAdapter<String> matches=new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,new ArrayList<>(catalog.keySet()));
+        results.setAdapter(matches);
+        query.addTextChangedListener(new TextWatcher(){
+            public void beforeTextChanged(CharSequence text,int start,int count,int after){}
+            public void afterTextChanged(Editable text){}
+            public void onTextChanged(CharSequence text,int start,int before,int count){
+                String q=text.toString().trim().toLowerCase(Locale.ROOT);
+                matches.setNotifyOnChange(false);
+                matches.clear();
+                for(String title:catalog.keySet()){
+                    if(title.toLowerCase(Locale.ROOT).contains(q))matches.add(title);
+                }
+                matches.notifyDataSetChanged();
+            }
+        });
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Course library").setView(layout)
+            .setNegativeButton("Close",null).create();
+        results.setOnItemClickListener((parent,view,position,id)->{
+            Runnable open=catalog.get(matches.getItem(position));
+            dialog.dismiss();
+            if(open!=null)open.run();
+        });
+        dialog.show();
     }
+
+    private void practiceMenu() {
+        String[] entries={"Algorithms and problem solving","Math into code","Code labs","C and C++ history","Guided projects","Achievements"};
+        Runnable[] destinations={()->foundation(0),this::mathLab,this::codeLabs,this::historyTimeline,this::projects,this::achievements};
+        new AlertDialog.Builder(this).setTitle("Practice & resources").setItems(entries,(dialog,index)->destinations[index].run()).show();
+    }
+
+    private void courseTile(boolean language) {
+        String key=language?"cpp-foundation":"c-foundation";
+        Lesson[] lessons=Curriculum.lessons(language);
+        int count=0;
+        int nextLesson=-1;
+        for(int i=0;i<lessons.length;i++){
+            if(progress.completed(key,Integer.toString(i)))count++;
+            else if(nextLesson<0)nextLesson=i;
+        }
+        LinearLayout tile=panel(false);
+        LinearLayout top=new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        TextView badge=label(language?"C++":"C",17,light?0xff5b3f9e:0xffd8c7ff);
+        badge.setGravity(Gravity.CENTER);
+        badge.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);
+        badge.setBackground(iconBadge());
+        top.addView(badge,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(12),0,0,0);
+        title(copy,language?"C++ foundations":"C foundations",19);
+        copy.addView(label(lessons.length+" lessons",14,MUTED));
+        top.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        top.addView(label("›",22,MUTED));
+        tile.addView(top);
+        courseMeter(tile,count,lessons.length);
+        tile.addView(label(nextLesson<0?"Completed · revisit lessons":(count*100/lessons.length)+"% complete · Next: "+lessons[nextLesson].title,14,MUTED));
+        tile.setFocusable(true);
+        tile.setOnClickListener(v->{
+            cpp=language;
+            preferences.edit().putBoolean("cpp",cpp).apply();
+            courseMap();
+        });
+    }
+
+    private void courseMeter(LinearLayout parent,int count,int total) {
+        ProgressBar meter=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
+        meter.setMax(total);
+        meter.setProgress(count);
+        meter.setProgressTintList(ColorStateList.valueOf(settings().contains("appearance_accent")?MINT:(light?0xff886100:0xffffbd39)));
+        meter.setProgressBackgroundTintList(ColorStateList.valueOf(light?0xffe8e2ed:0xff3a2b4c));
+        meter.setContentDescription(count+" of "+total+" lessons complete");
+        LinearLayout.LayoutParams dims=new LinearLayout.LayoutParams(-1,dp(6));
+        dims.topMargin=dp(12);
+        parent.addView(meter,dims);
+    }
+
+
     private void courseMap() {
-        shell("course","COURSE / "+(cpp?"C++":"C"),cpp?"C++ foundations":"C foundations","Work through the checkpoints in order. Revisit completed lessons anytime.");
-        Lesson[] lessons=Curriculum.lessons(cpp);LinearLayout summary=panel(true);
-        title(summary,completed()+" / "+lessons.length+" checkpoints",24);
-        ProgressBar meter=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);meter.setMax(lessons.length);meter.setProgress(completed());meter.setProgressTintList(ColorStateList.valueOf(MINT));summary.addView(meter,new LinearLayout.LayoutParams(-1,dp(6)));
-        action(summary,"Resume pathway",true,()->lesson(preferences.getInt(courseKey()+":resume",0)));
-        LinearLayout group=null;
-        for(int i=0;i<lessons.length;i++) {
-            if(i%4==0){section("LESSONS "+(i+1)+"–"+Math.min(i+4,lessons.length));group=panel(false);}
-            final int index=i;boolean complete=progress.completed(courseKey(),Integer.toString(i));
-            boolean available=LearningPath.canOpen(preferences.getBoolean("intro_checkpoint_v1",false),i,lessons.length,i>0&&progress.completed(courseKey(),Integer.toString(i-1)));
-            String detail=complete?"Checkpoint passed":available?"Ready to learn":"Complete the previous checkpoint";
+        int resume=Math.max(0,preferences.getInt(courseKey()+":resume",0));
+        courseMap(resume/3);
+    }
+
+    private void courseMap(int requestedPage) {
+        Lesson[] lessons=Curriculum.lessons(cpp);
+        int lastPage=(lessons.length-1)/3;
+        int page=Math.min(lastPage,Math.max(0,requestedPage));
+        boolean introduced=preferences.getBoolean("intro_checkpoint_v1",false);
+        String track=cpp?"C++ foundations":"C foundations";
+        shell("course","","","");
+        LinearLayout summary=panel(true);
+        title(summary,track,23);
+        int count=completed();
+        summary.addView(label(count+" / "+lessons.length+" lessons · "+(100*count/lessons.length)+"% complete",15,MUTED));
+        courseMeter(summary,count,lessons.length);
+        action(summary,introduced?"Continue":"Start introduction",true,()->{
+            if(introduced)lesson(preferences.getInt(courseKey()+":resume",0));
+            else programmingIntroduction();
+        });
+        section("LESSONS "+(page*3+1)+"–"+Math.min((page+1)*3,lessons.length));
+        for(int i=page*3;i<Math.min((page+1)*3,lessons.length);i++){
+            final int index=i;
+            boolean complete=progress.completed(courseKey(),Integer.toString(i));
+            boolean available=LearningPath.canOpen(introduced,i,lessons.length,i>0&&progress.completed(courseKey(),Integer.toString(i-1)));
+            String detail=complete?"Checkpoint passed":available?"Ready to learn":introduced?"Complete the previous checkpoint":"Complete the introduction";
             if(preferences.getBoolean(lessonKey(i)+":bookmark",false))detail+=" · Bookmarked";
-            row(group,complete?"✓":String.format(Locale.ROOT,"%02d",i+1),lessons[i].title,detail,available,()->lesson(index));
+            row(content,complete?"✓":String.valueOf(i+1),lessons[i].title,detail,available,()->{
+                if(available)lesson(index);
+                else message("Lesson locked",introduced?"Complete the previous checkpoint to open this lesson.":"Pass the introduction checkpoint to open the course.");
+            });
         }
-        action(content,"Change pathway",false,this::pathways);
-        action(content,"Back to journey",false,this::academy);
+        LinearLayout paging=new LinearLayout(this);
+        paging.setGravity(Gravity.CENTER_VERTICAL);
+        Button previous=compactButton("Previous",()->courseMap(page-1));
+        Button next=compactButton("Next",()->courseMap(page+1));
+        previous.setEnabled(page>0);
+        next.setEnabled(page<lastPage);
+        paging.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
+        TextView index=label((page+1)+" / "+(lastPage+1),14,MUTED);
+        index.setGravity(Gravity.CENTER);
+        paging.addView(index,new LinearLayout.LayoutParams(dp(72),dp(48)));
+        paging.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
+        content.addView(paging);
     }
     private void lesson(int index) {
         lesson(index,preferences.getInt(lessonKey(index)+":stage",0));
@@ -1044,7 +1257,10 @@ public final class MainActivity extends Activity {
         if(!LearningPath.canOpen(preferences.getBoolean("intro_checkpoint_v1",false),index,lessons.length,previous)) {
             academy();message("Continue your learning path","Pass the introduction and preceding lesson checkpoint first. Completed lessons remain available for review.");return;
         }
-        int stage=LearningPath.stage(requestedStage);activeLesson=index;activeStage=stage;
+        String challengeKey=lessonKey(index)+":stage:2:reflection:"+Integer.toHexString(lessons[index].challenge.hashCode())+":done";
+        int stage=LearningPath.stage(requestedStage)==3&&!preferences.getBoolean(challengeKey,false)
+            && !progress.completed(courseKey(),Integer.toString(index))?2:LearningPath.stage(requestedStage);
+        activeLesson=index;activeStage=stage;
         preferences.edit().putInt(courseKey()+":resume",index).putInt(lessonKey(index)+":stage",stage).apply();
         Lesson lesson=lessons[index];
         // Device-wide hint so an offline reminder never names another learner's content.
@@ -1112,7 +1328,7 @@ public final class MainActivity extends Activity {
         if(completed()<10){LinearLayout p=panel(true);title(p,"Build your foundation first",23);body(p,"Complete the 10 practice checks in this language to unlock project briefs. No purchase or certificate is required.");action(p,"Return to lessons",true,this::academy);return;}
         String[] names={"Calculator","Educational login","Student results","ATM simulator","Library management"};
         String[] ids={"calculator","login","grades","atm","library"};
-        for(int i=0;i<names.length;i++){final String id=ids[i],name=names[i];LinearLayout p=panel(false);title(p,name,22);body(p,"Specification · algorithm · milestones · reference · tests");action(p,"Open project guide",true,()->projectGuide(id,name));}
+        for(int i=0;i<names.length;i++){final String id=ids[i],name=names[i];row(content,"›",name,"Project guide",true,()->projectGuide(id,name));}
     }
     private String asset(String path) throws IOException {
         try(InputStream input=getAssets().open(path);ByteArrayOutputStream out=new ByteArrayOutputStream()){
@@ -1121,62 +1337,71 @@ public final class MainActivity extends Activity {
         }
     }
     private void projectGuide(String id,String name){
-        shell("guide","PROJECT LAB  /  "+(cpp?"C++":"C"),name,"Work through the milestones, then compare your solution.");
-        try{LinearLayout p=panel(false);body(p,asset("projects/"+id+".txt"));}catch(IOException e){error(e);}
-        action(content,"Try starter",true,()->copyAsset(id,true));
-        action(content,"Reference",false,()->copyAsset(id,false));
-        action(content,"Back to projects",false,this::projects);
+        try {
+            readStory(courseKey()+":project:"+id,name,asset("projects/"+id+".txt"),false,
+                ()->new AlertDialog.Builder(this).setTitle(name)
+                    .setItems(new String[]{"Open starter","Open reference","Project list"},(dialog,choice)->{
+                        if(choice==2)projects();else copyAsset(id,choice==0);
+                    }).show(),null,"");
+            readingBack=this::projects;
+        } catch(IOException error){error(error);}
     }
     private void copyAsset(String id,boolean starter){
         String extension=cpp?".cpp":".c",base=id+(starter?"-starter":"-reference"),name=base+extension;int suffix=2;
         try{while(store.exists(name))name=base+"-"+(suffix++)+extension;store.write(name,asset("projects/"+id+(starter?"-starter":"")+extension));openEditor(name);}catch(IOException e){error(e);}
     }
     private void mathLab() {
-        shell("labs","LABS  /  MATHEMATICS","Math into code","Nine worked problems. Read the reasoning, then open the program in the real compiler.");
-        LinearLayout intro=panel(false);
-        body(intro,"These examples connect a mathematical rule to C or C++ syntax. Predict the output before running, then change one value and explain the new result.");
-        for(LabCatalog.Lab lab:LabCatalog.math())labCard(lab);
-        action(content,"Back to academy",false,this::academy);
+        showLabs("Math into code",LabCatalog.math(),0);
     }
     private void codeLabs() {
-        shell("labs","LABS  /  CODE","Small programs, clear ideas","Ten complete examples covering functions, pointers, structures, algorithms and C++ classes.");
-        LinearLayout intro=panel(false);
-        body(intro,"Each lab opens in a scratch buffer. Nothing is saved as a project file unless you choose Save as. Run the program, then modify one line and predict the effect.");
-        for(LabCatalog.Lab lab:LabCatalog.code())labCard(lab);
-        action(content,"Back to academy",false,this::academy);
+        showLabs("Code examples",LabCatalog.code(),0);
     }
-    private void labCard(LabCatalog.Lab lab) {
-        LinearLayout card=panel(false);
-        TextView kind=label(lab.cpp?"C++ LAB":"C LAB",11,lab.cpp?LILAC:MINT);kind.setLetterSpacing(.12f);card.addView(kind);
-        title(card,lab.title,21);body(card,lab.summary);
-        TextView code=label("",13,INK);code.setTypeface(Typeface.MONOSPACE);code.setTextSize(12);code.setTextIsSelectable(true);
-        code.setText(RichText.format(lab.source,light,true));code.setPadding(dp(12),dp(10),dp(12),dp(10));code.setLineSpacing(dp(2),1);
-        GradientDrawable surface=new GradientDrawable();surface.setCornerRadius(dp(12));surface.setColor(light?0xfff4f8ff:0xff0b1526);surface.setStroke(dp(1),light?0x1a1d3a6b:0x2e9ab4e8);code.setBackground(surface);
-        card.addView(code);
-        action(card,"Open in compiler",true,()->{if(leaveEditor())openScratchWith(lab.source,lab.cpp?"main.cpp":"main.c");});
+    private void showLabs(String title,java.util.List<LabCatalog.Lab> labs,int page){
+        shell("labs","",title,"");
+        Runnable contents=()->showLabs(title,labs,page);
+        int end=Math.min(labs.size(),(page+1)*4);
+        for(LabCatalog.Lab lab:labs.subList(page*4,end)){
+            row(content,lab.cpp?"C++":"C",lab.title,"Worked example",true,()->{
+                readStory("lab:"+lab.title,lab.title,lab.summary,false,()->{
+                    readStory("source:"+lab.title,lab.title,lab.source,true,()->predictLab(lab),null,"");
+                    readingBack=contents;
+                },null,"");
+                readingBack=contents;
+            });
+        }
+        LinearLayout paging=new LinearLayout(this);
+        Button earlier=compactButton("Previous",()->showLabs(title,labs,page-1));
+        Button later=compactButton("Next",()->showLabs(title,labs,page+1));
+        earlier.setEnabled(page>0);
+        later.setEnabled(end<labs.size());
+        paging.addView(earlier,new LinearLayout.LayoutParams(0,dp(48),1));
+        paging.addView(later,new LinearLayout.LayoutParams(0,dp(48),1));
+        content.addView(paging);
+    }
+    private void predictLab(LabCatalog.Lab lab){
+        EditText prediction=new EditText(this);
+        prediction.setHint("What output do you expect?");
+        prediction.setMaxLines(3);
+        String key="prediction:"+lab.title;
+        prediction.setText(preferences.getString(key,""));
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Predict the output")
+            .setView(prediction).setPositiveButton("Open compiler",null).setNegativeButton("Back",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            String answer=prediction.getText().toString().trim();
+            if(answer.isEmpty()){prediction.setError("Enter your prediction first");return;}
+            preferences.edit().putString(key,answer).apply();
+            dialog.dismiss();
+            openScratchWith(lab.source,lab.cpp?"main.cpp":"main.c");
+        }));
+        dialog.show();
     }
     private void historyTimeline() {
-        shell("history","ACADEMY  /  HISTORY","C, C++ and the Unix years","A concise timeline of the languages behind the compiler.");
-        LinearLayout intro=panel(false);
-        body(intro,"C grew from earlier Bell Labs languages and became the implementation language of Unix. C++ began as an extension of C, then developed its own standards and library. These are historical notes, not a claim that one language replaces the other.");
-        timeline("1969–1972","Bell Labs and the birth of C","Dennis Ritchie developed C at Bell Labs, building on B and BCPL. It was designed for systems programming and closely tied to the development of Unix.");
-        timeline("1973","Unix rewritten in C","Rewriting the Unix kernel in C demonstrated that a high-level language could express portable systems software. This helped C spread beyond one machine.");
-        timeline("1978","The K&R book","Brian Kernighan and Dennis Ritchie published The C Programming Language. Its concise style and examples shaped how a generation learned C.");
-        timeline("1979–1983","C with Classes becomes C++","Bjarne Stroustrup began work on C with Classes at Bell Labs in 1979. The language was named C++ in 1983 and added stronger abstraction while retaining C-style performance.");
-        timeline("1989–1990","C standardized","ANSI C appeared in 1989 and became an ISO standard in 1990. Standardization made portability and conformance testable across implementations.");
-        timeline("1998–2020","Modern C++ standards","C++98 was the first ISO C++ standard. Later revisions added libraries and language features while preserving a large C-compatible foundation. C and C++ remain distinct languages with different rules.");
-        action(content,"Read the full history",true,this::readHistory);
-        action(content,"Back to academy",false,this::academy);
-    }
-    private void timeline(String year,String heading,String text) {
-        LinearLayout card=panel(false);
-        TextView marker=label(year,12,MINT);marker.setLetterSpacing(.1f);card.addView(marker);
-        title(card,heading,20);body(card,text);
+        readHistory();
     }
     private void readHistory() {
         try {
-            readStory("history:standalone","C and C++: history and purpose",asset("foundation/language-history.txt"),false,this::historyTimeline,null,"");
-            readingBack=this::historyTimeline;
+            readStory("history:standalone","C and C++: history and purpose",asset("foundation/language-history.txt"),false,this::academy,null,"");
+            readingBack=this::academy;
         } catch(IOException e){error(e);}
     }
     private void readGuide(String title,String path){
