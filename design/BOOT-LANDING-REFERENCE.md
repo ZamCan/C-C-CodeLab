@@ -1,6 +1,6 @@
 # Boot and landing — mandatory design reference
 
-Reference: two user-supplied IBKR Mobile screenshots dated 2026-11-25. Place original screenshots in design/screenshots/ as boot-reference.jpg and landing-reference.jpg. They are inspiration only; do not reuse IBKR logo, artwork or trade dress verbatim.
+Reference: two user-supplied IBKR Mobile screenshots dated 2026-11-25. Original uploaded references: [Boot screen](screenshots/Screenshot_20261125_165112_IBKR%20Mobile.jpg) and [Landing screen](screenshots/Screenshot_20261125_165119_IBKR%20Mobile.jpg). Inspect both images before implementing. They are inspiration only; do not reuse IBKR logo, artwork or trade dress verbatim.
 
 ## Implementation
 - Replace existing CodeLab boot and account-choice screens with a unified native Android visual system: near-black midnight navy, original low-contrast flowing technical mesh in lower half, crisp white CodeLab wordmark and original logo.
