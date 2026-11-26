@@ -13,3 +13,6 @@ backend/public/app.js
 backend/dist/
 backend/.private/
 backend/.env*
+
+# Local design reference extraction (never committed)
+.design-reference/

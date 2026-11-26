@@ -77,7 +77,7 @@ public final class MainActivity extends Activity {
             if(state.getBoolean("scratch",false)) studio();
             else openEditor(state.getString("file",filename));
         }
-        else if(state!=null && ("lesson".equals(state.getString("screen"))||"story".equals(state.getString("screen"))) && preferences.getString("reading_key","").startsWith(courseKey()+":")) lesson(state.getInt("lesson"),state.getInt("stage"));
+        else if(state!=null && "lesson".equals(state.getString("screen"))) lesson(state.getInt("lesson"));
         else if(state!=null && "appearance".equals(state.getString("screen"))) appearance();
         else if(state!=null && "settings".equals(state.getString("screen"))) settingsScreen();
         else home();
@@ -268,7 +268,7 @@ public final class MainActivity extends Activity {
         if("home".equals(screen)) super.onBackPressed();
         else if("story".equals(screen) && readingBack!=null)readingBack.run();
         else if("quiz".equals(screen) && quizBack!=null)quizBack.run();
-        else if("lesson".equals(screen)) { if(activeStage>0) lesson(activeLesson,activeStage-1); else courseMap(); }
+        else if("lesson".equals(screen)) courseMap();
         else if("course".equals(screen))academy();
         else if(java.util.Arrays.asList("appearance","status","inbox","sample_certificate","references").contains(screen))settingsScreen();
         else if("labs".equals(screen)||"history".equals(screen)||"achievements".equals(screen)||"projects".equals(screen))academy();
@@ -990,7 +990,7 @@ public final class MainActivity extends Activity {
         super.onActivityResult(request,result,data); if(request!=41||result!=RESULT_OK||data==null||data.getData()==null)return;
         try(OutputStream out=getContentResolver().openOutputStream(data.getData())){if(out==null)throw new IOException("Cannot open export destination");String source=editor==null?exportSource:editor.getText().toString();out.write(source.getBytes(StandardCharsets.UTF_8));Toast.makeText(this,"Source exported",Toast.LENGTH_SHORT).show();}catch(IOException|SecurityException e){error(e);}
     }
-    private int completed() {int count=0;for(int i=0;i<10;i++)if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i)))count++;return count;}
+    private int completed() {int count=0;int total=LessonScript.lessons(cpp).length;for(int i=0;i<total;i++)if(progress.completed(cpp?"cpp-foundation":"c-foundation",Integer.toString(i)))count++;return count;}
 
     private void readStory(String key,String heading,String text,boolean code,Runnable finish,Runnable extra,String extraLabel) {
         handler.removeCallbacks(autosave);editor=null;dirty=false;screen="story";readingBack=this::academy;
@@ -1054,7 +1054,7 @@ public final class MainActivity extends Activity {
         root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(20)+insets.getSystemWindowInsetLeft(),dp(12)+insets.getSystemWindowInsetTop(),dp(20)+insets.getSystemWindowInsetRight(),dp(12)+insets.getSystemWindowInsetBottom());return insets;});
         LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
         TextView back=label("‹  Back",16,MINT);back.setMinHeight(dp(48));back.setGravity(Gravity.CENTER_VERTICAL);
-        quizBack=()->{if(key.startsWith("intro:"))programmingIntroduction();else if(activeLesson>=0)lesson(activeLesson,2);else courseMap();};
+        quizBack=()->{if(key.startsWith("intro:"))programmingIntroduction();else if(activeLesson>=0)lesson(activeLesson);else courseMap();};
         back.setOnClickListener(v->quizBack.run());
         bar.addView(back,new LinearLayout.LayoutParams(0,-2,1));
         TextView kind=label("CHECKPOINT",11,MUTED);kind.setLetterSpacing(.12f);bar.addView(kind);root.addView(bar);
@@ -1156,7 +1156,7 @@ public final class MainActivity extends Activity {
 
     private void courseTile(boolean language) {
         String key=language?"cpp-foundation":"c-foundation";
-        Lesson[] lessons=Curriculum.lessons(language);
+        LessonScript.Lesson[] lessons=LessonScript.lessons(language);
         int count=0;
         int nextLesson=-1;
         for(int i=0;i<lessons.length;i++){
@@ -1208,7 +1208,7 @@ public final class MainActivity extends Activity {
     }
 
     private void courseMap(int requestedPage) {
-        Lesson[] lessons=Curriculum.lessons(cpp);
+        LessonScript.Lesson[] lessons=LessonScript.lessons(cpp);
         int lastPage=(lessons.length-1)/3;
         int page=Math.min(lastPage,Math.max(0,requestedPage));
         boolean introduced=preferences.getBoolean("intro_checkpoint_v1",false);
@@ -1249,65 +1249,64 @@ public final class MainActivity extends Activity {
         content.addView(paging);
     }
     private void lesson(int index) {
-        lesson(index,preferences.getInt(lessonKey(index)+":stage",0));
-    }
-    private void lesson(int index,int requestedStage) {
-        Lesson[] lessons=Curriculum.lessons(cpp);
+        LessonScript.Lesson[] lessons=LessonScript.lessons(cpp);
+        if(index<0||index>=lessons.length){courseMap();return;}
         boolean previous=index>0 && progress.completed(courseKey(),Integer.toString(index-1));
         if(!LearningPath.canOpen(preferences.getBoolean("intro_checkpoint_v1",false),index,lessons.length,previous)) {
-            academy();message("Continue your learning path","Pass the introduction and preceding lesson checkpoint first. Completed lessons remain available for review.");return;
+            academy();message("Continue your learning path","Pass the introduction and the preceding lesson checkpoint first. Completed lessons remain open for review.");return;
         }
-        String challengeKey=lessonKey(index)+":stage:2:reflection:"+Integer.toHexString(lessons[index].challenge.hashCode())+":done";
-        int stage=LearningPath.stage(requestedStage)==3&&!preferences.getBoolean(challengeKey,false)
-            && !progress.completed(courseKey(),Integer.toString(index))?2:LearningPath.stage(requestedStage);
-        activeLesson=index;activeStage=stage;
-        preferences.edit().putInt(courseKey()+":resume",index).putInt(lessonKey(index)+":stage",stage).apply();
-        Lesson lesson=lessons[index];
+        activeLesson=index;activeStage=0;
+        final String key=lessonKey(index);
+        preferences.edit().putInt(courseKey()+":resume",index).apply();
         // Device-wide hint so an offline reminder never names another learner's content.
-        settings().edit().putString("resume_hint",lesson.title).apply();
-        if(stage<3) {
-            String text=stage==0?lesson.explanation:stage==1?lesson.code:lesson.challenge;
-            Runnable extra=stage==1?()->copyLesson(index):stage==2?()->lessonTools(index):index==0?()->readGuide("First program: syntax anatomy","lessons/first-program.txt"):()->lessonTools(index);
-            readStory(lessonKey(index)+":stage:"+stage,lesson.title,text,stage==1,()->lesson(index,stage+1),extra,stage==1?"Try":stage==2?"Notes":"Explore");
-            readingBack=this::courseMap;
-        } else {
-            quizScreen(lesson.title,lesson.question,lesson.options,lesson.answer,lesson.feedback,lessonKey(index),()->{
-                progress.complete(courseKey(),Integer.toString(index));
-                if((index+1)%4==0 || index+1==lessons.length)
-                    celebrateCheckpoint(index+1,lessons.length,()->advanceAfterCheckpoint(index,lessons.length));
-                else advanceAfterCheckpoint(index,lessons.length);
-            },()->lesson(index,0));
-        }
-    }
-    private void advanceAfterCheckpoint(int index,int total){
-        if(index+1<total)lesson(index+1,0);
-        else readStory(courseKey()+":completed","Foundations completed",
-            completed()+" of "+total+" checkpoints passed. Review concepts or explore guided projects. These are learning achievements, not certificates.",
-            false,this::courseMap,this::projects,"Projects");
-    }
-    private void celebrateCheckpoint(int passed,int total,Runnable next){
-        final int green=0xff36d399;
-        LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(Gravity.CENTER);layout.setPadding(dp(24),dp(24),dp(24),dp(20));
-        TextView emblem=new TextView(this);emblem.setText("✓");emblem.setTextSize(56);
-        emblem.setTextColor(green);emblem.setGravity(Gravity.CENTER);
-        layout.addView(emblem,new LinearLayout.LayoutParams(-1,dp(88)));
-        TextView heading=label(passed==total?"Course completed!":"Congratulations!",24,INK);
-        heading.setGravity(Gravity.CENTER);layout.addView(heading);
-        TextView description=label(passed+" of "+total+" checkpoints passed. Keep building your skills.",16,MUTED);
-        description.setGravity(Gravity.CENTER);description.setPadding(0,dp(12),0,dp(12));layout.addView(description);
-        AlertDialog dialog=new AlertDialog.Builder(this).setView(layout)
-            .setPositiveButton(passed==total?"View progress":"Next lesson",(d,w)->next.run())
-            .setNegativeButton("Course contents",(d,w)->courseMap()).create();
-        dialog.setOnShowListener(d->{
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(green);
-            if(preferences.getBoolean("success_motion",true)&&android.animation.ValueAnimator.areAnimatorsEnabled()){
-                emblem.setScaleX(.4f);emblem.setScaleY(.4f);emblem.setAlpha(0f);
-                emblem.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(480).start();
+        settings().edit().putString("resume_hint",lessons[index].title).apply();
+        handler.removeCallbacks(autosave);editor=null;dirty=false;screen="lesson";readingBack=this::courseMap;
+        final LessonScript.Lesson lesson=lessons[index];
+        BeatPlayer.Session session=new BeatPlayer.Session(){
+            @Override public int beat(){return preferences.getInt(key+":beat",0);}
+            @Override public void beat(int position){preferences.edit().putInt(key+":beat",position).apply();}
+            @Override public boolean answered(int position){return preferences.getBoolean(key+":answer:"+position,false);}
+            @Override public void answered(int position,boolean correct){
+                if(correct)preferences.edit().putBoolean(key+":answer:"+position,true).apply();
             }
-            LearningFeedback.success(this,emblem,preferences.getBoolean("success_sound",true),false);
-        });
+            @Override public boolean bookmarked(){return preferences.getBoolean(key+":bookmark",false);}
+            @Override public void bookmarked(boolean value){preferences.edit().putBoolean(key+":bookmark",value).apply();}
+            @Override public void openCompiler(String asset,boolean isCpp){
+                try{openScratchWith(AssetText.read(MainActivity.this,asset),isCpp?"main.cpp":"main.c");}
+                catch(IOException failure){error(failure);}
+            }
+            @Override public void closed(){courseMap();}
+            @Override public void finished(BeatPlayer.Result result){completeLesson(index,lessons,result);}
+        };
+        setContentView(new BeatPlayer(this,light,lesson,cpp,session));
+    }
+    /** Reports the real measured checkpoint score and elapsed time, then offers the next step. */
+    private void completeLesson(int index,LessonScript.Lesson[] lessons,BeatPlayer.Result result){
+        boolean alreadyDone=progress.completed(courseKey(),Integer.toString(index));
+        progress.complete(courseKey(),Integer.toString(index));
+        if(learningSync!=null)learningSync.sync(progress);
+        int nextIndex=Math.min(index+1,lessons.length-1);
+        preferences.edit().putInt(courseKey()+":resume",nextIndex).apply();
+        String accuracy=result.total==0?"No scored checkpoints":(result.correct*100/result.total)+"%  ("+result.correct+"/"+result.total+" first attempts)";
+        String elapsed=formatDuration(result.millis);
+        boolean courseDone=completed()==lessons.length;
+        String title=courseDone?"Course complete":index+1==lessons.length?"Track complete":"Lesson complete";
+        String detail=(alreadyDone?"Reviewed: ":"")+lessons[index].title+".\n\nAccuracy: "+accuracy+"\nTime on task: "+elapsed;
+        if(courseDone)detail+="\n\nAll "+lessons.length+" lessons are complete. These are learning achievements, not certificates.";
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setMessage(detail)
+            .setPositiveButton(courseDone?"Projects":index+1<lessons.length?"Next lesson":"Course outline",(d,w)->{
+                if(courseDone)projects();
+                else if(index+1<lessons.length)lesson(index+1);
+                else courseMap();
+            })
+            .setNegativeButton(courseDone?"Course outline":"Outline",(d,w)->courseMap()).create();
+        dialog.setOnShowListener(d->LearningFeedback.success(this,dialog.getWindow()==null?findViewById(android.R.id.content):dialog.getWindow().getDecorView(),preferences.getBoolean("success_sound",true),preferences.getBoolean("success_motion",true)));
         dialog.show();
+    }
+    private static String formatDuration(long millis){
+        long seconds=Math.max(0,millis/1000);
+        long minutes=seconds/60;
+        return String.format(java.util.Locale.ENGLISH,"%d:%02d",minutes,seconds%60);
     }
     private void lessonTools(int index) {
         EditText notes=new EditText(this);notes.setTextSize(16);notes.setMinLines(4);notes.setMaxLines(8);notes.setHint("My prediction and reasoning");notes.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8000)});
@@ -1315,8 +1314,13 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Practice notes").setView(notes).setPositiveButton("Save",(d,w)->preferences.edit().putString(key+":notes",notes.getText().toString()).apply()).setNeutralButton(preferences.getBoolean(key+":bookmark",false)?"Unbookmark":"Bookmark",(d,w)->preferences.edit().putBoolean(key+":bookmark",!preferences.getBoolean(key+":bookmark",false)).putString(key+":notes",notes.getText().toString()).apply()).setNegativeButton("Cancel",null).show();
     }
     private void copyLesson(int index) {
+        LessonScript.Lesson lesson=LessonScript.lessons(cpp)[index];
         String base=(cpp?"cpp":"c")+"-lesson-"+(index+1),extension=cpp?".cpp":".c",name=base+extension;int n=2;
-        try{while(store.exists(name))name=base+"-"+(n++)+extension;store.write(name,Curriculum.lessons(cpp)[index].code);openEditor(name);}catch(IOException e){error(e);}
+        try{
+            String source=AssetText.read(this,lesson.codeAsset);
+            while(store.exists(name))name=base+"-"+(n++)+extension;
+            store.write(name,source);openEditor(name);
+        }catch(IOException e){error(e);}
     }
     private void achievements() {
         shell("achievements","ACADEMY  /  ACHIEVEMENTS","See your progress.","Every concept understood is a step forward.");LinearLayout p=panel(true);title(p,completed()+" / 10",40);body(p,(cpp?"C++":"C")+" practice checks completed on this device.");
@@ -1406,8 +1410,8 @@ public final class MainActivity extends Activity {
     }
     private void readGuide(String title,String path){
         try{
-            readStory("guide:"+path,title,asset(path),false,()->lesson(activeLesson,0),null,"");
-            readingBack=()->lesson(activeLesson,0);
+            readStory("guide:"+path,title,asset(path),false,()->lesson(activeLesson),null,"");
+            readingBack=()->lesson(activeLesson);
         }catch(IOException e){error(e);}
     }
     private void mathProblems(){mathLab();}

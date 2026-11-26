@@ -114,6 +114,8 @@ jobs:
         run: python3 tools/verify_lessons.py
       - name: Check guided projects compile and behave
         run: python3 tools/verify_projects.py
+      - name: Compile and run every authored lesson example
+        run: python3 tools/verify_curriculum_examples.py
   backend:
     name: Backend policy and schema checks
     runs-on: ubuntu-latest

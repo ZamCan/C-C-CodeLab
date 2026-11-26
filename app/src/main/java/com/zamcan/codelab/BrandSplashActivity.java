@@ -4,61 +4,77 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Brief local brand transition before opening the learner workspace. */
+/**
+ * Brief brand transition. The animation is short and ends in the first real screen, never in an
+ * artificial wait or a second welcome page.
+ */
 public final class BrandSplashActivity extends Activity {
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable launch = () -> {
-        if (isFinishing() || isDestroyed()) return;
-        startActivity(new Intent(this, MainActivity.class));
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        finish();
-    };
+    private boolean routed;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         boolean light = AppAppearance.isLight(this);
-        int backdrop = light ? 0xfff6f1ff : 0xff24104f;
-        getWindow().setStatusBarColor(backdrop);
-        getWindow().setNavigationBarColor(backdrop);
+        if (light) setTheme(R.style.AppThemeLight);
+        getWindow().setStatusBarColor(Design.bg(light));
+        getWindow().setNavigationBarColor(Design.bg(light));
         if (light) getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+
         FrameLayout stage = new FrameLayout(this);
-        stage.setFitsSystemWindows(true);
-        stage.setBackgroundColor(backdrop);
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.ic_codelab_brand);
-        logo.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        stage.addView(logo, new FrameLayout.LayoutParams(dp(112), dp(112), Gravity.CENTER));
-        TextView wordmark = new TextView(this);
-        wordmark.setText("CodeLab C & C++");
-        wordmark.setTextColor(light ? 0xff361e69 : 0xffeadfff);
-        wordmark.setTextSize(24);
+        stage.setBackgroundColor(Design.bg(light));
+        stage.addView(new MeshBackdrop(this, light), new FrameLayout.LayoutParams(-1, -1));
+
+        LinearLayout lockup = new LinearLayout(this);
+        lockup.setOrientation(LinearLayout.VERTICAL);
+        lockup.setGravity(Gravity.CENTER);
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(R.drawable.ic_codelab_brand);
+        mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        lockup.addView(mark, new LinearLayout.LayoutParams(Design.dp(this, 96), Design.dp(this, 96)));
+
+        TextView wordmark = Design.text(this, "CodeLab", 28, Design.ink(light), true);
+        wordmark.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         wordmark.setGravity(Gravity.CENTER);
-        wordmark.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        FrameLayout.LayoutParams bottom = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
-        bottom.bottomMargin = dp(32);
-        stage.addView(wordmark, bottom);
+        wordmark.setPadding(0, Design.dp(this, 18), 0, 0);
+        lockup.addView(wordmark);
+
+        TextView track = Design.eyebrow(this, "C & C++ ACADEMY", Design.accent(light));
+        track.setGravity(Gravity.CENTER);
+        track.setPadding(0, Design.dp(this, 8), 0, 0);
+        lockup.addView(track);
+
+        stage.addView(lockup, new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER));
         setContentView(stage);
-        logo.setScaleX(.92f);
-        logo.setScaleY(.92f);
-        logo.animate().scaleX(1f).scaleY(1f).setDuration(240).start();
-        handler.postDelayed(launch, 500);
+
+        boolean motion = android.animation.ValueAnimator.areAnimatorsEnabled();
+        if (motion) {
+            lockup.setAlpha(0f);
+            lockup.setScaleX(.92f);
+            lockup.setScaleY(.92f);
+            lockup.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(360)
+                    .withEndAction(this::route).start();
+        } else {
+            stage.postDelayed(this::route, 120);
+        }
     }
 
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+    private void route() {
+        if (routed || isFinishing() || isDestroyed()) return;
+        routed = true;
+        startActivity(new Intent(this, WelcomeActivity.class));
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        finish();
     }
 
     @Override protected void onDestroy() {
-        handler.removeCallbacks(launch);
         super.onDestroy();
+        routed = true;
     }
 }

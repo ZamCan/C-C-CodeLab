@@ -323,3 +323,12 @@ platform 35 with build-tools 35.0.0, Gradle 8.9 wrapper. No physical device, emu
 - Android `release` signing now reads `CODELAB_RELEASE_STORE_FILE`, `CODELAB_RELEASE_STORE_PASSWORD`, `CODELAB_RELEASE_KEY_ALIAS`, and `CODELAB_RELEASE_KEY_PASSWORD` from the process environment only. No keystore or credential is stored in Git. Debug builds remain unaffected.
 - Local gate result: **BLOCKED** with `release signing keystore is not configured` and `physical-device evidence is missing`.
 - These gates are safety controls; they do not constitute device, OAuth, Cloudflare deployment, or release-signing verification.
+
+## Learning experience rebuild — 2026-11-26
+
+See `docs/LEDGER_2026-11-26_LEARNING_REBUILD.md` for commands, outputs and limits. Summary: a
+dark-first token system, original boot/landing with a guest-first path, a beat-based lesson player
+with durable position/bookmarks and real accuracy reporting, 12 C + 11 C++ authored lessons, 12
+original Canvas diagram families, and 23 examples proven by a real compiler
+(`tools/verify_curriculum_examples.py`). 72 unit tests, lint and the debug APK build pass locally;
+no Android device/emulator was available, so on-device launch and screenshot review remain open.
