@@ -19,3 +19,5 @@ jobs:
         run: python3 tools/verify_toolchain.py
       - name: Compile and execute real C and C++
         run: node --v8-pool-size=1 --wasm-num-compilation-tasks=1 tools/test_packaged_compiler.cjs
+      - name: Compile and execute every authored lesson example
+        run: node --v8-pool-size=1 --wasm-num-compilation-tasks=1 tools/test_packaged_compiler.cjs --curriculum

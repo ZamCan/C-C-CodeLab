@@ -22,13 +22,29 @@ cases.push({name:'UTF-8 input and output',files:{'main.c':'#include <stdio.h>\ni
 cases.push({name:'Output flood stops at budget',files:{'main.c':'#include <stdio.h>\nint main(void){for(;;)puts("output flood");}'},trap:'Output limit'});
 cases.push({name:'Memory exhaustion is bounded',files:{'main.c':'#include <stdlib.h>\n#include <stdio.h>\nint main(void){void*p=malloc(128*1024*1024);puts(p?"unexpected":"bounded");}'},expected:'bounded'});
 cases.push({name:'C++17 multiple translation units',files:{'sum.hpp':'int sum(int,int);','sum.cpp':'#include "sum.hpp"\nint sum(int a,int b){return a+b;}','main.cpp':'#include <iostream>\n#include "sum.hpp"\nint main(){std::cout<<sum(20,22);}'},expected:'42'});
-if(isMainThread){(async()=>{for(const test of (process.argv[2]===undefined?cases:[cases[Number(process.argv[2])]])){await new Promise((resolve,reject)=>{
+// --curriculum: compile and run every authored lesson example through the packaged engine.
+if(process.argv.includes('--curriculum')){
+  const dir=path.join(__dirname,'../app/src/main/assets/curriculum');
+  cases.length=0;
+  for(const language of ['c','cpp'])for(const file of fs.readdirSync(path.join(dir,language)).sort()){
+    if(!/\.(c|cpp)$/.test(file))continue;
+    const source=fs.readFileSync(path.join(dir,language,file),'utf8');
+    const match=/\/\*\s*expect:\n([\s\S]*?)\*\//.exec(source);
+    if(!match)throw new Error('missing expect block: '+file);
+    const expected=match[1].split('\n').map(line=>line.replace(/\s+$/,'')).join('\n').replace(/\n+$/,'');
+    const stdinPath=path.join(dir,language,file.replace(/\.(c|cpp)$/,'.stdin'));
+    cases.push({name:'lesson '+language+'/'+file,files:{[file]:source},
+      stdin:fs.existsSync(stdinPath)?fs.readFileSync(stdinPath,'utf8'):'',expected});
+  }
+}
+
+if(isMainThread){(async()=>{const only=process.argv[2]&&!process.argv[2].startsWith('--')?[cases[Number(process.argv[2])]]:cases;for(const test of only){await new Promise((resolve,reject)=>{
  const w=new Worker(__filename,{workerData:test});let ended=false;
  let timer=setTimeout(()=>done(new Error('Compile timeout')),120000);
  function done(e){if(ended)return;ended=true;clearTimeout(timer);w.terminate().then(()=>e?reject(e):resolve());}
  w.on('message',m=>{if(m.phase==='run'){clearTimeout(timer);timer=setTimeout(()=>done(test.timeout?null:new Error('Run timeout')),3000);}else if(m.done)done();else if(m.error)done(new Error(m.error));});
  w.on('error',done);w.on('exit',code=>{if(!ended)done(new Error('Unexpected worker exit '+code));});
- });console.log('PASS: '+test.name);}console.log('PASS: '+(process.argv[2]===undefined?cases.length:1)+' packaged-engine integration checks. Android WebView verification remains pending.');})().catch(e=>{console.error(e);process.exitCode=1;});}
+ });console.log('PASS: '+test.name);}console.log('PASS: '+(process.argv[2]&&!process.argv[2].startsWith('--')?1:cases.length)+' packaged-engine integration checks. Android WebView verification remains pending.');})().catch(e=>{console.error(e);process.exitCode=1;});}
 else{(async()=>{
  const sandbox={WebAssembly,TextEncoder,TextDecoder,console:{log(){}},setTimeout,clearTimeout};vm.createContext(sandbox);
  vm.runInContext(fs.readFileSync(path.join(root,'shared.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'engine.js'),'utf8')+'\nglobalThis.runEngine=compileProject;',sandbox);

@@ -46,7 +46,7 @@ final class LessonScriptCpp {
 
         new LessonScript.Lesson("cpp-streams", "Streams and the first program", "iostream, std:: and the insertion operator", 7, src("02-streams.cpp"),
             Beat.hook("In C, printf needs a format string that must match the arguments. C++ offers a different idea: let the type decide how it is written. What could go wrong?"),
-            Beat.code(src("02-streams.cpp"), "Name: Ada has 12 lessons"),
+            Beat.code(src("02-streams.cpp"), "Lessons: You have 12 lessons"),
             Beat.define("A stream is an ordered sequence of characters connected to a source or destination, with type-aware insertion and extraction operations."),
             Beat.explain("""
                     `#include <iostream>` provides the standard stream objects. `std::` names the standard \
@@ -59,18 +59,18 @@ final class LessonScriptCpp {
                     flushing repeatedly costs time for little benefit."""),
             Beat.visual("streams", "Values flow into a stream object; the stream's overload for each type decides the textual form."),
             Beat.check("Where should diagnostics normally be written?",
-                    new String[]{"std::cerr", "std::cout", "A variable named error"},
+                    new String[]{"stderr, here through fprintf(stderr, ...)", "stdout", "A variable named error"},
                     0,
-                    "std::cerr is the standard diagnostic stream. Keeping diagnostics separate lets a caller redirect normal output without losing errors."),
+                    "Diagnostics belong on the standard error stream so ordinary output can be redirected or captured separately. The offline teaching runtime exposes that stream through fprintf; std::cerr is the usual C++ spelling but is not part of this reduced header set."),
             Beat.predict("`std::cout << 7 / 2;` prints what?",
                     new String[]{"3", "3.5", "3.500000"},
                     0,
                     "Both operands are integers, so integer division happens before the stream sees the value. Streams format the result; they do not change arithmetic."),
             Beat.explain("""
-                    `std::cin >> learner` skips leading whitespace and reads one word. A name with a \
-                    space needs `std::getline`. Mixing extraction and getline requires consuming the \
-                    leftover newline, otherwise getline reads an empty line. Check the stream state before \
-                    using a value: a failed extraction leaves the target unchanged."""),
+                    `std::cin >> lessons` skips leading whitespace and extracts an int. The stream converts \
+                    to false when extraction fails, which is why the example tests it before using the \
+                    value. A failed extraction leaves the target unchanged, so validation must happen \
+                    before the number is trusted."""),
             Beat.tryIt("Open the example, remove the std:: prefixes one at a time and read the compiler's message. Then restore them and add a third line.", src("02-streams.cpp")),
             Beat.reflect("Streams move formatting into the type system. The remaining responsibility is yours: validate that extraction actually succeeded.")),
 

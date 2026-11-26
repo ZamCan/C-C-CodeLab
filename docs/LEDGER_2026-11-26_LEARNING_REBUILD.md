@@ -16,6 +16,8 @@ The compiler packaging, evaluation backend and certificate service were verified
 | 12 C + 11 C++ authored lessons | done | `LessonScript.java`, `LessonScriptCpp.java`; 23 beats-driven lessons |
 | Original Canvas instructional diagrams | done | `ConceptArt.java`, 12 concept families |
 | Every example verified by a real compiler | done | `tools/verify_curriculum_examples.py`: 23 compiled/executed, 0 failures |
+| Every example verified through the app's own Clang/lld/WASI engine | done | `node tools/test_packaged_compiler.cjs --curriculum`: 23 compiled/linked/run, 0 failures |
+| Teaching `iostream` subset documented | done | `docs/COMPILER_ENGINE.md` "Measured runtime limits"; streams lesson corrected to the verified subset |
 | Lesson-integrity tests | done | `LessonScriptTest`; 72 unit tests total, 0 failures |
 | Stale CompileLearn branding removed | done | launcher label `C/C++ CodeLab`; unused `BrandHero` deleted |
 | CI compiles the authored examples | done | `.github/workflows/android.yml` lessons job |
@@ -28,6 +30,8 @@ The compiler packaging, evaluation backend and certificate service were verified
 ./gradlew :app:assembleDebug       -> app-debug.apk (44.95 MB)
 python3 tools/verify_curriculum_examples.py -> 23 examples, 0 failures
 python3 tools/verify_toolchain.py --apk app/build/outputs/apk/debug/app-debug.apk -> all PASS
+node tools/test_packaged_compiler.cjs              -> 14 packaged-engine checks, all PASS
+node tools/test_packaged_compiler.cjs --curriculum -> 23 lesson examples, all PASS
 ```
 
 ## Not verified / remaining manual work

@@ -101,7 +101,13 @@ Each has a caption that states the idea in words for accessibility.
 - `./gradlew :app:testDebugUnitTest` — 72 tests, 0 failures (includes `LessonScriptTest`).
 - `./gradlew :app:lintDebug` — clean.
 - `./gradlew :app:assembleDebug` — debug APK produced.
-- `python3 tools/verify_curriculum_examples.py` — 23 examples compiled and executed, 0 failures.
+- `python3 tools/verify_curriculum_examples.py` — 23 examples compiled and executed with
+  `gcc`/`g++`, 0 failures.
+- `node tools/test_packaged_compiler.cjs --curriculum` — the same 23 examples compiled, linked and
+  run through the **packaged Clang/lld/WASI engine** the app uses, 0 failures. This check found a
+  real incompatibility (`std::cerr` and string extraction are absent from the teaching `iostream`
+  stub), and the streams lesson now teaches the verified subset and documents the gap in
+  `docs/COMPILER_ENGINE.md`.
 - `python3 tools/verify_toolchain.py --apk app/build/outputs/apk/debug/app-debug.apk` — packaged
   clang, lld, sysroot and memfs match the reviewed bytes.
 

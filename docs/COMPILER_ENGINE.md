@@ -35,3 +35,25 @@ Dark/light syntax coloring; accessible contrast; C/C++ tokenization; 4-space aut
 - Real device: airplane mode, low memory, screen rotation/background, Android version and ABI compatibility.
 
 Capture device model, Android version, ABI, toolchain version, exact commands, outputs and tests. A green host CI smoke test is only a prerequisite, not Android validation.
+
+## Measured runtime limits — bundled teaching sysroot (2026-11-26)
+
+The packaged `sysroot22.tar` intentionally ships a **reduced `<iostream>`**: the full libc++ header
+produces a multi-hundred-megabyte AST for the Program Model adapter, so the sysroot replaces it with
+a small teaching header. Verified behaviour:
+
+| Feature | Status |
+| --- | --- |
+| `std::cout << int / long / unsigned / long long / double / char / bool / const char* / std::string` | supported (`double` is formatted with `%g`) |
+| `std::endl` | supported |
+| `std::cin >> int / long / unsigned / double / char`, `while (std::cin >> x)`, `if (!(std::cin >> x))` | supported |
+| `std::cin >> std::string`, `std::getline`, `std::cerr`, `std::ostringstream`, stream manipulators | **not available** |
+| Diagnostics to stderr | use `fprintf(stderr, ...)` / `std::fprintf` |
+
+Curriculum examples are verified twice: on the host with `gcc`/`g++`
+(`tools/verify_curriculum_examples.py`) and through the exact packaged Clang/lld/WASI engine used by
+the app (`node tools/test_packaged_compiler.cjs --curriculum`). The C++ streams lesson teaches the
+reduced subset explicitly rather than pretending the full stream library is present.
+
+This is a documented teaching-runtime limitation, not a claim of complete C++ standard library
+support. Replacing the stub requires repackaging and re-reviewing the signed sysroot artifact.

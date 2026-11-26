@@ -1,19 +1,17 @@
+#include <cstdio>
 #include <iostream>
-#include <string>
 
 int main() {
-    std::string learner;
     int lessons = 0;
 
-    std::cout << "Name: ";
-    if (!(std::cin >> learner)) {
-        std::cerr << "No name supplied\n";
+    std::cout << "Lessons: ";
+    if (!(std::cin >> lessons)) {
+        std::fprintf(stderr, "No number supplied\n");
         return 1;
     }
-    std::cin >> lessons;
-    std::cout << learner << " has " << lessons << " lessons\n";
+    std::cout << "You have " << lessons << " lessons\n";
     return 0;
 }
 /* expect:
-Name: Ada has 12 lessons
+Lessons: You have 12 lessons
 */
