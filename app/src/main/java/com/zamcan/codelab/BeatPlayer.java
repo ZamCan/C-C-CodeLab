@@ -29,6 +29,11 @@ public final class BeatPlayer extends FrameLayout {
         void beat(int index);
         boolean answered(int index);
         void answered(int index, boolean correct);
+        int firstAttempt(int index);
+        String prediction(int index);
+        void prediction(int index, String text);
+        long activeMillis();
+        void addActiveMillis(long duration);
         boolean bookmarked();
         void bookmarked(boolean value);
         void openCompiler(String asset, boolean cpp);
@@ -59,14 +64,16 @@ public final class BeatPlayer extends FrameLayout {
     private final Button back;
     private final Button next;
     private final Button bookmark;
-    private final long startedAt = System.currentTimeMillis();
+    private final Button skip;
+    private android.widget.EditText prediction;
+    private long activeSince = -1;
     private int index;
     private int selected = -1;
     private boolean resolved;
     private LinearLayout optionsBox;
     private TextView feedback;
     private View[] optionViews;
-    private int resolvedIndex = -1;
+
 
     BeatPlayer(Context context, boolean light, LessonScript.Lesson lesson, boolean cpp, Session session) {
         super(context);
@@ -136,6 +143,14 @@ public final class BeatPlayer extends FrameLayout {
         back = Design.quiet(context, light, "Back");
         back.setOnClickListener(v -> move(-1));
         footer.addView(back, new LinearLayout.LayoutParams(0, Design.dp(context, 52), 1));
+        skip = Design.quiet(context, light, "Skip");
+        skip.setContentDescription("Skip reading to the next required question");
+        skip.setOnClickListener(v -> {
+            int target = index + 1;
+            while (target < lesson.beats.length - 1 && !required(lesson.beats[target])) target++;
+            move(target - index);
+        });
+        footer.addView(skip, new LinearLayout.LayoutParams(0, Design.dp(context, 52), 1));
         next = Design.primary(context, light, "Next");
         next.setOnClickListener(v -> advance());
         LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(0, Design.dp(context, 52), 2);
@@ -178,23 +193,59 @@ public final class BeatPlayer extends FrameLayout {
 
     private void advance() {
         Beat beat = lesson.beats[index];
-        if (beat.scored() && !resolved) return;
+        if (beat.scored() && !resolved) {
+            if (selected >= 0) resolve(selected, beat);
+            return;
+        }
+        if (beat.kind == Beat.Kind.HOOK && prediction.getText().toString().trim().isEmpty()) return;
         move(1);
     }
 
+    private static boolean required(Beat beat) {
+        return beat.scored() || beat.kind == Beat.Kind.HOOK;
+    }
+
+    @Override protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (hasWindowFocus()) activeSince = android.os.SystemClock.elapsedRealtime();
+    }
+
+    @Override public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);
+        if (focused && activeSince < 0) activeSince = android.os.SystemClock.elapsedRealtime();
+        if (!focused) saveTime();
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        saveTime();
+        super.onDetachedFromWindow();
+    }
+
+    private void saveTime() {
+        if (activeSince < 0) return;
+        session.addActiveMillis(android.os.SystemClock.elapsedRealtime() - activeSince);
+        activeSince = -1;
+    }
+
     private void finish() {
-        int correct = 0;
+        int correct = 0, measured = 0;
         for (int i = 0; i < lesson.beats.length; i++) {
-            if (lesson.beats[i].scored() && session.answered(i)) correct++;
+            if (!lesson.beats[i].scored()) continue;
+            int first = session.firstAttempt(i);
+            if (first >= 0) {
+                measured++;
+                correct += first;
+            }
         }
-        session.finished(new Result(correct, lesson.scoringBeats(), System.currentTimeMillis() - startedAt));
+        saveTime();
+        session.finished(new Result(correct, measured, session.activeMillis()));
     }
 
     private void render() {
         Beat beat = lesson.beats[index];
         selected = -1;
         resolved = session.answered(index);
-        resolvedIndex = -1;
+        prediction = null;
 
         heading.setText(lesson.title);
         railLabel.setText("LESSON " + (index + 1) + " OF " + lesson.beats.length + "  ·  " + beat.label().toUpperCase(java.util.Locale.ENGLISH));
@@ -209,6 +260,22 @@ public final class BeatPlayer extends FrameLayout {
             case HOOK:
                 canvas.addView(eyebrow("QUESTION", Design.amber(light)));
                 canvas.addView(prose(beat.text, 21, Design.ink(light)));
+                prediction = new android.widget.EditText(getContext());
+                prediction.setHint("Your prediction");
+                prediction.setTextColor(Design.ink(light));
+                prediction.setHintTextColor(Design.muted(light));
+                prediction.setMaxLines(3);
+                prediction.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(1000)});
+                prediction.setText(session.prediction(index));
+                prediction.addTextChangedListener(new android.text.TextWatcher() {
+                    public void beforeTextChanged(CharSequence s,int start,int count,int after) {}
+                    public void onTextChanged(CharSequence s,int start,int before,int count) {
+                        session.prediction(index,s.toString());
+                        enableAction(!s.toString().trim().isEmpty());
+                    }
+                    public void afterTextChanged(android.text.Editable s) {}
+                });
+                canvas.addView(prediction);
                 break;
             case DIALOGUE:
                 canvas.addView(eyebrow("DIALOGUE", Design.accent(light)));
@@ -275,14 +342,10 @@ public final class BeatPlayer extends FrameLayout {
         back.setText(index == 0 ? "Close" : "Back");
         boolean last = index == lesson.beats.length - 1;
         boolean needsAnswer = beat.scored() && !resolved;
-        next.setText(last ? "Finish" : "Next");
-        next.setEnabled(!needsAnswer);
-        next.setAlpha(needsAnswer ? .45f : 1f);
-        if (needsAnswer) {
-            next.setContentDescription("Answer this checkpoint before continuing");
-        } else {
-            next.setContentDescription(last ? "Finish lesson" : "Next");
-        }
+        next.setText(needsAnswer ? "Check" : last ? "Finish" : "Next");
+        next.setContentDescription(next.getText());
+        skip.setVisibility(required(beat) || last ? GONE : VISIBLE);
+        enableAction(!needsAnswer && (prediction == null || !prediction.getText().toString().trim().isEmpty()));
         scroll.post(() -> scroll.scrollTo(0, 0));
     }
 
@@ -419,18 +482,6 @@ public final class BeatPlayer extends FrameLayout {
         feedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         canvas.addView(feedback);
 
-        Button check = Design.primary(getContext(), light, "Check");
-        check.setEnabled(false);
-        check.setAlpha(.45f);
-        check.setOnClickListener(v -> {
-            if (selected < 0) return;
-            resolve(selected, beat, check);
-        });
-        LinearLayout.LayoutParams checkParams = new LinearLayout.LayoutParams(-1, dp(50));
-        checkParams.bottomMargin = dp(6);
-        canvas.addView(check, checkParams);
-        optionsBox.setTag(check);
-
         if (resolved) {
             // Previously answered correctly: show the state and let the learner continue.
             markResolved(beat.answer, beat, true);
@@ -442,27 +493,26 @@ public final class BeatPlayer extends FrameLayout {
         selected = choice;
         for (int i = 0; i < optionViews.length; i++) {
             boolean active = i == choice;
+            optionViews[i].setSelected(active);
             optionViews[i].setBackground(Design.pressable(getContext(),
                     Design.outlined(getContext(), active ? Design.accentSoft(light) : Design.surface(light), 12,
                             active ? Design.accent(light) : Design.line(light)), 0x3396b8ff));
         }
-        if (optionsBox != null && optionsBox.getTag() instanceof Button) {
-            Button check = (Button) optionsBox.getTag();
-            check.setEnabled(true);
-            check.setAlpha(1f);
-        }
+        enableAction(true);
     }
 
-    private void resolve(int choice, Beat beat, Button check) {
-        boolean correct = choice == beat.answer;
-        boolean firstAttempt = !session.answered(index);
-        if (firstAttempt) session.answered(index, correct);
+    private void enableAction(boolean enabled) {
+        next.setEnabled(enabled);
+        next.setAlpha(enabled ? 1f : .45f);
+    }
 
+    private void resolve(int choice, Beat beat) {
+        boolean correct = choice == beat.answer;
+        session.answered(index, correct);
         if (correct) {
             resolved = true;
             markResolved(choice, beat, true);
-            check.setEnabled(false);
-            check.setAlpha(.4f);
+            next.setText(index == lesson.beats.length - 1 ? "Finish" : "Next");
             next.setEnabled(true);
             next.setAlpha(1f);
             next.setContentDescription(index == lesson.beats.length - 1 ? "Finish lesson" : "Next");
@@ -480,8 +530,7 @@ public final class BeatPlayer extends FrameLayout {
                 feedback.setText("Not yet. " + beat.explanation + "\n\nChoose again — the explanation above is the clue.");
             }
             selected = -1;
-            check.setEnabled(false);
-            check.setAlpha(.45f);
+            enableAction(false);
         }
     }
 
@@ -498,12 +547,6 @@ public final class BeatPlayer extends FrameLayout {
                         right ? (light ? 0xffe4f8ef : 0xff11302a) : Design.surface(light), 12,
                         right ? Design.SUCCESS : Design.line(light)));
             }
-        }
-        if (optionsBox != null && optionsBox.getTag() instanceof Button) {
-            Button check = (Button) optionsBox.getTag();
-            check.setText("Answered");
-            check.setEnabled(false);
-            check.setAlpha(.4f);
         }
         if (next != null) {
             next.setEnabled(true);

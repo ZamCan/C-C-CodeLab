@@ -332,3 +332,7 @@ with durable position/bookmarks and real accuracy reporting, 12 C + 11 C++ autho
 original Canvas diagram families, and 23 examples proven by a real compiler
 (`tools/verify_curriculum_examples.py`). 72 unit tests, lint and the debug APK build pass locally;
 no Android device/emulator was available, so on-device launch and screenshot review remain open.
+
+### Native lesson checkpoints and completion
+
+Building on `2a22585`, the authored C and C++ lessons require a saved opening prediction. Skip advances through reading to the next question. The footer checks a selected answer before enabling progression. The completion screen distinguishes first-attempt accuracy from eventual mastery and accumulates focused study time across visits. Previously completed checkpoints without a recorded first attempt are excluded from accuracy. Android instrumentation covers a complete lesson with a wrong answer, a retry, a correct answer and a measured 50% result.

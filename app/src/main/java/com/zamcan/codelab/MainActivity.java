@@ -268,7 +268,7 @@ public final class MainActivity extends Activity {
         if("home".equals(screen)) super.onBackPressed();
         else if("story".equals(screen) && readingBack!=null)readingBack.run();
         else if("quiz".equals(screen) && quizBack!=null)quizBack.run();
-        else if("lesson".equals(screen)) courseMap();
+        else if("lesson".equals(screen)||"lesson_result".equals(screen)) courseMap();
         else if("course".equals(screen))academy();
         else if(java.util.Arrays.asList("appearance","status","inbox","sample_certificate","references").contains(screen))settingsScreen();
         else if("labs".equals(screen)||"history".equals(screen)||"achievements".equals(screen)||"projects".equals(screen))academy();
@@ -1054,7 +1054,11 @@ public final class MainActivity extends Activity {
         root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(20)+insets.getSystemWindowInsetLeft(),dp(12)+insets.getSystemWindowInsetTop(),dp(20)+insets.getSystemWindowInsetRight(),dp(12)+insets.getSystemWindowInsetBottom());return insets;});
         LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
         TextView back=label("‹  Back",16,MINT);back.setMinHeight(dp(48));back.setGravity(Gravity.CENTER_VERTICAL);
-        quizBack=()->{if(key.startsWith("intro:"))programmingIntroduction();else if(activeLesson>=0)lesson(activeLesson);else courseMap();};
+        quizBack=()->new AlertDialog.Builder(this)
+            .setTitle("Leave this checkpoint?")
+            .setMessage("Your choice is saved. Answer correctly to complete the checkpoint.")
+            .setNegativeButton("Keep learning",null)
+            .setPositiveButton("Leave",(dialog,which)->review.run()).show();
         back.setOnClickListener(v->quizBack.run());
         bar.addView(back,new LinearLayout.LayoutParams(0,-2,1));
         TextView kind=label("CHECKPOINT",11,MUTED);kind.setLetterSpacing(.12f);bar.addView(kind);root.addView(bar);
@@ -1267,8 +1271,17 @@ public final class MainActivity extends Activity {
             @Override public void beat(int position){preferences.edit().putInt(key+":beat",position).apply();}
             @Override public boolean answered(int position){return preferences.getBoolean(key+":answer:"+position,false);}
             @Override public void answered(int position,boolean correct){
-                if(correct)preferences.edit().putBoolean(key+":answer:"+position,true).apply();
+                String first = key+":first:"+position;
+                android.content.SharedPreferences.Editor edit = preferences.edit();
+                if(!preferences.contains(first)) edit.putInt(first,correct?1:0);
+                if(correct) edit.putBoolean(key+":answer:"+position,true);
+                edit.apply();
             }
+            @Override public int firstAttempt(int position){return preferences.getInt(key+":first:"+position,-1);}
+            @Override public String prediction(int position){return preferences.getString(key+":prediction:"+position,"");}
+            @Override public void prediction(int position,String value){preferences.edit().putString(key+":prediction:"+position,value).apply();}
+            @Override public long activeMillis(){return preferences.getLong(key+":active_ms",0);}
+            @Override public void addActiveMillis(long duration){preferences.edit().putLong(key+":active_ms",activeMillis()+duration).apply();}
             @Override public boolean bookmarked(){return preferences.getBoolean(key+":bookmark",false);}
             @Override public void bookmarked(boolean value){preferences.edit().putBoolean(key+":bookmark",value).apply();}
             @Override public void openCompiler(String asset,boolean isCpp){
@@ -1282,26 +1295,29 @@ public final class MainActivity extends Activity {
     }
     /** Reports the real measured checkpoint score and elapsed time, then offers the next step. */
     private void completeLesson(int index,LessonScript.Lesson[] lessons,BeatPlayer.Result result){
-        boolean alreadyDone=progress.completed(courseKey(),Integer.toString(index));
         progress.complete(courseKey(),Integer.toString(index));
         if(learningSync!=null)learningSync.sync(progress);
         int nextIndex=Math.min(index+1,lessons.length-1);
         preferences.edit().putInt(courseKey()+":resume",nextIndex).apply();
-        String accuracy=result.total==0?"No scored checkpoints":(result.correct*100/result.total)+"%  ("+result.correct+"/"+result.total+" first attempts)";
+        String accuracy=result.total==0?"First attempts unavailable":(result.correct*100/result.total)+"%  ("+result.correct+"/"+result.total+" first attempts)";
         String elapsed=formatDuration(result.millis);
         boolean courseDone=completed()==lessons.length;
         String title=courseDone?"Course complete":index+1==lessons.length?"Track complete":"Lesson complete";
-        String detail=(alreadyDone?"Reviewed: ":"")+lessons[index].title+".\n\nAccuracy: "+accuracy+"\nTime on task: "+elapsed;
-        if(courseDone)detail+="\n\nAll "+lessons.length+" lessons are complete. These are learning achievements, not certificates.";
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setMessage(detail)
-            .setPositiveButton(courseDone?"Projects":index+1<lessons.length?"Next lesson":"Course outline",(d,w)->{
-                if(courseDone)projects();
-                else if(index+1<lessons.length)lesson(index+1);
-                else courseMap();
-            })
-            .setNegativeButton(courseDone?"Course outline":"Outline",(d,w)->courseMap()).create();
-        dialog.setOnShowListener(d->LearningFeedback.success(this,dialog.getWindow()==null?findViewById(android.R.id.content):dialog.getWindow().getDecorView(),preferences.getBoolean("success_sound",true),preferences.getBoolean("success_motion",true)));
-        dialog.show();
+        shell("lesson_result","","","");
+        title(content,title,28);
+        body(content,lessons[index].title);
+        section("YOUR RESULTS");
+        body(content,"First-attempt accuracy · "+accuracy);
+        body(content,"Active study time · "+elapsed);
+        if(!courseDone && index+1<lessons.length){
+            section("NEXT LESSON");
+            body(content,lessons[index+1].title);
+            action(content,"Next lesson",true,()->lesson(index+1));
+        }else if(courseDone){
+            action(content,"Guided projects",true,this::projects);
+        }
+        action(content,"Course outline",false,this::courseMap);
+        LearningFeedback.success(this,content,preferences.getBoolean("success_sound",true),preferences.getBoolean("success_motion",true));
     }
     private static String formatDuration(long millis){
         long seconds=Math.max(0,millis/1000);
