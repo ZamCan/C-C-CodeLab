@@ -113,7 +113,8 @@ public final class MainActivity extends Activity {
                         boolean newlyVerified=!onlineVerified;
                         onlineVerified=true;
                         if(learningSync!=null)learningSync.sync(progress);
-                        if(newlyVerified && "home".equals(screen))home();
+                        if(newlyVerified && "profile".equals(screen))progressSettings();
+                        else if(newlyVerified && "home".equals(screen))home();
                         return;
                     }
                     switchToAccount(id);
@@ -126,7 +127,8 @@ public final class MainActivity extends Activity {
                     if(request!=accountVerificationGeneration)return;
                     boolean wasVerified=onlineVerified;
                     onlineVerified=false;
-                    if(wasVerified && verifiedAccountId!=null && "home".equals(screen))home();
+                    if(wasVerified && "profile".equals(screen))progressSettings();
+                    else if(wasVerified && verifiedAccountId!=null && "home".equals(screen))home();
                 });
             }
             @Override public void unauthenticated(String reason) {
@@ -135,6 +137,7 @@ public final class MainActivity extends Activity {
                     if(verifiedAccountId==null)return;
                     // Expired or revoked session: close the account database and return to
                     // guest storage. Account data stays on disk for a later sign-in.
+                    saveSource(false);
                     closeLearnerStorage();
                     settings().edit().remove(LAST_VERIFIED_USER).apply();
                     preferences=settings();
@@ -143,7 +146,7 @@ public final class MainActivity extends Activity {
                     progress=new LearningStore(MainActivity.this);
                     progress.importLegacy(preferences);
                     if(!reopenLearnerWorkspace())return;
-                    if("home".equals(screen))home();
+                    home();
                 });
             }
         });
@@ -155,6 +158,7 @@ public final class MainActivity extends Activity {
     }
     /** Activates a newly verified account; invalidates every callback from the previous one. */
     private void switchToAccount(String id) {
+        saveSource(false);
         if(learningSync!=null)learningSync.cancel();
         if(progress!=null)progress.close();
         verifiedAccountId=id;
@@ -164,7 +168,7 @@ public final class MainActivity extends Activity {
         progress=new LearningStore(MainActivity.this,id);
         if(learningSync!=null)learningSync.sync(progress);
         if(!reopenLearnerWorkspace())return;
-        if("home".equals(screen))home();
+        home();
     }
     /**
      * Ends the Appwrite session. The learner database is closed only after the server confirms
@@ -270,7 +274,7 @@ public final class MainActivity extends Activity {
         else if("quiz".equals(screen) && quizBack!=null)quizBack.run();
         else if("lesson".equals(screen)||"lesson_result".equals(screen)) courseMap();
         else if("course".equals(screen))academy();
-        else if(java.util.Arrays.asList("appearance","status","inbox","sample_certificate","references").contains(screen))settingsScreen();
+        else if(java.util.Arrays.asList("appearance","status","inbox","sample_certificate","references","profile").contains(screen))settingsScreen();
         else if("labs".equals(screen)||"history".equals(screen)||"achievements".equals(screen)||"projects".equals(screen))academy();
         else if("guide".equals(screen))projects();
         else if(leaveEditor()) home();
@@ -371,6 +375,8 @@ public final class MainActivity extends Activity {
         if("achievements".equals(name))return "Achievements";
         if("references".equals(name))return "References";
         if("settings".equals(name))return "Settings";
+        if("profile".equals(name))return "Learning profile";
+        if("lesson_result".equals(name))return "Lesson results";
         if("appearance".equals(name))return "Appearance";
         if("status".equals(name))return "About";
         if("inbox".equals(name))return "Notifications";
@@ -384,7 +390,7 @@ public final class MainActivity extends Activity {
     private void settingsScreen() {
         shell("settings","","","");
         section("ACCOUNT");
-        setting("Learning account",this::progressSettings);
+        setting("Learning profile",this::progressSettings);
         section("PREFERENCES");
         setting("Appearance",this::appearance);
         setting("Sound & motion",this::feedbackSettings);
@@ -576,26 +582,31 @@ public final class MainActivity extends Activity {
         });
     }
     private void progressSettings() {
-        if(verifiedAccountId==null) {
-            new AlertDialog.Builder(this).setIcon(R.drawable.appwrite_google_g).setTitle("Learning account")
-                .setMessage("Guest progress stays on this device. Google sign-in uses Appwrite and keeps each account's learning data separate.")
-                .setPositiveButton("Sign in with Google",(d,w)->startActivity(new Intent(this,GoogleSignInActivity.class)))
-                .setNeutralButton("Study reminders",(d,w)->reminderSettings())
-                .setNegativeButton("Continue as guest",null).show();
-            return;
+        shell("profile","","","");
+        title(content,verifiedAccountId==null?"Guest learner":"Your learning account",24);
+        body(content,verifiedAccountId==null?"Progress is saved on this device."
+            :onlineVerified?"Your Google session is verified.":"Studying offline with your saved progress.");
+        section("COURSE PROGRESS");
+        for(boolean language:new boolean[]{false,true}){
+            LessonScript.Lesson[] lessons=LessonScript.lessons(language);
+            String track=language?"cpp-foundation":"c-foundation";
+            int finished=0;
+            for(int i=0;i<lessons.length;i++)if(progress.completed(track,Integer.toString(i)))finished++;
+            row(content,language?"++":"C",language?"C++ foundations":"C foundations",
+                finished+" of "+lessons.length+" lessons complete",true,()->{
+                    cpp=language;
+                    preferences.edit().putBoolean("cpp",language).apply();
+                    courseMap();
+                });
         }
-        String[] actions={"Copy guest progress here","Study reminders","Switch Google account","Sign out"};
-        new AlertDialog.Builder(this).setIcon(R.drawable.appwrite_google_g).setTitle("Learning account")
-            .setMessage(onlineVerified
-                ?"Google account verified. This account keeps its own private progress, bookmarks and upload queue."
-                :"Your last verified session is ready. New progress stays on this device until your account is verified.")
-            .setItems(actions,(dialog,which)->{
-                if(which==0)offerGuestTransfer();
-                else if(which==1)reminderSettings();
-                else if(which==2)signOut(()->startActivity(new Intent(this,GoogleSignInActivity.class)));
-                else signOut(null);
-            })
-            .setNegativeButton("Close",null).show();
+        section("ACCOUNT");
+        if(verifiedAccountId==null){
+            setting("Sign in with Google",()->startActivity(new Intent(this,GoogleSignInActivity.class)));
+        }else{
+            setting("Copy guest progress here",this::offerGuestTransfer);
+            setting("Switch Google account",()->signOut(()->startActivity(new Intent(this,GoogleSignInActivity.class))));
+            setting("Sign out",()->signOut(null));
+        }
     }
     private void reminderSettings() {
         boolean enabled=settings().getBoolean(StudyReminders.PREF,false);
@@ -1266,24 +1277,25 @@ public final class MainActivity extends Activity {
         settings().edit().putString("resume_hint",lessons[index].title).apply();
         handler.removeCallbacks(autosave);editor=null;dirty=false;screen="lesson";readingBack=this::courseMap;
         final LessonScript.Lesson lesson=lessons[index];
+        final android.content.SharedPreferences lessonPreferences=preferences;
         BeatPlayer.Session session=new BeatPlayer.Session(){
-            @Override public int beat(){return preferences.getInt(key+":beat",0);}
-            @Override public void beat(int position){preferences.edit().putInt(key+":beat",position).apply();}
-            @Override public boolean answered(int position){return preferences.getBoolean(key+":answer:"+position,false);}
+            @Override public int beat(){return lessonPreferences.getInt(key+":beat",0);}
+            @Override public void beat(int position){lessonPreferences.edit().putInt(key+":beat",position).apply();}
+            @Override public boolean answered(int position){return lessonPreferences.getBoolean(key+":answer:"+position,false);}
             @Override public void answered(int position,boolean correct){
                 String first = key+":first:"+position;
-                android.content.SharedPreferences.Editor edit = preferences.edit();
-                if(!preferences.contains(first)) edit.putInt(first,correct?1:0);
+                android.content.SharedPreferences.Editor edit = lessonPreferences.edit();
+                if(!lessonPreferences.contains(first)) edit.putInt(first,correct?1:0);
                 if(correct) edit.putBoolean(key+":answer:"+position,true);
                 edit.apply();
             }
-            @Override public int firstAttempt(int position){return preferences.getInt(key+":first:"+position,-1);}
-            @Override public String prediction(int position){return preferences.getString(key+":prediction:"+position,"");}
-            @Override public void prediction(int position,String value){preferences.edit().putString(key+":prediction:"+position,value).apply();}
-            @Override public long activeMillis(){return preferences.getLong(key+":active_ms",0);}
-            @Override public void addActiveMillis(long duration){preferences.edit().putLong(key+":active_ms",activeMillis()+duration).apply();}
-            @Override public boolean bookmarked(){return preferences.getBoolean(key+":bookmark",false);}
-            @Override public void bookmarked(boolean value){preferences.edit().putBoolean(key+":bookmark",value).apply();}
+            @Override public int firstAttempt(int position){return lessonPreferences.getInt(key+":first:"+position,-1);}
+            @Override public String prediction(int position){return lessonPreferences.getString(key+":prediction:"+position,"");}
+            @Override public void prediction(int position,String value){lessonPreferences.edit().putString(key+":prediction:"+position,value).apply();}
+            @Override public long activeMillis(){return lessonPreferences.getLong(key+":active_ms",0);}
+            @Override public void addActiveMillis(long duration){lessonPreferences.edit().putLong(key+":active_ms",activeMillis()+duration).apply();}
+            @Override public boolean bookmarked(){return lessonPreferences.getBoolean(key+":bookmark",false);}
+            @Override public void bookmarked(boolean value){lessonPreferences.edit().putBoolean(key+":bookmark",value).apply();}
             @Override public void openCompiler(String asset,boolean isCpp){
                 try{openScratchWith(AssetText.read(MainActivity.this,asset),isCpp?"main.cpp":"main.c");}
                 catch(IOException failure){error(failure);}
